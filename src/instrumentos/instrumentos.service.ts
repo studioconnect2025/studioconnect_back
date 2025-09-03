@@ -1,6 +1,5 @@
 import { Injectable } from '@nestjs/common';
 import { CreateInstrumentoDto } from './dto/create-instrumento.dto';
-import { UpdateInstrumentoDto } from './dto/update-instrumento.dto';
 
 @Injectable()
 export class InstrumentosService {
@@ -16,11 +15,4 @@ export class InstrumentosService {
     return `This action returns a #${id} instrumento`;
   }
 
-  update(id: number, updateInstrumentoDto: UpdateInstrumentoDto) {
-    return `This action updates a #${id} instrumento`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} instrumento`;
-  }
 }
