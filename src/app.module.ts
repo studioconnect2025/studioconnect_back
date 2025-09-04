@@ -5,13 +5,15 @@ import { InstrumentosModule } from './instrumentos/instrumentos.module';
 import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
 import { StudiosModule } from './studios/studios.module';
+import { FileUploadModule } from './file-upload/file-upload.module';
 
 @Module({
   imports: [
     InstrumentosModule,
     UsersModule,
     AuthModule,
-    StudiosModule
+    StudiosModule,
+    FileUploadModule
   ],
   controllers: [AppController],
   providers: [AppService],
