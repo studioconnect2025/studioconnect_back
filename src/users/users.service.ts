@@ -1,4 +1,8 @@
-import { Injectable, ConflictException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  ConflictException,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from './entities/user.entity';
@@ -12,7 +16,9 @@ export class UsersService {
   ) {}
 
   async create(createUserDto: CreateUserDto): Promise<User> {
-    const existingUser = await this.usersRepository.findOneBy({ email: createUserDto.email });
+    const existingUser = await this.usersRepository.findOneBy({
+      email: createUserDto.email,
+    });
     if (existingUser) {
       throw new ConflictException('El email ya se encuentra registrado.');
     }
@@ -21,7 +27,7 @@ export class UsersService {
     return this.usersRepository.save(newUser);
   }
 
-  async findOneByEmail (email: string): Promise<User | undefined> {
+  async findOneByEmail(email: string): Promise<User | undefined> {
     const user = await this.usersRepository.findOneBy({ email });
     return user ?? undefined;
   }
@@ -34,4 +40,3 @@ export class UsersService {
     return user;
   }
 }
-

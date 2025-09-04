@@ -25,4 +25,3 @@ import { FileUploadModule } from './file-upload/file-upload.module';
   providers: [AppService],
 })
 export class AppModule {}
-

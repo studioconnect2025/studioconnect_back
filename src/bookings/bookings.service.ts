@@ -3,6 +3,7 @@ import {
   NotFoundException,
   ConflictException,
   BadRequestException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { LessThan, MoreThan, Repository } from 'typeorm';
@@ -21,6 +22,9 @@ export class BookingsService {
     private readonly studioRepository: Repository<Studio>,
   ) {}
 
+  /**
+   * Crea una nueva reserva para un músico.
+   */
   async create(
     createBookingDto: CreateBookingDto,
     musician: User,
@@ -59,19 +63,66 @@ export class BookingsService {
       musician,
       startTime,
       endTime,
-      // El estado PENDING se asignará por defecto (ver entidad)
+      // El estado PENDING se asigna por defecto desde la entidad
     });
 
     return this.bookingRepository.save(newBooking);
   }
 
-  // Devuelve todas las reservas de los estudios de un dueño
+  /**
+   * Devuelve todas las reservas de los estudios que pertenecen a un dueño.
+   */
   async findOwnerBookings(ownerId: string): Promise<Booking[]> {
     const studios = await this.studioRepository.find({
       where: { owner: { id: ownerId } },
-      relations: ['bookings', 'bookings.musician'],
+      relations: ['bookings', 'bookings.musician'], // Carga las reservas y los músicos asociados
     });
 
+    // Aplanar el array de arrays de reservas en un solo array
     return studios.flatMap((studio) => studio.bookings);
   }
+
+  /**
+   * Confirma una reserva específica, verificando la propiedad.
+   */
+  async confirmBooking(bookingId: string, owner: User): Promise<Booking> {
+    const booking = await this.verifyBookingOwnership(bookingId, owner.id);
+    booking.status = BookingStatus.CONFIRMED;
+    return this.bookingRepository.save(booking);
+  }
+
+  /**
+   * Rechaza una reserva específica, verificando la propiedad.
+   */
+  async rejectBooking(bookingId: string, owner: User): Promise<Booking> {
+    const booking = await this.verifyBookingOwnership(bookingId, owner.id);
+    booking.status = BookingStatus.REJECTED;
+    return this.bookingRepository.save(booking);
+  }
+
+  /**
+   * Método privado para verificar que una reserva pertenece a un estudio del dueño.
+   */
+  private async verifyBookingOwnership(
+    bookingId: string,
+    ownerId: string,
+  ): Promise<Booking> {
+    const booking = await this.bookingRepository.findOne({
+      where: { id: bookingId },
+      relations: ['studio', 'studio.owner'], // Cargar el estudio y su dueño
+    });
+
+    if (!booking) {
+      throw new NotFoundException(`Reserva con ID #${bookingId} no encontrada.`);
+    }
+
+    if (booking.studio.owner.id !== ownerId) {
+      throw new ForbiddenException(
+        'No tienes permiso para gestionar esta reserva.',
+      );
+    }
+
+    return booking;
+  }
 }
+

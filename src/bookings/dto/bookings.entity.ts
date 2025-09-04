@@ -36,3 +36,4 @@ export class Booking {
   @CreateDateColumn()
   createdAt: Date;
 }
+
