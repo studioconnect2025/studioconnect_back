@@ -8,7 +8,7 @@ import { Repository } from 'typeorm';
 import { Studio } from './entities/studio.entity';
 import { CreateStudioDto } from './dto/create-stuido.dto';
 import { UpdateStudioDto } from './dto/update-studio.dto';
-import { User } from '../users/entities/user.entity';
+import { User } from 'src/users/entities/user.entity';
 import { UserRole } from 'src/auth/enum/roles.enum'; // Corregida la ruta de importación
 import { FileUploadService } from '../file-upload/file-upload.service';
 
@@ -17,7 +17,7 @@ export class StudiosService {
   constructor(
     @InjectRepository(Studio)
     private readonly studioRepository: Repository<Studio>,
-    private readonly fileUploadService: FileUploadService, // Asumimos que este servicio está inyectado correctamente
+    private readonly fileUploadService: FileUploadService,
   ) {}
 
   // --- MÉTODOS PÚBLICOS ---
@@ -52,9 +52,7 @@ export class StudiosService {
     });
 
     if (!studio) {
-      throw new NotFoundException(
-        'No se encontró el estudio o no tienes permiso para editarlo.',
-      );
+      throw new NotFoundException('No se encontró el estudio o no es tuyo');
     }
 
     Object.assign(studio, dto);
@@ -81,11 +79,10 @@ export class StudiosService {
     }
 
     const result = await this.fileUploadService.uploadFile(file);
+
     studio.photos = [...(studio.photos || []), result.secure_url];
     return this.studioRepository.save(studio);
   }
-
-  // --- MÉTODO INTERNO (Usado por AuthService durante el registro) ---
 
   async create(createStudioDto: CreateStudioDto, user: User): Promise<Studio> {
     if (user.role !== UserRole.STUDIO_OWNER) {
