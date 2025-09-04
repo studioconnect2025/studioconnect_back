@@ -8,7 +8,9 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Category } from 'src/categories/entities/category.entity';
 import { Instruments } from 'src/instrumentos/entities/instrumento.entity';
 import { DataSource, Repository } from 'typeorm';
-import data from '../data.json';
+import rawData from '../data.json';
+import { InstrumentData } from 'src/interface/interface-datajson';
+const data: InstrumentData[] = rawData;
 
 @Injectable()
 export class SeederService implements OnApplicationBootstrap {
@@ -21,8 +23,8 @@ export class SeederService implements OnApplicationBootstrap {
     @InjectRepository(Instruments)
     private readonly instrumentsRepository: Repository<Instruments>,
 
-    @InjectRepository(Reservas)
-    private readonly reservasRepository: Repository<Reservas>,
+    @InjectRepository(Booking)
+    private readonly bookingRepository: Repository<Booking>,
   ) {}
 
   async onApplicationBootstrap() {
@@ -67,22 +69,22 @@ export class SeederService implements OnApplicationBootstrap {
   }
 
   async resetData(): Promise<string> {
-    const existingReservas = await this.reservasRepository.find();
+    const existingBooking = await this.bookingRepository.find();
 
-    if (existingReservas.length > 0) {
+    if (existingBooking.length > 0) {
       throw new BadRequestException(
-        'No se puede resetear: existen reservas registradas.',
+        'No se puede resetear: existen Booking registradas.',
       );
     }
 
     await this.datasource.query(`
       TRUNCATE TABLE
-        "RESERVAS",
+        "BOOKING",
         "INSTRUMENTS",
         "CATEGORIES"
       CASCADE
     `);
 
-    return 'Datos reseteados correctamente (sin reservas activas).';
+    return 'Datos reseteados correctamente (sin Booking activas).';
   }
 }
