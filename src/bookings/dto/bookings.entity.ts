@@ -1,8 +1,15 @@
-import { Column, Entity, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
+import {
+  Column,
+  Entity,
+  ManyToOne,
+  PrimaryGeneratedColumn,
+  CreateDateColumn,
+} from 'typeorm';
 import { Studio } from 'src/studios/entities/studio.entity';
 import { User } from 'src/users/entities/user.entity';
+import { BookingStatus } from '../enum/enums-bookings';
 
-@Entity()
+@Entity('bookings')
 export class Booking {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -14,8 +21,18 @@ export class Booking {
   musician: User;
 
   @Column({ type: 'timestamp' })
-  startDate: Date;
+  startTime: Date;
 
   @Column({ type: 'timestamp' })
-  endDate: Date;
+  endTime: Date;
+
+  @Column({
+    type: 'enum',
+    enum: BookingStatus,
+    default: BookingStatus.PENDING,
+  })
+  status: BookingStatus;
+
+  @CreateDateColumn()
+  createdAt: Date;
 }

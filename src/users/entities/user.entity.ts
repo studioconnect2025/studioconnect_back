@@ -22,4 +22,5 @@ export class User {
 
   @OneToMany(() => Studio, (studio) => studio.owner)
   studios: Studio[];
+  bookings: any;
 }
