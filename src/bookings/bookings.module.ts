@@ -4,9 +4,10 @@ import { BookingsController } from './bookings.controller';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Studio } from 'src/studios/entities/studio.entity';
 import { Booking } from './dto/bookings.entity';
+import { User } from 'src/users/entities/user.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Booking, Studio])],
+  imports: [TypeOrmModule.forFeature([Booking, Studio, User])],
   controllers: [BookingsController],
   providers: [BookingsService],
 })

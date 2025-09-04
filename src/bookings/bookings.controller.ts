@@ -1,10 +1,13 @@
 // src/bookings/bookings.controller.ts
-import { Controller, Get, Param, Patch } from '@nestjs/common';
+import { Controller, Get, Param, Patch, UseGuards } from '@nestjs/common';
 import { BookingsService } from './bookings.service';
 import { Roles } from 'src/auth/decorators/roles.decorator';
 import { UserRole } from 'src/auth/enum/roles.enum';
+import { RolesGuard } from 'src/auth/guard/roles.guard';
+import { JwtStrategy } from 'src/auth/jwt-strategy';
 
 @Controller('studios/me/bookings')
+@UseGuards(JwtStrategy, RolesGuard)
 export class BookingsController {
   constructor(private readonly bookingsService: BookingsService) {}
 
