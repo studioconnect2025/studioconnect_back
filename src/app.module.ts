@@ -5,9 +5,10 @@ import { InstrumentosModule } from './instrumentos/instrumentos.module';
 import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
 import { StudiosModule } from './studios/studios.module';
-import { CategoriesModule } from './categories/categories.module';
+import { CategoriasModule } from './categorias/categorias.module';
 import { SeederModule } from './seeder/seeder.module';
-import { BookingsModule } from './bookings/bookings.module';
+import { BookingsModule } from './booking/bookings.module';
+import { FileUploadModule } from './file-upload/file-upload.module';
 
 @Module({
   imports: [
@@ -15,11 +16,13 @@ import { BookingsModule } from './bookings/bookings.module';
     UsersModule,
     AuthModule,
     StudiosModule,
-    CategoriesModule,
+    CategoriasModule,
     SeederModule,
-    BookingsModule
+    BookingsModule,
+    FileUploadModule,
   ],
   controllers: [AppController],
   providers: [AppService],
 })
 export class AppModule {}
+
