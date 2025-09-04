@@ -10,6 +10,7 @@ import {
 import { User } from '../../users/entities/user.entity';
 import { StudioStatus } from '../enum/studio-status.enum';
 import { Instruments } from 'src/instrumentos/entities/instrumento.entity';
+import { Booking } from 'src/bookings/dto/bookings.entity';
 
 @Entity('studios')
 export class Studio {
@@ -37,7 +38,7 @@ export class Studio {
   @Column({ nullable: true })
   email?: string;
 
-  @Column({ type: 'text', length: 500 })
+  @Column({ type: 'text' })
   description: string;
 
   @Column('text', { array: true, nullable: true })
@@ -66,6 +67,10 @@ export class Studio {
   })
   instruments: Instruments[];
 
+  // --- LÍNEA AÑADIDA ---
+  @OneToMany(() => Booking, (booking) => booking.studio)
+  bookings: Booking[];
+
   @CreateDateColumn()
   createdAt: Date;
 
@@ -79,3 +84,4 @@ export class Studio {
   })
   status: StudioStatus;
 }
+
