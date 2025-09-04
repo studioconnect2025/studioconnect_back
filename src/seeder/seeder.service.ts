@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import {
   BadRequestException,
   Injectable,
@@ -10,6 +9,7 @@ import { Instruments } from 'src/instrumentos/entities/instrumento.entity';
 import { DataSource, Repository } from 'typeorm';
 import { InstrumentData } from 'src/interface/interface-datajson';
 import rawData from '../data.json';
+import { Booking } from 'src/bookings/dto/bookings.entity';
 const data: InstrumentData[] = rawData;
 
 @Injectable()
