@@ -21,8 +21,8 @@ export class SeederService implements OnApplicationBootstrap {
     @InjectRepository(Instruments)
     private readonly instrumentsRepository: Repository<Instruments>,
 
-    @InjectRepository(Booking)
-    private readonly bookingRepository: Repository<Booking>,
+    @InjectRepository(Reservas)
+    private readonly reservasRepository: Repository<Reservas>,
   ) {}
 
   async onApplicationBootstrap() {
@@ -67,22 +67,22 @@ export class SeederService implements OnApplicationBootstrap {
   }
 
   async resetData(): Promise<string> {
-    const existingBooking = await this.bookingRepository.find();
+    const existingReservas = await this.reservasRepository.find();
 
-    if (existingBooking.length > 0) {
+    if (existingReservas.length > 0) {
       throw new BadRequestException(
-        'No se puede resetear: existen Booking registradas.',
+        'No se puede resetear: existen reservas registradas.',
       );
     }
 
     await this.datasource.query(`
       TRUNCATE TABLE
-        "Booking",
+        "RESERVAS",
         "INSTRUMENTS",
         "CATEGORIES"
       CASCADE
     `);
 
-    return 'Datos reseteados correctamente (sin Booking activas).';
+    return 'Datos reseteados correctamente (sin reservas activas).';
   }
 }

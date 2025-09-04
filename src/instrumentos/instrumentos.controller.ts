@@ -1,18 +1,48 @@
-import { Controller, Post, Get, Body, Req } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Get,
+  Body,
+  Req,
+  Put,
+  Param,
+  ParseUUIDPipe,
+  Delete,
+} from '@nestjs/common';
 import { CreateInstrumentDto } from './dto/create-instrumento.dto';
 import { InstrumentosService } from './instrumentos.service';
+import { UpdateInstrumentoDto } from './dto/update-instrumento.dto';
+import { Instruments } from './entities/instrumento.entity';
 
-@Controller('studios/me/instruments')
+@Controller('instruments')
 export class InstrumentsController {
   constructor(private readonly instrumentsService: InstrumentosService) {}
 
-  @Post()
-  create(@Body() dto: CreateInstrumentDto, @Req() req) {
-    return this.instrumentsService.createForStudio(req.user.id, dto);
+  @Get()
+  async findAllInstruments(@Req() req) {
+    return this.instrumentsService.findAllForStudio(req.user.id);
   }
 
-  @Get()
-  findAll(@Req() req) {
-    return this.instrumentsService.findAllForStudio(req.user.id);
+  @Get(':name')
+  async findOne(@Param('name') name: string): Promise<Instruments> {
+    return this.instrumentsService.findInstrumentById(name);
+  }
+
+  @Post('/create')
+  async createInstrument(@Body() dto: CreateInstrumentDto, @Req() req: any) {
+    return await this.instrumentsService.createForStudio(req.user.id, dto);
+  }
+
+  @Put(':id')
+  async updateProduct(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() updateInstrumentDto: UpdateInstrumentoDto,
+  ) {
+    return await this.productsService.updateProduct(id, updateInstrumentDto);
+  }
+
+  @Delete(':id')
+  async deleteInstrument(@Param('id', ParseUUIDPipe) id: string) {
+    return await this.instrumentsService.deleteInstrument(id);
   }
 }
