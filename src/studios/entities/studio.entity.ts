@@ -1,18 +1,20 @@
-import { 
-  Entity, 
-  PrimaryGeneratedColumn, 
-  Column, 
-  ManyToOne, 
-  CreateDateColumn, 
-  UpdateDateColumn 
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  CreateDateColumn,
+  UpdateDateColumn,
+  OneToMany,
 } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
 import { StudioStatus } from '../enum/studio-status.enum';
+import { Instruments } from 'src/instrumentos/entities/instrumento.entity';
 
 @Entity('studios')
 export class Studio {
-  @PrimaryGeneratedColumn()
-  id: number;
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
 
   @Column({ length: 100 })
   name: string;
@@ -38,7 +40,7 @@ export class Studio {
   @Column({ type: 'text', length: 500 })
   description: string;
 
-  @Column('text', { array: true, nullable: true }) 
+  @Column('text', { array: true, nullable: true })
   photos?: string[];
 
   @Column('text', { array: true, nullable: true })
@@ -59,6 +61,11 @@ export class Studio {
   @ManyToOne(() => User, (user) => user.studios, { eager: true })
   owner: User;
 
+  @OneToMany(() => Instruments, (instrument) => instrument.studio, {
+    cascade: true,
+  })
+  instruments: Instruments[];
+
   @CreateDateColumn()
   createdAt: Date;
 
@@ -66,10 +73,9 @@ export class Studio {
   updatedAt: Date;
 
   @Column({
-  type: 'enum',
-  enum: StudioStatus,
-  default: StudioStatus.PENDING,
-})
-status: StudioStatus;
-
+    type: 'enum',
+    enum: StudioStatus,
+    default: StudioStatus.PENDING,
+  })
+  status: StudioStatus;
 }

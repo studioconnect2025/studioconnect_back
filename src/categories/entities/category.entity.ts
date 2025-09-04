@@ -1,5 +1,5 @@
 import { Instruments } from 'src/instrumentos/entities/instrumento.entity';
-import { Column, Entity, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 
 @Entity({
   name: 'CATEGORIES',
@@ -16,8 +16,6 @@ export class Category {
   })
   name: string;
 
-  @ManyToOne(() => Instruments, (instruments) => instruments.category, {
-    eager: true,
-  })
-  instruments: Instruments;
+  @OneToMany(() => Instruments, (instruments) => instruments.category)
+  instruments: Instruments[];
 }

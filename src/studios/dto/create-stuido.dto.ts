@@ -1,12 +1,12 @@
-import { 
-  IsString, 
-  IsNotEmpty, 
-  MaxLength, 
-  IsOptional, 
-  IsEmail, 
-  IsArray, 
-  IsNumber, 
-  Min 
+import {
+  IsString,
+  IsNotEmpty,
+  MaxLength,
+  IsOptional,
+  IsEmail,
+  IsArray,
+  IsNumber,
+  Min,
 } from 'class-validator';
 
 export class CreateStudioDto {
@@ -40,7 +40,9 @@ export class CreateStudioDto {
 
   @IsString({ message: 'La descripción debe ser un texto' })
   @IsNotEmpty({ message: 'La descripción es obligatoria' })
-  @MaxLength(500, { message: 'La descripción no puede superar los 500 caracteres' })
+  @MaxLength(500, {
+    message: 'La descripción no puede superar los 500 caracteres',
+  })
   description: string;
 
   @IsArray({ message: 'El equipo disponible debe ser un arreglo de textos' })
@@ -58,7 +60,9 @@ export class CreateStudioDto {
   @IsOptional()
   dailyRate?: number;
 
-  @IsString({ message: 'La hora de apertura debe ser un texto en formato HH:mm' })
+  @IsString({
+    message: 'La hora de apertura debe ser un texto en formato HH:mm',
+  })
   @IsOptional()
   openingTime?: string;
 

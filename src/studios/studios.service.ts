@@ -6,10 +6,10 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Studio } from './entities/studio.entity';
-import { CreateStudioDto } from './dto/create-studio.dto';
+import { CreateStudioDto } from './dto/create-stuido.dto';
 import { UpdateStudioDto } from './dto/update-studio.dto';
-import { User } from '../users/user.entity';
-import { UserRole } from '../users/roles.enum'; // Corregida la ruta de importación
+import { User } from 'src/users/entities/user.entity';
+import { UserRole } from 'src/auth/enum/roles.enum'; // Corregida la ruta de importación
 import { FileUploadService } from '../file-upload/file-upload.service';
 
 @Injectable()
@@ -20,9 +20,31 @@ export class StudiosService {
     private readonly fileUploadService: FileUploadService,
   ) {}
 
+  // --- MÉTODOS PÚBLICOS ---
+
+  async findAll(): Promise<Studio[]> {
+    return this.studioRepository.find();
+  }
+
+  async findOne(id: string): Promise<Studio> {
+    const studio = await this.studioRepository.findOneBy({ id });
+    if (!studio) {
+      throw new NotFoundException(`Estudio con ID #${id} no encontrado.`);
+    }
+    return studio;
+  }
+
+  // --- MÉTODOS PROTEGIDOS (PARA DUEÑOS DE ESTUDIO) ---
+
+  async findMyStudios(user: User): Promise<Studio[]> {
+    return this.studioRepository.find({
+      where: { owner: { id: user.id } },
+    });
+  }
+
   async updateMyStudio(
     user: User,
-    studioId: number,
+    studioId: string,
     dto: UpdateStudioDto,
   ): Promise<Studio> {
     const studio = await this.studioRepository.findOne({
@@ -37,21 +59,24 @@ export class StudiosService {
     return this.studioRepository.save(studio);
   }
 
-  async findMyStudios(user: User): Promise<Studio[]> {
-    return this.studioRepository.find({
-      where: { owner: { id: user.id } },
-    });
-  }
-
-  async uploadPhoto(user, id: number, file: Express.Multer.File) {
+  async uploadPhoto(
+    user: User,
+    id: string,
+    file: Express.Multer.File,
+  ): Promise<Studio> {
     const studio = await this.studioRepository.findOne({
       where: { id },
       relations: ['owner'],
     });
 
-    if (!studio) throw new NotFoundException('Estudio no encontrado');
-    if (studio.owner.id !== user.id)
-      throw new ForbiddenException('No eres dueño de este estudio');
+    if (!studio) {
+      throw new NotFoundException('Estudio no encontrado');
+    }
+    if (studio.owner.id !== user.id) {
+      throw new ForbiddenException(
+        'No tienes permiso para modificar este estudio',
+      );
+    }
 
     const result = await this.fileUploadService.uploadFile(file);
 
@@ -73,4 +98,3 @@ export class StudiosService {
     return this.studioRepository.save(studio);
   }
 }
-
