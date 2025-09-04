@@ -21,10 +21,15 @@ export class BookingsService {
       relations: ['bookings', 'bookings.musician'],
     });
 
-    return studios.flatMap(studio => studio.bookings);
+    return studios.flatMap((studio) => studio.bookings);
   }
 
-  async createBooking(studioId: string, musicianId: string, startDate: Date, endDate: Date) {
+  async createBooking(
+    studioId: string,
+    musicianId: string,
+    startDate: Date,
+    endDate: Date,
+  ) {
     const studio = await this.studioRepo.findOne({ where: { id: studioId } });
     if (!studio) throw new Error('Studio no encontrado');
 
