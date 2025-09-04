@@ -4,14 +4,14 @@ import {
   Get,
   Body,
   Req,
-  Put,
+  // Put,
   Param,
-  ParseUUIDPipe,
-  Delete,
+  // ParseUUIDPipe,
+  // Delete,
 } from '@nestjs/common';
 import { CreateInstrumentDto } from './dto/create-instrumento.dto';
 import { InstrumentosService } from './instrumentos.service';
-import { UpdateInstrumentoDto } from './dto/update-instrumento.dto';
+// import { UpdateInstrumentoDto } from './dto/update-instrumento.dto';
 import { Instruments } from './entities/instrumento.entity';
 
 @Controller('instruments')
@@ -33,16 +33,16 @@ export class InstrumentsController {
     return await this.instrumentsService.createForStudio(req.user.id, dto);
   }
 
-  @Put(':id')
-  async updateProduct(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Body() updateInstrumentDto: UpdateInstrumentoDto,
-  ) {
-    return await this.productsService.updateProduct(id, updateInstrumentDto);
-  }
+  // @Put(':id')
+  // async updateProduct(
+  //   @Param('id', ParseUUIDPipe) id: string,
+  //   @Body() updateInstrumentDto: UpdateInstrumentoDto,
+  // ) {
+  //   return await this.productsService.updateProduct(id, updateInstrumentDto);
+  // }
 
-  @Delete(':id')
-  async deleteInstrument(@Param('id', ParseUUIDPipe) id: string) {
-    return await this.instrumentsService.deleteInstrument(id);
-  }
+  // @Delete(':id')
+  // async deleteInstrument(@Param('id', ParseUUIDPipe) id: string) {
+  //   return await this.instrumentsService.deleteInstrument(id);
+  // }
 }

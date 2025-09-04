@@ -8,8 +8,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Category } from 'src/categories/entities/category.entity';
 import { Instruments } from 'src/instrumentos/entities/instrumento.entity';
 import { DataSource, Repository } from 'typeorm';
-import rawData from '../data.json';
 import { InstrumentData } from 'src/interface/interface-datajson';
+import rawData from '../data.json';
 const data: InstrumentData[] = rawData;
 
 @Injectable()

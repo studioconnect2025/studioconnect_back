@@ -8,6 +8,7 @@ import { StudiosModule } from './studios/studios.module';
 import { CategoriesModule } from './categories/categories.module';
 import { SeederModule } from './seeder/seeder.module';
 import { BookingsModule } from './bookings/bookings.module';
+import { FileUploadModule } from './file-upload/file-upload.module';
 
 @Module({
   imports: [
@@ -17,7 +18,8 @@ import { BookingsModule } from './bookings/bookings.module';
     StudiosModule,
     CategoriesModule,
     SeederModule,
-    BookingsModule
+    BookingsModule,
+    FileUploadModule,
   ],
   controllers: [AppController],
   providers: [AppService],

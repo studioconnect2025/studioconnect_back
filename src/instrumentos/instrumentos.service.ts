@@ -8,6 +8,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Category } from 'src/categories/entities/category.entity';
 import { Repository } from 'typeorm';
 import { Instruments } from './entities/instrumento.entity';
+import { Studio } from 'src/studios/entities/studio.entity';
 
 @Injectable()
 export class InstrumentosService {
@@ -23,7 +24,6 @@ export class InstrumentosService {
     ownerId: string,
     createInstrumentoDto: CreateInstrumentDto,
   ): Promise<{ message: string; instrument: Instruments }> {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { categoryName, studioId, ...instrumentData } = createInstrumentoDto;
 
     // 1. Buscar estudio
