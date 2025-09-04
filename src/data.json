@@ -1,0 +1,92 @@
+[
+  {
+    "name": "Guitarra Acústica",
+    "description": "Instrumento de cuerdas popular en géneros como pop, rock y música folclórica.",
+    "price": 250.00,
+    "available": true,
+    "imgUrl": "https://example.com/guitarra-acustica.jpg",
+    "category": "Cuerdas",
+    "studio": "Studio A"
+  },
+  {
+    "name": "Bajo Eléctrico",
+    "description": "Instrumento grave de cuerdas usado en rock, funk y jazz.",
+    "price": 400.00,
+    "available": true,
+    "imgUrl": "https://example.com/bajo-electrico.jpg",
+    "category": "Cuerdas",
+    "studio": "Studio A"
+  },
+  {
+    "name": "Batería Acústica",
+    "description": "Conjunto de tambores y platillos utilizado en múltiples géneros musicales.",
+    "price": 1200.00,
+    "available": true,
+    "imgUrl": "https://example.com/bateria-acustica.jpg",
+    "category": "Percusión",
+    "studio": "Studio B"
+  },
+  {
+    "name": "Cajón Flamenco",
+    "description": "Instrumento de percusión de origen peruano muy usado en música latina y flamenca.",
+    "price": 180.00,
+    "available": true,
+    "imgUrl": "https://example.com/cajon-flamenco.jpg",
+    "category": "Percusión",
+    "studio": "Studio B"
+  },
+  {
+    "name": "Teclado Electrónico",
+    "description": "Instrumento versátil con sonidos de piano y sintetizador.",
+    "price": 600.00,
+    "available": true,
+    "imgUrl": "https://example.com/teclado-electronico.jpg",
+    "category": "Teclados",
+    "studio": "Studio C"
+  },
+  {
+    "name": "Piano Acústico",
+    "description": "Instrumento clásico de teclas usado en música clásica y contemporánea.",
+    "price": 3000.00,
+    "available": true,
+    "imgUrl": "https://example.com/piano-acustico.jpg",
+    "category": "Teclados",
+    "studio": "Studio C"
+  },
+  {
+    "name": "Trompeta",
+    "description": "Instrumento de viento metal usado en jazz, salsa y música clásica.",
+    "price": 800.00,
+    "available": true,
+    "imgUrl": "https://example.com/trompeta.jpg",
+    "category": "Viento-Metal",
+    "studio": "Studio D"
+  },
+  {
+    "name": "Saxofón",
+    "description": "Instrumento de viento madera con gran presencia en jazz y música moderna.",
+    "price": 950.00,
+    "available": true,
+    "imgUrl": "https://example.com/saxofon.jpg",
+    "category": "Viento-Madera",
+    "studio": "Studio D"
+  },
+  {
+    "name": "Flauta Traversa",
+    "description": "Instrumento de viento de tono agudo utilizado en música clásica y folclórica.",
+    "price": 350.00,
+    "available": true,
+    "imgUrl": "https://example.com/flauta-traversa.jpg",
+    "category": "Viento-Madera",
+    "studio": "Studio E"
+  },
+  {
+    "name": "Violín",
+    "description": "Instrumento de cuerdas frotadas esencial en música clásica y orquestal.",
+    "price": 500.00,
+    "available": true,
+    "imgUrl": "https://example.com/violin.jpg",
+    "category": "Cuerdas",
+    "studio": "Studio E"
+  }
+]
