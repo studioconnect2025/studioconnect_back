@@ -1,26 +1,89 @@
-import { Injectable } from '@nestjs/common';
-import { CreateInstrumentoDto } from './dto/create-instrumento.dto';
-import { UpdateInstrumentoDto } from './dto/update-instrumento.dto';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { CreateInstrumentDto } from './dto/create-instrumento.dto';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Category } from 'src/categories/entities/category.entity';
+import { Repository } from 'typeorm';
+import { Instruments } from './entities/instrumento.entity';
 
 @Injectable()
 export class InstrumentosService {
-  create(createInstrumentoDto: CreateInstrumentoDto) {
-    return 'This action adds a new instrumento';
+  constructor(
+    @InjectRepository(Category)
+    private readonly categoryRepository: Repository<Category>,
+    @InjectRepository(Instruments)
+    private readonly instrumentsRepository: Repository<Instruments>,
+    @InjectRepository(Studio)
+    private readonly studioRepository: Repository<Studio>,
+  ) {}
+  async createForStudio(
+    ownerId: string,
+    createInstrumentoDto: CreateInstrumentDto,
+  ): Promise<{ message: string; instrument: Instruments }> {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { categoryName, studioId, ...instrumentData } = createInstrumentoDto;
+
+    // 1. Buscar estudio
+    const studio = await this.studioRepository.findOne({
+      where: { id: studioId, owner: { id: ownerId } },
+    });
+    if (!studio) {
+      throw new NotFoundException(
+        `El estudio con id ${studioId} no existe o no pertenece al dueño autenticado `,
+      );
+    }
+    const newInstrumentExisting = await this.instrumentsRepository.findOne({
+      where: { name: instrumentData.name, studio: { id: studioId } },
+    });
+
+    if (newInstrumentExisting) {
+      throw new BadRequestException('Ya existe un instrumento con ese nombre');
+    }
+
+    let category = await this.categoryRepository.findOneBy({
+      name: categoryName,
+    });
+
+    if (!category) {
+      category = this.categoryRepository.create({
+        name: categoryName,
+      });
+      category = await this.categoryRepository.save(category);
+    }
+
+    const newInstrument = this.instrumentsRepository.create({
+      ...instrumentData,
+      category,
+      studio,
+    });
+
+    const newInstrumentDb =
+      await this.instrumentsRepository.save(newInstrument);
+
+    return {
+      message: `Producto ${newInstrument.name} agregado con exito`,
+      instrument: newInstrumentDb,
+    };
   }
 
-  findAll() {
-    return `This action returns all instrumentos`;
+  async findAllForStudio() {
+    return await this.instrumentsRepository.find({
+      relations: { category: true },
+    });
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} instrumento`;
-  }
+  async findInstrumentById(name: string): Promise<Instruments> {
+    const instrumentName = await this.instrumentsRepository.findOne({
+      where: { name },
+    });
 
-  update(id: number, updateInstrumentoDto: UpdateInstrumentoDto) {
-    return `This action updates a #${id} instrumento`;
-  }
+    if (!instrumentName) {
+      throw new NotFoundException(`Instrumento de ${name} no encontrado`);
+    }
 
-  remove(id: number) {
-    return `This action removes a #${id} instrumento`;
+    return instrumentName;
   }
 }
