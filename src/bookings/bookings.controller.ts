@@ -4,10 +4,10 @@ import { BookingsService } from './bookings.service';
 import { Roles } from 'src/auth/decorators/roles.decorator';
 import { UserRole } from 'src/auth/enum/roles.enum';
 import { RolesGuard } from 'src/auth/guard/roles.guard';
-import { JwtStrategy } from 'src/auth/jwt-strategy';
+import { AuthGuard } from '@nestjs/passport';
 
 @Controller('studios/me/bookings')
-@UseGuards(JwtStrategy, RolesGuard)
+@UseGuards(AuthGuard('jwt'), RolesGuard)
 export class BookingsController {
   constructor(private readonly bookingsService: BookingsService) {}
 

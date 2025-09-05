@@ -1,5 +1,5 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
-import { UsersService } from '../users/';
+import { UsersService } from 'src/users/users.service';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { LoginDto } from './dto/login.dto';
@@ -12,7 +12,7 @@ import { User } from 'src/users/entities/user.entity';
 export class AuthService {
   constructor(
     private usersService: UsersService,
-    private studiosService: StudiosService, 
+    private studiosService: StudiosService,
     private jwtService: JwtService,
   ) {}
 
@@ -26,7 +26,6 @@ export class AuthService {
       passwordHash: hashedPassword,
       role: UserRole.STUDIO_OWNER,
     });
-
 
     await this.studiosService.create(studioInfo, newUser);
 

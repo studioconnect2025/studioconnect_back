@@ -10,6 +10,7 @@ import {
 import { User } from '../../users/entities/user.entity';
 import { StudioStatus } from '../enum/studio-status.enum';
 import { Instruments } from 'src/instrumentos/entities/instrumento.entity';
+import { Booking } from 'src/bookings/dto/bookings.entity';
 
 @Entity('studios')
 export class Studio {
@@ -65,6 +66,9 @@ export class Studio {
     cascade: true,
   })
   instruments: Instruments[];
+
+  @OneToMany(() => Booking, (booking) => booking.studio)
+  bookings: Booking[];
 
   @CreateDateColumn()
   createdAt: Date;

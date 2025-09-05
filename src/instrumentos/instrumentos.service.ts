@@ -69,9 +69,10 @@ export class InstrumentosService {
     };
   }
 
-  async findAllForStudio() {
+  async findAllForStudio(studioId: string) {
     return await this.instrumentsRepository.find({
-      relations: { category: true },
+      where: { studio: { id: studioId } },
+      relations: ['studio'],
     });
   }
 
