@@ -72,11 +72,11 @@ export class InstrumentosService {
   async findAllForStudio(studioId: string) {
     return await this.instrumentsRepository.find({
       where: { studio: { id: studioId } },
-      relations: ['studio'],
+      relations: ['studio', 'category'],
     });
   }
 
-  async findInstrumentById(name: string): Promise<Instruments> {
+  async findInstrumentByName(name: string): Promise<Instruments> {
     const instrumentName = await this.instrumentsRepository.findOne({
       where: { name },
     });

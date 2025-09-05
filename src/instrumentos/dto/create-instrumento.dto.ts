@@ -24,7 +24,7 @@ export class CreateInstrumentDto {
    */
   @IsString()
   @IsNotEmpty()
-  description?: string;
+  description: string;
   /**
    * @description Esta propiedad debe ser el precio de alquiler del instrumento
    * @example 350.0
