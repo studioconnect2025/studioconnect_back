@@ -14,40 +14,41 @@ import { RolesGuard } from 'src/auth/guard/roles.guard';
 import { Roles } from 'src/auth/decorators/roles.decorator';
 import { UserRole } from 'src/auth/enum/roles.enum';
 import { CreateBookingDto } from './dto/create-booking';
+import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 
+@ApiTags('Bookings') // 👉 Agrupa todo en la sección Bookings
 @Controller('bookings')
 export class BookingsController {
   constructor(private readonly bookingsService: BookingsService) {}
 
   // --- RUTA PARA MÚSICOS ---
 
-  /**
-   * Crea una nueva reserva. Solo para usuarios con rol de Músico.
-   */
+  @ApiOperation({ summary: 'Crear una nueva reserva (solo músicos)' })
+  @ApiResponse({ status: 201, description: 'Reserva creada exitosamente' })
+  @ApiResponse({ status: 400, description: 'Datos inválidos para la reserva' })
+  @ApiResponse({ status: 401, description: 'No autenticado' })
   @Post()
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles(UserRole.MUSICIAN)
   create(@Body() createBookingDto: CreateBookingDto, @Request() req) {
-    // req.user contiene el payload del JWT del músico autenticado
     return this.bookingsService.create(createBookingDto, req.user);
   }
 
   // --- RUTAS PARA DUEÑOS DE ESTUDIO ---
 
-  /**
-   * Obtiene todas las reservas de los estudios que pertenecen al dueño autenticado.
-   */
+  @ApiOperation({ summary: 'Obtener todas las reservas de mis estudios (solo dueño)' })
+  @ApiResponse({ status: 200, description: 'Lista de reservas recuperada exitosamente' })
+  @ApiResponse({ status: 401, description: 'No autenticado' })
   @Get('owner/my-bookings')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles(UserRole.STUDIO_OWNER)
   getMyStudioBookings(@Request() req) {
-    // Se usa el ID del dueño del estudio desde el token para más seguridad
     return this.bookingsService.findOwnerBookings(req.user.id);
   }
 
-  /**
-   * Confirma una reserva específica. Solo para el dueño del estudio.
-   */
+  @ApiOperation({ summary: 'Confirmar una reserva (solo dueño)' })
+  @ApiResponse({ status: 200, description: 'Reserva confirmada' })
+  @ApiResponse({ status: 404, description: 'Reserva no encontrada' })
   @Patch('owner/:bookingId/confirm')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles(UserRole.STUDIO_OWNER)
@@ -55,13 +56,12 @@ export class BookingsController {
     @Param('bookingId') bookingId: string,
     @Request() req,
   ) {
-    // El servicio deberá verificar que el dueño (req.user) es propietario de esta reserva
     return this.bookingsService.confirmBooking(bookingId, req.user);
   }
 
-  /**
-   * Rechaza una reserva específica. Solo para el dueño del estudio.
-   */
+  @ApiOperation({ summary: 'Rechazar una reserva (solo dueño)' })
+  @ApiResponse({ status: 200, description: 'Reserva rechazada' })
+  @ApiResponse({ status: 404, description: 'Reserva no encontrada' })
   @Patch('owner/:bookingId/reject')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles(UserRole.STUDIO_OWNER)
@@ -69,7 +69,6 @@ export class BookingsController {
     @Param('bookingId') bookingId: string,
     @Request() req,
   ) {
-    // El servicio deberá verificar que el dueño (req.user) es propietario de esta reserva
     return this.bookingsService.rejectBooking(bookingId, req.user);
   }
 }

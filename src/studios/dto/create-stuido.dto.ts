@@ -8,65 +8,80 @@ import {
   IsNumber,
   Min,
 } from 'class-validator';
+import { ApiProperty } from '@nestjs/swagger';
 
 export class CreateStudioDto {
-  @IsString({ message: 'El nombre debe ser un texto' })
-  @IsNotEmpty({ message: 'El nombre es obligatorio' })
+  @ApiProperty({ description: 'Nombre del estudio', example: 'Estudio Sonido Pro' })
+  @IsString()
+  @IsNotEmpty()
   name: string;
 
-  @IsString({ message: 'El tipo de estudio debe ser un texto' })
-  @IsNotEmpty({ message: 'El tipo de estudio es obligatorio' })
+  @ApiProperty({ description: 'Tipo de estudio', example: 'Grabación' })
+  @IsString()
+  @IsNotEmpty()
   studioType: string;
 
-  @IsString({ message: 'La ciudad debe ser un texto' })
-  @IsNotEmpty({ message: 'La ciudad es obligatoria' })
+  @ApiProperty({ description: 'Ciudad donde se ubica el estudio', example: 'Monterrey' })
+  @IsString()
+  @IsNotEmpty()
   city: string;
 
-  @IsString({ message: 'La provincia debe ser un texto' })
-  @IsNotEmpty({ message: 'La provincia es obligatoria' })
+  @ApiProperty({ description: 'Provincia o estado del estudio', example: 'Nuevo León' })
+  @IsString()
+  @IsNotEmpty()
   province: string;
 
-  @IsString({ message: 'La dirección debe ser un texto' })
-  @IsNotEmpty({ message: 'La dirección es obligatoria' })
+  @ApiProperty({ description: 'Dirección del estudio', example: 'Av. Siempre Viva 123' })
+  @IsString()
+  @IsNotEmpty()
   address: string;
 
-  @IsString({ message: 'El teléfono debe ser un texto' })
+  @ApiProperty({ description: 'Teléfono de contacto', example: '+52 8112345678', required: false })
+  @IsString()
   @IsOptional()
   phoneNumber?: string;
 
-  @IsEmail({}, { message: 'El correo electrónico no es válido' })
+  @ApiProperty({ description: 'Correo de contacto', example: 'contacto@estudiopro.com', required: false })
+  @IsEmail()
   @IsOptional()
   email?: string;
 
-  @IsString({ message: 'La descripción debe ser un texto' })
-  @IsNotEmpty({ message: 'La descripción es obligatoria' })
-  @MaxLength(500, {
-    message: 'La descripción no puede superar los 500 caracteres',
-  })
+  @ApiProperty({ description: 'Descripción del estudio', example: 'Estudio con cabina profesional y acústica optimizada' })
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(500)
   description: string;
 
-  @IsArray({ message: 'El equipo disponible debe ser un arreglo de textos' })
-  @IsString({ each: true, message: 'Cada equipo debe ser un texto' })
+  @ApiProperty({
+    description: 'Equipo disponible en el estudio',
+    example: ['Consola Yamaha', 'Micrófono Shure SM7B'],
+    required: false,
+  })
+  @IsArray()
+  @IsString({ each: true })
   @IsOptional()
   availableEquipment?: string[];
 
-  @IsNumber({}, { message: 'La tarifa por hora debe ser un número' })
-  @Min(0, { message: 'La tarifa por hora no puede ser negativa' })
+  @ApiProperty({ description: 'Tarifa por hora', example: 200, required: false })
+  @IsNumber()
+  @Min(0)
   @IsOptional()
   hourlyRate?: number;
 
-  @IsNumber({}, { message: 'La tarifa por día debe ser un número' })
-  @Min(0, { message: 'La tarifa por día no puede ser negativa' })
+  @ApiProperty({ description: 'Tarifa por día', example: 1500, required: false })
+  @IsNumber()
+  @Min(0)
   @IsOptional()
   dailyRate?: number;
 
-  @IsString({
-    message: 'La hora de apertura debe ser un texto en formato HH:mm',
-  })
+  @ApiProperty({ description: 'Hora de apertura (HH:mm)', example: '09:00', required: false })
+  @IsString()
   @IsOptional()
   openingTime?: string;
 
-  @IsString({ message: 'La hora de cierre debe ser un texto en formato HH:mm' })
+  @ApiProperty({ description: 'Hora de cierre (HH:mm)', example: '21:00', required: false })
+  @IsString()
   @IsOptional()
   closingTime?: string;
 }
+

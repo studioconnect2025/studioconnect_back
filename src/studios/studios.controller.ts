@@ -19,54 +19,71 @@ import { RolesGuard } from 'src/auth/guard/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from 'src/auth/enum/roles.enum';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiConsumes } from '@nestjs/swagger';
 
+@ApiTags('Studios') // Grupo en Swagger
 @Controller('studios')
 export class StudiosController {
   constructor(private readonly studiosService: StudiosService) {}
 
-  // --- RUTAS PÚBLICAS (Para que cualquiera pueda buscar estudios) ---
+  // --- RUTAS PÚBLICAS ---
 
+  // La ruta para crear estudio ya no es necesaria aqui,
+  // por que la creacíon se maneja durante el registro en AuthController.
+  
   @Get()
+  @ApiOperation({ summary: 'Obtener todos los estudios' })
+  @ApiResponse({ status: 200, description: 'Lista de estudios obtenida con éxito.' })
   findAll() {
     return this.studiosService.findAll();
   }
 
   @Get(':id')
-  findOne(@Param('id', ParseIntPipe) id: number) {
+  @ApiOperation({ summary: 'Obtener un estudio por ID' })
+  @ApiResponse({ status: 200, description: 'Estudio encontrado correctamente.' })
+  @ApiResponse({ status: 404, description: 'Estudio no encontrado.' })
+  findOne(@Param('id', ParseIntPipe) id: string) {
     return this.studiosService.findOne(id);
   }
 
-  // --- RUTAS PROTEGIDAS (Solo para el Dueño de Estudio autenticado) ---
-
-  // La ruta para crear un estudio ya no es necesaria aquí,
-  // porque la creación se maneja durante el registro en AuthController.
-
+  // --- RUTAS PROTEGIDAS ---
   @Get('me/my-studios')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Obtener estudios del dueño autenticado' })
+  @ApiResponse({ status: 200, description: 'Lista de estudios del usuario autenticado.' })
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles(UserRole.STUDIO_OWNER)
   findMyStudios(@Request() req) {
-    // El servicio se encargará de encontrar los estudios asociados al req.user.id
     return this.studiosService.findMyStudios(req.user);
   }
 
   @Patch('me/:id')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Actualizar un estudio propio' })
+  @ApiResponse({ status: 200, description: 'Estudio actualizado correctamente.' })
+  @ApiResponse({ status: 403, description: 'No autorizado para actualizar este estudio.' })
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles(UserRole.STUDIO_OWNER)
   updateMyStudio(
-    @Param('id', ParseIntPipe) id: number,
+    @Param('id', ParseIntPipe) id: string,
     @Body() updateStudioDto: UpdateStudioDto,
     @Request() req,
   ) {
-    // El servicio verificará que el req.user sea el propietario del estudio con ese 'id'
+    //El servicio verificará que el req.user sea el propietario de el estudio con este "id"
     return this.studiosService.updateMyStudio(req.user, id, updateStudioDto);
   }
 
   @Post('me/:id/photos')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Subir foto de un estudio propio' })
+  @ApiConsumes('multipart/form-data')
+  @ApiResponse({ status: 201, description: 'Foto subida exitosamente.' })
+  @ApiResponse({ status: 403, description: 'No autorizado para subir fotos a este estudio.' })
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles(UserRole.STUDIO_OWNER)
   @UseInterceptors(FileInterceptor('file'))
   uploadPhoto(
-    @Param('id', ParseIntPipe) id: number,
+    @Param('id', ParseIntPipe) id: string,
     @UploadedFile() file: Express.Multer.File,
     @Request() req,
   ) {
@@ -74,4 +91,3 @@ export class StudiosController {
     return this.studiosService.uploadPhoto(req.user, id, file);
   }
 }
-
