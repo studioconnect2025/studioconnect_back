@@ -7,8 +7,10 @@ import {
   IsArray,
   IsNumber,
   Min,
+  IsEnum,
 } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
+import { StudioType } from '../enum/studio-type.enum';
 
 export class CreateStudioDto {
   @ApiProperty({ description: 'Nombre del estudio', example: 'Estudio Sonido Pro' })
@@ -16,10 +18,11 @@ export class CreateStudioDto {
   @IsNotEmpty()
   name: string;
 
-  @ApiProperty({ description: 'Tipo de estudio', example: 'Grabación' })
-  @IsString()
-  @IsNotEmpty()
-  studioType: string;
+  @ApiProperty({ description: 'Tipo de estudio', example: 'El tipo de estudio debe ser grabacion, ensayo o produccion' })
+   @IsEnum(StudioType, {
+    message: 'El tipo de estudio debe ser grabacion, ensayo o produccion',
+  })
+  studioType: StudioType;
 
   @ApiProperty({ description: 'Ciudad donde se ubica el estudio', example: 'Monterrey' })
   @IsString()

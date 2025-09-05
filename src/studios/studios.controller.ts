@@ -12,7 +12,7 @@ import {
   ParseIntPipe,
 } from '@nestjs/common';
 import { StudiosService } from './studios.service';
-import { CreateStudioDto } from './dto/create-stuido.dto';
+import { CreateStudioDto } from './dto/create-studio.dto';
 import { UpdateStudioDto } from './dto/update-studio.dto';
 import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard } from 'src/auth/guard/roles.guard';
@@ -24,13 +24,13 @@ import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiConsumes } from '
 @ApiTags('Studios') // Grupo en Swagger
 @Controller('studios')
 export class StudiosController {
-  constructor(private readonly studiosService: StudiosService) {}
+  constructor(private readonly studiosService: StudiosService) { }
 
   // --- RUTAS PÚBLICAS ---
 
   // La ruta para crear estudio ya no es necesaria aqui,
   // por que la creacíon se maneja durante el registro en AuthController.
-  
+
   @Get()
   @ApiOperation({ summary: 'Obtener todos los estudios' })
   @ApiResponse({ status: 200, description: 'Lista de estudios obtenida con éxito.' })
@@ -47,33 +47,30 @@ export class StudiosController {
   }
 
   // --- RUTAS PROTEGIDAS ---
-  @Get('me/my-studios')
+  @Get('me')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Obtener estudios del dueño autenticado' })
   @ApiResponse({ status: 200, description: 'Lista de estudios del usuario autenticado.' })
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles(UserRole.STUDIO_OWNER)
-  findMyStudios(@Request() req) {
-    return this.studiosService.findMyStudios(req.user);
+  findMyStudio(@Request() req) {
+    return this.studiosService.findMyStudio(req.user);
   }
 
-  @Patch('me/:id')
+  @Patch('me')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Actualizar un estudio propio' })
   @ApiResponse({ status: 200, description: 'Estudio actualizado correctamente.' })
   @ApiResponse({ status: 403, description: 'No autorizado para actualizar este estudio.' })
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles(UserRole.STUDIO_OWNER)
-  updateMyStudio(
-    @Param('id', ParseIntPipe) id: string,
-    @Body() updateStudioDto: UpdateStudioDto,
-    @Request() req,
-  ) {
-    //El servicio verificará que el req.user sea el propietario de el estudio con este "id"
-    return this.studiosService.updateMyStudio(req.user, id, updateStudioDto);
+  updateMyStudio(@Body() updateStudioDto: UpdateStudioDto, @Request() req) 
+  {
+     //El servicio verificará que el req.user sea el propietario de el estudio con este "id"
+    return this.studiosService.updateMyStudio(req.user, updateStudioDto);
   }
 
-  @Post('me/:id/photos')
+  @Post('me/photos')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Subir foto de un estudio propio' })
   @ApiConsumes('multipart/form-data')
@@ -83,11 +80,11 @@ export class StudiosController {
   @Roles(UserRole.STUDIO_OWNER)
   @UseInterceptors(FileInterceptor('file'))
   uploadPhoto(
-    @Param('id', ParseIntPipe) id: string,
-    @UploadedFile() file: Express.Multer.File,
-    @Request() req,
-  ) {
-    // El servicio verificará la propiedad antes de subir la foto
-    return this.studiosService.uploadPhoto(req.user, id, file);
-  }
+  @UploadedFile() file: Express.Multer.File,
+  @Request() req,
+)
+ {
+  // El servicio verificará la propiedad antes de subir la foto
+  return this.studiosService.uploadPhoto(req.user, file);
+}
 }

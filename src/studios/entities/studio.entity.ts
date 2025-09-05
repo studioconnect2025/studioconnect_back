@@ -6,11 +6,15 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   OneToMany,
+  JoinColumn,
+  OneToOne,
 } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
 import { StudioStatus } from '../enum/studio-status.enum';
 import { Instruments } from 'src/instrumentos/entities/instrumento.entity';
 import { Booking } from 'src/bookings/dto/bookings.entity';
+import { Room } from 'src/rooms/entities/room.entity';
+import { StudioType } from '../enum/studio-type.enum';
 
 @Entity('studios')
 export class Studio {
@@ -20,8 +24,12 @@ export class Studio {
   @Column({ length: 100 })
   name: string;
 
-  @Column({ length: 50 })
-  studioType: string;
+  @Column({
+    type: 'enum',
+    enum: StudioType,
+  })
+  studioType: StudioType;
+  //Actualizar en la tabla de base de datos 
 
   @Column()
   city: string;
@@ -59,7 +67,8 @@ export class Studio {
   @Column({ nullable: true })
   closingTime?: string;
 
-  @ManyToOne(() => User, (user) => user.studios, { eager: true })
+  @OneToOne(() => User, (user) => user.studio, { eager: true })
+  @JoinColumn()
   owner: User;
 
   @OneToMany(() => Instruments, (instrument) => instrument.studio, {
@@ -83,5 +92,8 @@ export class Studio {
     default: StudioStatus.PENDING,
   })
   status: StudioStatus;
+
+  @OneToMany(() => Room, (room) => room.studio, { cascade: true })
+  rooms: Room[];
 }
 

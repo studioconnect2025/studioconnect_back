@@ -6,7 +6,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Studio } from './entities/studio.entity';
-import { CreateStudioDto } from './dto/create-stuido.dto';
+import { CreateStudioDto } from './dto/create-studio.dto';
 import { UpdateStudioDto } from './dto/update-studio.dto';
 import { User } from 'src/users/entities/user.entity';
 import { UserRole } from 'src/auth/enum/roles.enum'; // Corregida la ruta de importación
@@ -18,7 +18,7 @@ export class StudiosService {
     @InjectRepository(Studio)
     private readonly studioRepository: Repository<Studio>,
     private readonly fileUploadService: FileUploadService,
-  ) {}
+  ) { }
 
   // --- MÉTODOS PÚBLICOS ---
 
@@ -36,53 +36,39 @@ export class StudiosService {
 
   // --- MÉTODOS PROTEGIDOS (PARA DUEÑOS DE ESTUDIO) ---
 
-  async findMyStudios(user: User): Promise<Studio[]> {
-    return this.studioRepository.find({
+  async findMyStudio(user: User): Promise<Studio> {
+    const studio = await this.studioRepository.findOne({
       where: { owner: { id: user.id } },
     });
+    if (!studio) throw new NotFoundException('No tienes un estudio aún');
+    return studio;
   }
 
-  async updateMyStudio(
-    user: User,
-    studioId: string,
-    dto: UpdateStudioDto,
-  ): Promise<Studio> {
+  async updateMyStudio(user: User, dto: UpdateStudioDto): Promise<Studio> {
     const studio = await this.studioRepository.findOne({
-      where: { id: studioId, owner: { id: user.id } },
+      where: { owner: { id: user.id } },
     });
 
     if (!studio) {
-      throw new NotFoundException('No se encontró el estudio o no es tuyo');
+      throw new NotFoundException('No se encontró tu estudio');
     }
 
     Object.assign(studio, dto);
     return this.studioRepository.save(studio);
   }
 
-  async uploadPhoto(
-    user: User,
-    id: string,
-    file: Express.Multer.File,
-  ): Promise<Studio> {
-    const studio = await this.studioRepository.findOne({
-      where: { id },
-      relations: ['owner'],
-    });
+async uploadPhoto(user: User, file: Express.Multer.File) {
+  const studio = await this.studioRepository.findOne({
+    where: { owner: { id: user.id } },
+  });
 
-    if (!studio) {
-      throw new NotFoundException('Estudio no encontrado');
-    }
-    if (studio.owner.id !== user.id) {
-      throw new ForbiddenException(
-        'No tienes permiso para modificar este estudio',
-      );
-    }
+  if (!studio) throw new NotFoundException('No tienes un estudio creado');
 
-    const result = await this.fileUploadService.uploadFile(file);
+  const result = await this.fileUploadService.uploadFile(file);
 
-    studio.photos = [...(studio.photos || []), result.secure_url];
-    return this.studioRepository.save(studio);
-  }
+  studio.photos = [...(studio.photos || []), result.secure_url];
+  return this.studioRepository.save(studio);
+}
 
   async create(createStudioDto: CreateStudioDto, user: User): Promise<Studio> {
     if (user.role !== UserRole.STUDIO_OWNER) {

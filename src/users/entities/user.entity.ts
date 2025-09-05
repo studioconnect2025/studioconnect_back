@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, OneToMany } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, OneToMany, OneToOne } from 'typeorm';
 import { UserRole } from '../../auth/enum/roles.enum';
 import { Studio } from '../../studios/entities/studio.entity';
 
@@ -20,7 +20,6 @@ export class User {
   })
   role: UserRole;
 
-  @OneToMany(() => Studio, (studio) => studio.owner)
-  studios: Studio[];
-  bookings: any;
+   @OneToOne(() => Studio, (studio) => studio.owner)
+  studio: Studio;
 }
