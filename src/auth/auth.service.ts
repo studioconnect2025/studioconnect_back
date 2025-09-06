@@ -68,37 +68,15 @@ export class AuthService {
     return this.generateJwtToken(user);
   }
 
-  async googleLogin(req) {
-    if (!req.user) {
-      throw new UnauthorizedException('Usuario de Google no encontrado.');
-    }
-
-    // Verifica si el usuario ya existe en tu base de datos
-    let user = await this.usersService.findOneByEmail(req.user.email);
-
-    if (!user) {
-      // Si no existe, crea un nuevo usuario
-      // Se genera una contraseña aleatoria ya que no es necesaria para el login con Google
-      const randomPassword = Math.random().toString(36).slice(-8);
-      const hashedPassword = await bcrypt.hash(randomPassword, 10);
-
-      user = await this.usersService.create({
-        email: req.user.email,
-        passwordHash: hashedPassword,
-        role: UserRole.MUSICIAN, // Los usuarios de Google son Músicos por defecto
-      });
-    }
-
-    // Genera y retorna el token JWT para el usuario
-    return this.generateJwtToken(user);
+  private async generateJwtToken(user: User) {
+    // Aseguramos que el ID en el token siempre esté en minúsculas
+    const payload = {
+      sub: user.id.toLowerCase(),
+      email: user.email,
+      role: user.role,
+    };
+    return {
+      access_token: await this.jwtService.signAsync(payload),
+    };
   }
-
- private async generateJwtToken(user: User) {
-  // Aseguramos que el ID en el token siempre esté en minúsculas
-  const payload = { sub: user.id.toLowerCase(), email: user.email, role: user.role };
-  return {
-    access_token: await this.jwtService.signAsync(payload),
-  };
 }
-}
-

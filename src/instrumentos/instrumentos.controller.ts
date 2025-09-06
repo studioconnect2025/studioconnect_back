@@ -6,6 +6,9 @@ import {
   Req,
   Put,
   Param,
+  Delete,
+  ParseUUIDPipe,
+  UseGuards,
   // ParseUUIDPipe,
   // Delete,
 } from '@nestjs/common';
@@ -13,6 +16,11 @@ import { CreateInstrumentDto } from './dto/create-instrumento.dto';
 import { InstrumentosService } from './instrumentos.service';
 import { UpdateInstrumentoDto } from './dto/update-instrumento.dto';
 import { Instruments } from './entities/instrumento.entity';
+import { AuthGuard } from '@nestjs/passport';
+import { ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { Roles } from 'src/auth/decorators/roles.decorator';
+import { UserRole } from 'src/auth/enum/roles.enum';
+import { RolesGuard } from 'src/auth/guard/roles.guard';
 
 @Controller('instruments')
 @UseGuards(AuthGuard('jwt'), RolesGuard)
@@ -21,8 +29,14 @@ export class InstrumentsController {
 
   @Get()
   @Roles(UserRole.STUDIO_OWNER)
-  @ApiOperation({ summary: 'Obtener todos los instrumentos del estudio del usuario autenticado' })
-  @ApiResponse({ status: 200, description: 'Lista de instrumentos obtenida con éxito.' })
+  @ApiOperation({
+    summary:
+      'Obtener todos los instrumentos del estudio del usuario autenticado',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Lista de instrumentos obtenida con éxito.',
+  })
   async findAllInstruments(@Req() req) {
     return this.instrumentsService.findAllForStudio(req.user.id);
   }
@@ -43,7 +57,10 @@ export class InstrumentsController {
   @Put(':id')
   @Roles(UserRole.STUDIO_OWNER)
   @ApiOperation({ summary: 'Actualizar un instrumento existente' })
-  @ApiResponse({ status: 200, description: 'Instrumento actualizado con éxito.' })
+  @ApiResponse({
+    status: 200,
+    description: 'Instrumento actualizado con éxito.',
+  })
   async updateInstrument(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() updateInstrumentDto: UpdateInstrumentoDto,
@@ -59,9 +76,12 @@ export class InstrumentsController {
   @Roles(UserRole.STUDIO_OWNER)
   @ApiOperation({ summary: 'Eliminar un instrumento' })
   @ApiResponse({ status: 200, description: 'Instrumento eliminado con éxito.' })
-  async deleteInstrument(@Param('id', ParseUUIDPipe) id: string, @Req() req: any) {
-     // Es necesario implementar el método `deleteInstrument` en el servicio
-     // y asegurarse de que el usuario (req.user) tiene permiso para eliminar este instrumento.
+  async deleteInstrument(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Req() req: any,
+  ) {
+    // Es necesario implementar el método `deleteInstrument` en el servicio
+    // y asegurarse de que el usuario (req.user) tiene permiso para eliminar este instrumento.
     // return await this.instrumentosService.deleteInstrument(id, req.user);
   }
 }

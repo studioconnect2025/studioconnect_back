@@ -2,7 +2,6 @@ import {
   Entity,
   PrimaryGeneratedColumn,
   Column,
-  ManyToOne,
   CreateDateColumn,
   UpdateDateColumn,
   OneToMany,
@@ -13,11 +12,8 @@ import { User } from '../../users/entities/user.entity';
 import { StudioStatus } from '../enum/studio-status.enum';
 import { Instruments } from 'src/instrumentos/entities/instrumento.entity';
 import { Booking } from 'src/bookings/dto/bookings.entity';
-<<<<<<< HEAD
-=======
 import { Room } from 'src/rooms/entities/room.entity';
 import { StudioType } from '../enum/studio-type.enum';
->>>>>>> origin/develop
 
 @Entity('studios')
 export class Studio {
@@ -27,12 +23,12 @@ export class Studio {
   @Column({ length: 100 })
   name: string;
 
- @Column({
-  type: 'enum',
-  enum: StudioType,
-  default: StudioType.GRABACION, // 👈 AÑADE ESTA LÍNEA
-})
-studioType: StudioType;
+  @Column({
+    type: 'enum',
+    enum: StudioType,
+    default: StudioType.GRABACION, // 👈 AÑADE ESTA LÍNEA
+  })
+  studioType: StudioType;
 
   @Column()
   city: string;
@@ -79,10 +75,7 @@ studioType: StudioType;
   })
   instruments: Instruments[];
 
-<<<<<<< HEAD
-=======
   // --- LÍNEA AÑADIDA ---
->>>>>>> origin/develop
   @OneToMany(() => Booking, (booking) => booking.studio)
   bookings: Booking[];
 
@@ -102,4 +95,3 @@ studioType: StudioType;
   @OneToMany(() => Room, (room) => room.studio, { cascade: true })
   rooms: Room[];
 }
-
