@@ -7,7 +7,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Studio } from './entities/studio.entity';
-import { CreateStudioDto } from './dto/create-stuido.dto';
+import { CreateStudioDto } from './dto/create-studio.dto';
 import { UpdateStudioDto } from './dto/update-studio.dto';
 import { User } from 'src/users/entities/user.entity';
 import { UserRole } from 'src/auth/enum/roles.enum';
@@ -19,7 +19,7 @@ export class StudiosService {
     @InjectRepository(Studio)
     private readonly studioRepository: Repository<Studio>,
     private readonly fileUploadService: FileUploadService,
-  ) {}
+  ) { }
 
   // --- MÉTODOS PÚBLICOS ---
 
@@ -48,11 +48,13 @@ export class StudiosService {
     studioId: string,
     dto: UpdateStudioDto,
   ): Promise<Studio> {
+    // Se busca el estudio por su ID, asegurando que pertenezca al usuario.
     const studio = await this.studioRepository.findOne({
       where: { id: studioId, owner: { id: user.id } },
     });
 
     if (!studio) {
+      // Mensaje de error más claro de la rama 'develop'.
       throw new NotFoundException('No se encontró el estudio o no te pertenece.');
     }
 
@@ -66,47 +68,4 @@ export class StudiosService {
     file: Express.Multer.File,
   ): Promise<Studio> {
     if (!file) {
-      throw new Error('El archivo no fue recibido por el servicio.');
-    }
-
-    const studio = await this.studioRepository.findOne({
-      where: { id },
-      relations: ['owner'],
-    });
-
-    if (!studio) {
-      throw new NotFoundException('Estudio no encontrado');
-    }
-    if (studio.owner.id !== user.id) {
-      throw new ForbiddenException(
-        'No tienes permiso para modificar este estudio',
-      );
-    }
-
-    try {
-      const result = await this.fileUploadService.uploadFile(file);
-      
-      studio.photos = [...(studio.photos || []), result.secure_url];
-      
-      return this.studioRepository.save(studio);
-
-    } catch (error) {
-      // Si Cloudinary falla, lanza un error interno del servidor
-      throw new InternalServerErrorException(`Error al subir la imagen: ${error.message}`);
-    }
-  }
-
-  async create(createStudioDto: CreateStudioDto, user: User): Promise<Studio> {
-    if (user.role !== UserRole.STUDIO_OWNER) {
-      throw new ForbiddenException(
-        'Solo los dueños de estudio pueden crear estudios',
-      );
-    }
-
-    const studio = this.studioRepository.create({
-      ...createStudioDto,
-      owner: user,
-    });
-    return this.studioRepository.save(studio);
-  }
-}
+      throw new

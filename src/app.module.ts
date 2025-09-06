@@ -11,6 +11,7 @@ import { CategoriesModule } from './categories/categories.module';
 import { SeederModule } from './seeder/seeder.module';
 import { BookingsModule } from './bookings/bookings.module';
 import { FileUploadModule } from './file-upload/file-upload.module';
+import { RoomsModule } from './rooms/rooms.module';
 
 @Module({
   imports: [
@@ -41,6 +42,7 @@ import { FileUploadModule } from './file-upload/file-upload.module';
     SeederModule,
     BookingsModule,
     FileUploadModule,
+    RoomsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

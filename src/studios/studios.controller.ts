@@ -12,14 +12,13 @@ import {
   ParseUUIDPipe,
 } from '@nestjs/common';
 import { StudiosService } from './studios.service';
-import { CreateStudioDto } from './dto/create-stuido.dto';
+import { CreateStudioDto } from './dto/create-studio.dto';
 import { UpdateStudioDto } from './dto/update-studio.dto';
 import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard } from 'src/auth/guard/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from 'src/auth/enum/roles.enum';
 import { FileInterceptor } from '@nestjs/platform-express';
-// CAMBIO AQUÍ: Se importa ApiBody
 import { 
   ApiTags, 
   ApiOperation, 
@@ -33,9 +32,12 @@ import {
 @ApiBearerAuth()
 @Controller('studios')
 export class StudiosController {
-  constructor(private readonly studiosService: StudiosService) {}
+  constructor(private readonly studiosService: StudiosService) { }
 
   // --- RUTAS PÚBLICAS ---
+
+  // La ruta para crear estudio ya no es necesaria aqui,
+  // porque la creacíon se maneja durante el registro en AuthController.
   
   @Get()
   @ApiOperation({ summary: 'Obtener todos los estudios' })
@@ -60,6 +62,7 @@ export class StudiosController {
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles(UserRole.STUDIO_OWNER)
   findMyStudios(@Request() req) {
+    // Se corrige el nombre del método para que coincida con el servicio
     return this.studiosService.findMyStudios(req.user);
   }
 
@@ -80,7 +83,6 @@ export class StudiosController {
   @Post('me/:id/photos')
   @ApiOperation({ summary: 'Subir foto de un estudio propio' })
   @ApiConsumes('multipart/form-data')
-  // CAMBIO AQUÍ: Se agrega @ApiBody para describir el campo del archivo
   @ApiBody({
     description: 'Archivo de imagen del estudio',
     schema: {
