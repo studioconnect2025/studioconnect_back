@@ -68,4 +68,46 @@ export class StudiosService {
     file: Express.Multer.File,
   ): Promise<Studio> {
     if (!file) {
-      throw new
+      throw new Error('El archivo no fue recibido por el servicio.');
+    }
+
+    const studio = await this.studioRepository.findOne({
+      where: { id },
+      relations: ['owner'],
+    });
+
+    if (!studio) {
+      throw new NotFoundException('Estudio no encontrado');
+    }
+    // Se añade esta verificación de seguridad crucial.
+    if (studio.owner.id !== user.id) {
+      throw new ForbiddenException('No tienes permiso para modificar este estudio.');
+    }
+
+    try {
+      const result = await this.fileUploadService.uploadFile(file);
+      
+      studio.photos = [...(studio.photos || []), result.secure_url];
+      
+      return this.studioRepository.save(studio);
+
+    } catch (error) {
+      // Se mantiene el manejo de errores robusto de 'develop'.
+      throw new InternalServerErrorException(`Error al subir la imagen: ${error.message}`);
+    }
+  }
+
+  async create(createStudioDto: CreateStudioDto, user: User): Promise<Studio> {
+    if (user.role !== UserRole.STUDIO_OWNER) {
+      throw new ForbiddenException(
+        'Solo los dueños de estudio pueden crear estudios',
+      );
+    }
+
+    const studio = this.studioRepository.create({
+      ...createStudioDto,
+      owner: user,
+    });
+    return this.studioRepository.save(studio);
+  }
+}

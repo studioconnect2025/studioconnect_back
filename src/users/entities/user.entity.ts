@@ -22,4 +22,5 @@ export class User {
 
    @OneToOne(() => Studio, (studio) => studio.owner)
   studio: Studio;
+  bookings: any;
 }
