@@ -10,9 +10,11 @@ import {
   IsNumber,
   Min,
   MaxLength,
+  IsEnum, // CAMBIO AQUÍ: Se importa IsEnum
 } from 'class-validator';
+import { StudioType } from 'src/studios/enum/studio-type.enum'; // CAMBIO AQUÍ: Se importa el Enum
 
-
+// La clase OwnerInfoDto no necesita cambios
 export class OwnerInfoDto {
   @IsString()
   @IsNotEmpty()
@@ -35,20 +37,22 @@ export class OwnerInfoDto {
   password: string;
 }
 
-
 class StudioInfoDto {
   @IsString()
   @IsNotEmpty()
   name: string;
   
-  @IsString()
-  @IsNotEmpty()
-  studioType: string;
+  // CAMBIO AQUÍ: Se reemplaza IsString por IsEnum y se usa el tipo StudioType
+  @IsEnum(StudioType, {
+    message: 'El tipo de estudio debe ser grabacion, ensayo o produccion',
+  })
+  studioType: StudioType;
 
   @IsString()
   @IsNotEmpty()
   city: string;
 
+  // ... el resto de las propiedades de StudioInfoDto se quedan igual ...
   @IsString()
   @IsNotEmpty()
   province: string;
