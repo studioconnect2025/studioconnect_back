@@ -43,10 +43,11 @@ class StudioInfoDto {
   name: string;
 
   // CAMBIO AQUÍ: Se reemplaza IsString por IsEnum y se usa el tipo StudioType
+  @IsOptional()
   @IsEnum(StudioType, {
     message: 'El tipo de estudio debe ser grabacion, ensayo o produccion',
   })
-  studioType: StudioType;
+  studioType?: StudioType;
 
   @IsString()
   @IsNotEmpty()
