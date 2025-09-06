@@ -2,7 +2,7 @@ import { Controller, Post, Body, HttpCode, HttpStatus, Get, UseGuards, Req } fro
 import { AuthService } from './auth.service';
 import { StudioOwnerRegisterDto } from 'src/users/dto/owner.dto';
 import { LoginDto } from './dto/login.dto';
-import { ApiBody, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiBody, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
 
 @ApiTags('Auth')
@@ -57,7 +57,6 @@ export class AuthController {
   }
 
   // --- Rutas para Google OAuth ---
-
   @ApiOperation({ summary: 'Iniciar sesión con Google (Inicia el flujo)' })
   @ApiResponse({ status: 302, description: 'Redirige al login de Google.' })
   @Get('google/login')
@@ -73,5 +72,14 @@ export class AuthController {
   handleGoogleCallback(@Req() req) {
     return this.authService.googleLogin(req);
   }
-}
 
+  @Post('logout')
+  @ApiBearerAuth()
+  @UseGuards(AuthGuard('jwt'))
+  @HttpCode(HttpStatus.OK)
+  async logout(@Req() req) {
+    // El req.user contiene el payload del token y el token mismo
+    const token = req.headers.authorization.split(' ')[1];
+    return this.authService.logout(token);
+  }
+}
