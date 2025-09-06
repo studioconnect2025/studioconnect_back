@@ -1,71 +1,128 @@
-import { Injectable } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+  BadRequestException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { LessThan, MoreThan, Repository } from 'typeorm';
 import { Studio } from 'src/studios/entities/studio.entity';
-import { Booking, BookingStatus } from './dto/bookings.entity';
+import { Booking } from './dto/bookings.entity';
+import { CreateBookingDto } from './dto/create-booking';
 import { User } from 'src/users/entities/user.entity';
+import { BookingStatus } from './enum/enums-bookings';
 
 @Injectable()
 export class BookingsService {
   constructor(
     @InjectRepository(Booking)
-    private readonly bookingRepo: Repository<Booking>,
+    private readonly bookingRepository: Repository<Booking>,
     @InjectRepository(Studio)
-    private readonly studioRepo: Repository<Studio>,
-    @InjectRepository(User)
-    private readonly userRepo: Repository<User>,
+    private readonly studioRepository: Repository<Studio>,
   ) {}
 
-  // Devuelve todas las reservas de los estudios de un dueño
-  async findOwnerBookings(ownerId: string): Promise<Booking[]> {
-    const studios = await this.studioRepo.find({
-      where: { owner: { id: ownerId } },
-      relations: ['bookings', 'bookings.musician'],
+  /**
+   * Crea una nueva reserva para un músico.
+   */
+  async create(
+    createBookingDto: CreateBookingDto,
+    musician: User,
+  ): Promise<Booking> {
+    const { studioId, startTime, endTime } = createBookingDto;
+
+    if (new Date(startTime) >= new Date(endTime)) {
+      throw new BadRequestException(
+        'La fecha de fin debe ser posterior a la fecha de inicio.',
+      );
+    }
+
+    const studio = await this.studioRepository.findOneBy({ id: studioId });
+    if (!studio) {
+      throw new NotFoundException(`Estudio con ID #${studioId} no encontrado.`);
+    }
+
+    // Lógica de validación de disponibilidad
+    const conflictingBooking = await this.bookingRepository.findOne({
+      where: {
+        studio: { id: studioId },
+        status: BookingStatus.CONFIRMED, // Solo chocar con reservas confirmadas
+        startTime: LessThan(endTime),
+        endTime: MoreThan(startTime),
+      },
     });
 
+    if (conflictingBooking) {
+      throw new ConflictException(
+        'El horario seleccionado ya no está disponible.',
+      );
+    }
+
+    const newBooking = this.bookingRepository.create({
+      studio,
+      musician,
+      startTime,
+      endTime,
+      // El estado PENDING se asigna por defecto desde la entidad
+    });
+
+    return this.bookingRepository.save(newBooking);
+  }
+
+  /**
+   * Devuelve todas las reservas de los estudios que pertenecen a un dueño.
+   */
+  async findOwnerBookings(ownerId: string): Promise<Booking[]> {
+    const studios = await this.studioRepository.find({
+      where: { owner: { id: ownerId } },
+      relations: ['bookings', 'bookings.musician'], // Carga las reservas y los músicos asociados
+    });
+
+    // Aplanar el array de arrays de reservas en un solo array
     return studios.flatMap((studio) => studio.bookings);
   }
 
-  async createBooking(
-    studioId: string,
-    musicianId: string,
-    startDate: Date,
-    endDate: Date,
-  ) {
-    const studio = await this.studioRepo.findOne({ where: { id: studioId } });
-    if (!studio) throw new Error('Studio no encontrado');
-
-    const musician = await this.userRepo.findOne({ where: { id: musicianId } });
-    if (!musician) throw new Error('Músico no encontrado');
-
-    const booking = this.bookingRepo.create({
-      studio,
-      musician,
-      startDate,
-      endDate,
-      status: BookingStatus.PENDIENTE,
-    });
-
-    return this.bookingRepo.save(booking);
+  /**
+   * Confirma una reserva específica, verificando la propiedad.
+   */
+  async confirmBooking(bookingId: string, owner: User): Promise<Booking> {
+    const booking = await this.verifyBookingOwnership(bookingId, owner.id);
+    booking.status = BookingStatus.CONFIRMED;
+    return this.bookingRepository.save(booking);
   }
 
-  async confirmBooking(bookingId: string): Promise<Booking> {
-    const booking = await this.bookingRepo.findOne({
-      where: { id: bookingId },
-    });
-    if (!booking) throw new Error('Reserva no encontrada');
-
-    booking.status = BookingStatus.CONFIRMADA;
-    return this.bookingRepo.save(booking);
+  /**
+   * Rechaza una reserva específica, verificando la propiedad.
+   */
+  async rejectBooking(bookingId: string, owner: User): Promise<Booking> {
+    const booking = await this.verifyBookingOwnership(bookingId, owner.id);
+    booking.status = BookingStatus.REJECTED;
+    return this.bookingRepository.save(booking);
   }
 
-  async rejectBooking(bookingId: string): Promise<Booking> {
-    const booking = await this.bookingRepo.findOne({
+  /**
+   * Método privado para verificar que una reserva pertenece a un estudio del dueño.
+   */
+  private async verifyBookingOwnership(
+    bookingId: string,
+    ownerId: string,
+  ): Promise<Booking> {
+    const booking = await this.bookingRepository.findOne({
       where: { id: bookingId },
+      relations: ['studio', 'studio.owner'], // Cargar el estudio y su dueño
     });
-    if (!booking) throw new Error('Reserva no encontrada');
 
-    booking.status = BookingStatus.RECHAZADA;
-    return this.bookingRepo.save(booking);
+    if (!booking) {
+      throw new NotFoundException(`Reserva con ID #${bookingId} no encontrada.`);
+    }
+
+    if (booking.studio.owner.id !== ownerId) {
+      throw new ForbiddenException(
+        'No tienes permiso para gestionar esta reserva.',
+      );
+    }
+
+    return booking;
   }
 }
+

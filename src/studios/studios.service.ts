@@ -2,14 +2,15 @@ import {
   Injectable,
   NotFoundException,
   ForbiddenException,
+  InternalServerErrorException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Studio } from './entities/studio.entity';
-import { CreateStudioDto } from './dto/create-stuido.dto';
+import { CreateStudioDto } from './dto/create-studio.dto';
 import { UpdateStudioDto } from './dto/update-studio.dto';
 import { User } from 'src/users/entities/user.entity';
-import { UserRole } from 'src/auth/enum/roles.enum'; // Corregida la ruta de importación
+import { UserRole } from 'src/auth/enum/roles.enum';
 import { FileUploadService } from '../file-upload/file-upload.service';
 
 @Injectable()
@@ -18,7 +19,7 @@ export class StudiosService {
     @InjectRepository(Studio)
     private readonly studioRepository: Repository<Studio>,
     private readonly fileUploadService: FileUploadService,
-  ) {}
+  ) { }
 
   // --- MÉTODOS PÚBLICOS ---
 
@@ -47,12 +48,14 @@ export class StudiosService {
     studioId: string,
     dto: UpdateStudioDto,
   ): Promise<Studio> {
+    // Se busca el estudio por su ID, asegurando que pertenezca al usuario.
     const studio = await this.studioRepository.findOne({
       where: { id: studioId, owner: { id: user.id } },
     });
 
     if (!studio) {
-      throw new NotFoundException('No se encontró el estudio o no es tuyo');
+      // Mensaje de error más claro de la rama 'develop'.
+      throw new NotFoundException('No se encontró el estudio o no te pertenece.');
     }
 
     Object.assign(studio, dto);
@@ -64,6 +67,10 @@ export class StudiosService {
     id: string,
     file: Express.Multer.File,
   ): Promise<Studio> {
+    if (!file) {
+      throw new Error('El archivo no fue recibido por el servicio.');
+    }
+
     const studio = await this.studioRepository.findOne({
       where: { id },
       relations: ['owner'],
@@ -72,16 +79,22 @@ export class StudiosService {
     if (!studio) {
       throw new NotFoundException('Estudio no encontrado');
     }
+    // Se añade esta verificación de seguridad crucial.
     if (studio.owner.id !== user.id) {
-      throw new ForbiddenException(
-        'No tienes permiso para modificar este estudio',
-      );
+      throw new ForbiddenException('No tienes permiso para modificar este estudio.');
     }
 
-    const result = await this.fileUploadService.uploadFile(file);
+    try {
+      const result = await this.fileUploadService.uploadFile(file);
+      
+      studio.photos = [...(studio.photos || []), result.secure_url];
+      
+      return this.studioRepository.save(studio);
 
-    studio.photos = [...(studio.photos || []), result.secure_url];
-    return this.studioRepository.save(studio);
+    } catch (error) {
+      // Se mantiene el manejo de errores robusto de 'develop'.
+      throw new InternalServerErrorException(`Error al subir la imagen: ${error.message}`);
+    }
   }
 
   async create(createStudioDto: CreateStudioDto, user: User): Promise<Studio> {

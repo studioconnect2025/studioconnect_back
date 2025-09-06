@@ -9,5 +9,6 @@ import { FileUploadModule } from '../file-upload/file-upload.module';
   imports: [TypeOrmModule.forFeature([Studio]), FileUploadModule],
   controllers: [StudiosController],
   providers: [StudiosService],
+  exports: [StudiosService], 
 })
 export class StudiosModule {}

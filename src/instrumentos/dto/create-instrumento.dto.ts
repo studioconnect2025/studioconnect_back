@@ -8,55 +8,63 @@ import {
   MaxLength,
   Min,
 } from 'class-validator';
+import { ApiProperty } from '@nestjs/swagger';
 
 export class CreateInstrumentDto {
-  /**
-   * @description Esta propiedad debe ser el nombre del instrumento
-   * @example "guitarra electrica"
-   */
+  @ApiProperty({
+    description: 'Nombre del instrumento',
+    example: 'Guitarra eléctrica',
+  })
   @IsString()
   @IsNotEmpty()
   @MaxLength(50)
   name: string;
-  /**
-   * @description Esta propiedad debe ser la descripción del instrumento
-   * @example "Guitarra marca x y sus caracteristicas"
-   */
+
+  @ApiProperty({
+    description: 'Descripción del instrumento',
+    example: 'Guitarra marca Fender con pastillas dobles',
+  })
   @IsString()
   @IsNotEmpty()
-  description: string;
-  /**
-   * @description Esta propiedad debe ser el precio de alquiler del instrumento
-   * @example 350.0
-   */
+  description?: string;
+
+  @ApiProperty({
+    description: 'Precio de alquiler del instrumento',
+    example: 350.0,
+  })
   @IsNumber()
   @Min(0)
   price: number;
-  /**
-   * @description Esta propiedad indica si el instrumento está disponible
-   * @example true
-   */
+
+  @ApiProperty({
+    description: 'Disponibilidad del instrumento',
+    example: true,
+  })
   @IsBoolean()
   @IsNotEmpty()
   available: boolean;
-  /**
-   * @description Esta propiedad debe ser la imagen del instrumento
-   * @example ""
-   */
+
+  @ApiProperty({
+    description: 'URL de la imagen del instrumento',
+    example: 'https://misfotos.com/guitarra.png',
+    required: false,
+  })
   @IsString()
   @IsOptional()
   imgUrl?: string;
-  /**
-   * @description Esta propiedad debe ser el nombre de la categoria
-   * @example "Instrumento de cuerda."
-   */
+
+  @ApiProperty({
+    description: 'Categoría del instrumento',
+    example: 'Instrumento de cuerda',
+  })
   @IsString()
   @IsNotEmpty()
   categoryName: string;
-  /**
-   * @description Id del estudio al que pertenece el instrumento
-   * @example "8f8b6e34-12ab-4c9e-b6d5-f9a123456789"
-   */
+
+  @ApiProperty({
+    description: 'ID del estudio al que pertenece el instrumento',
+    example: '8f8b6e34-12ab-4c9e-b6d5-f9a123456789',
+  })
   @IsUUID()
   @IsNotEmpty()
   studioId: string;

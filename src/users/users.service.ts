@@ -4,7 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { ILike, Repository } from 'typeorm';
 import { User } from './entities/user.entity';
 import { CreateUserDto } from './dto/create-user.dto';
 
@@ -32,11 +32,12 @@ export class UsersService {
     return user ?? undefined;
   }
 
-  async findOneById(id: string): Promise<User> {
-    const user = await this.usersRepository.findOneBy({ id });
-    if (!user) {
-      throw new NotFoundException(`Usuario con ID "${id}" no encontrado.`);
-    }
-    return user;
+   async findOneById(id: string): Promise<User> {
+  // 👇 Cambia esto de vuelta a la versión simple
+  const user = await this.usersRepository.findOneBy({ id: id }); 
+  if (!user) {
+    throw new NotFoundException(`Usuario con ID "${id}" no encontrado.`);
   }
+  return user;
+}
 }

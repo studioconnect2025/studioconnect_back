@@ -6,11 +6,18 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   OneToMany,
+  JoinColumn,
+  OneToOne,
 } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
 import { StudioStatus } from '../enum/studio-status.enum';
 import { Instruments } from 'src/instrumentos/entities/instrumento.entity';
 import { Booking } from 'src/bookings/dto/bookings.entity';
+<<<<<<< HEAD
+=======
+import { Room } from 'src/rooms/entities/room.entity';
+import { StudioType } from '../enum/studio-type.enum';
+>>>>>>> origin/develop
 
 @Entity('studios')
 export class Studio {
@@ -20,8 +27,12 @@ export class Studio {
   @Column({ length: 100 })
   name: string;
 
-  @Column({ length: 50 })
-  studioType: string;
+ @Column({
+  type: 'enum',
+  enum: StudioType,
+  default: StudioType.GRABACION, // 👈 AÑADE ESTA LÍNEA
+})
+studioType: StudioType;
 
   @Column()
   city: string;
@@ -38,7 +49,7 @@ export class Studio {
   @Column({ nullable: true })
   email?: string;
 
-  @Column({ type: 'text', length: 500 })
+  @Column({ type: 'text' })
   description: string;
 
   @Column('text', { array: true, nullable: true })
@@ -59,7 +70,8 @@ export class Studio {
   @Column({ nullable: true })
   closingTime?: string;
 
-  @ManyToOne(() => User, (user) => user.studios, { eager: true })
+  @OneToOne(() => User, (user) => user.studio, { eager: true })
+  @JoinColumn()
   owner: User;
 
   @OneToMany(() => Instruments, (instrument) => instrument.studio, {
@@ -67,6 +79,10 @@ export class Studio {
   })
   instruments: Instruments[];
 
+<<<<<<< HEAD
+=======
+  // --- LÍNEA AÑADIDA ---
+>>>>>>> origin/develop
   @OneToMany(() => Booking, (booking) => booking.studio)
   bookings: Booking[];
 
@@ -82,4 +98,8 @@ export class Studio {
     default: StudioStatus.PENDING,
   })
   status: StudioStatus;
+
+  @OneToMany(() => Room, (room) => room.studio, { cascade: true })
+  rooms: Room[];
 }
+

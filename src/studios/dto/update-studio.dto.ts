@@ -8,66 +8,88 @@ import {
   Min,
   IsEnum,
 } from 'class-validator';
+import { ApiPropertyOptional } from '@nestjs/swagger';
 import { StudioStatus } from '../enum/studio-status.enum';
 
 export class UpdateStudioDto {
-  @IsString({ message: 'El nombre debe ser un texto' })
+  @ApiPropertyOptional({ description: 'Nombre del estudio', example: 'Estudio Actualizado' })
+  @IsString()
   @IsOptional()
   name?: string;
 
-  @IsString({ message: 'El tipo de estudio debe ser un texto' })
+  @ApiPropertyOptional({ description: 'Tipo de estudio', example: 'Ensayo' })
+  @IsString()
   @IsOptional()
   studioType?: string;
 
+  @ApiPropertyOptional({ description: 'Ciudad del estudio', example: 'Guadalajara' })
   @IsString()
   @IsOptional()
   city?: string;
 
+  @ApiPropertyOptional({ description: 'Provincia del estudio', example: 'Jalisco' })
   @IsString()
   @IsOptional()
   province?: string;
 
+  @ApiPropertyOptional({ description: 'Dirección del estudio', example: 'Calle Nueva 456' })
   @IsString()
   @IsOptional()
   address?: string;
 
+  @ApiPropertyOptional({ description: 'Teléfono de contacto', example: '+52 3312345678' })
   @IsString()
   @IsOptional()
   phoneNumber?: string;
 
-  @IsEmail({}, { message: 'Debe ser un email válido' })
+  @ApiPropertyOptional({ description: 'Correo electrónico', example: 'nuevo@estudio.com' })
+  @IsEmail()
   @IsOptional()
   email?: string;
 
+  @ApiPropertyOptional({ description: 'Descripción del estudio', example: 'Nueva descripción del estudio' })
   @IsString()
-  @MaxLength(500, { message: 'La descripción no puede tener más de 500 caracteres' })
+  @MaxLength(500)
   @IsOptional()
   description?: string;
 
-  @IsArray({ message: 'Los equipos disponibles deben ser un arreglo de strings' })
+  @ApiPropertyOptional({
+    description: 'Equipo disponible actualizado',
+    example: ['Micrófono Neumann', 'Batería Pearl'],
+  })
+  @IsArray()
   @IsString({ each: true })
   @IsOptional()
   availableEquipment?: string[];
 
+  @ApiPropertyOptional({ description: 'Tarifa por hora', example: 250 })
   @IsNumber()
   @Min(0)
   @IsOptional()
   hourlyRate?: number;
 
+  @ApiPropertyOptional({ description: 'Tarifa por día', example: 1800 })
   @IsNumber()
   @Min(0)
   @IsOptional()
   dailyRate?: number;
 
+  @ApiPropertyOptional({ description: 'Hora de apertura', example: '08:00' })
   @IsString()
   @IsOptional()
   openingTime?: string;
 
+  @ApiPropertyOptional({ description: 'Hora de cierre', example: '22:00' })
   @IsString()
   @IsOptional()
   closingTime?: string;
 
-  @IsEnum(StudioStatus, { message: 'El estado debe ser: approved, pending o rejected' })
+  @ApiPropertyOptional({
+    description: 'Estado del estudio',
+    example: 'approved',
+    enum: StudioStatus,
+  })
+  @IsEnum(StudioStatus)
   @IsOptional()
   status?: StudioStatus;
 }
