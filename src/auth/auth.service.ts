@@ -60,7 +60,7 @@ export class AuthService {
       user = await this.usersService.create({
         email: req.user.email,
         passwordHash: hashedPassword,
-        role: UserRole.MUSICIAN, // Los usuarios de Google son Músicos por defecto
+        role: UserRole.STUDIO_OWNER, // Los usuarios de Google son Músicos por defecto
       });
     }
 
