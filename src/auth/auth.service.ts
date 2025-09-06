@@ -68,12 +68,15 @@ export class AuthService {
     return this.generateJwtToken(user);
   }
 
- private async generateJwtToken(user: User) {
-  // Aseguramos que el ID en el token siempre esté en minúsculas
-  const payload = { sub: user.id.toLowerCase(), email: user.email, role: user.role };
-  return {
-    access_token: await this.jwtService.signAsync(payload),
-  };
+  private async generateJwtToken(user: User) {
+    // Aseguramos que el ID en el token siempre esté en minúsculas
+    const payload = {
+      sub: user.id.toLowerCase(),
+      email: user.email,
+      role: user.role,
+    };
+    return {
+      access_token: await this.jwtService.signAsync(payload),
+    };
+  }
 }
-}
-
