@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   ForbiddenException,
+  InternalServerErrorException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -9,7 +10,7 @@ import { Studio } from './entities/studio.entity';
 import { CreateStudioDto } from './dto/create-stuido.dto';
 import { UpdateStudioDto } from './dto/update-studio.dto';
 import { User } from 'src/users/entities/user.entity';
-import { UserRole } from 'src/auth/enum/roles.enum'; // Corregida la ruta de importación
+import { UserRole } from 'src/auth/enum/roles.enum';
 import { FileUploadService } from '../file-upload/file-upload.service';
 
 @Injectable()
@@ -52,7 +53,7 @@ export class StudiosService {
     });
 
     if (!studio) {
-      throw new NotFoundException('No se encontró el estudio o no es tuyo');
+      throw new NotFoundException('No se encontró el estudio o no te pertenece.');
     }
 
     Object.assign(studio, dto);
@@ -64,6 +65,10 @@ export class StudiosService {
     id: string,
     file: Express.Multer.File,
   ): Promise<Studio> {
+    if (!file) {
+      throw new Error('El archivo no fue recibido por el servicio.');
+    }
+
     const studio = await this.studioRepository.findOne({
       where: { id },
       relations: ['owner'],
@@ -78,10 +83,17 @@ export class StudiosService {
       );
     }
 
-    const result = await this.fileUploadService.uploadFile(file);
+    try {
+      const result = await this.fileUploadService.uploadFile(file);
+      
+      studio.photos = [...(studio.photos || []), result.secure_url];
+      
+      return this.studioRepository.save(studio);
 
-    studio.photos = [...(studio.photos || []), result.secure_url];
-    return this.studioRepository.save(studio);
+    } catch (error) {
+      // Si Cloudinary falla, lanza un error interno del servidor
+      throw new InternalServerErrorException(`Error al subir la imagen: ${error.message}`);
+    }
   }
 
   async create(createStudioDto: CreateStudioDto, user: User): Promise<Studio> {
