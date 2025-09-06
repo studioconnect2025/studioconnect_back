@@ -1,6 +1,5 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinTable, ManyToMany } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne } from 'typeorm';
 import { Studio } from 'src/studios/entities/studio.entity';
-import { Instruments } from 'src/instrumentos/entities/instrumento.entity';
 
 @Entity('ROOMS')
 export class Room {
@@ -35,12 +34,8 @@ export class Room {
   customEquipment: string;
 
   @Column({ type: 'json', nullable: true })
-  availability: any; // { day: 'Lunes', from: '09:00', to: '22:00' }
+  availability: any;
 
   @ManyToOne(() => Studio, (studio) => studio.rooms, { onDelete: 'CASCADE' })
   studio: Studio;
-  
-  @ManyToMany(() => Instruments, { eager: true })
-  @JoinTable()
-  instruments: Instruments[];
 }
