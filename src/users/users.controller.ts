@@ -1,8 +1,10 @@
 import {
   Controller,
   Delete,
+  Get,
   Param,
   Patch,
+  Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
@@ -15,12 +17,31 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
+import { User } from './entities/user.entity';
 
 @ApiTags('Users')
 @ApiBearerAuth()
 @Controller('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
+
+  @Get(':id')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @ApiOperation({ summary: 'Obtener usuario por ID' })
+  @ApiResponse({ status: 200, description: 'Usuario encontrado', type: User })
+  @ApiResponse({ status: 404, description: 'Usuario no encontrado' })
+  async getUserById(@Param('id') id: string): Promise<User> {
+    return await this.usersService.findOneById(id);
+  }
+
+  @Get('by-email')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @ApiOperation({ summary: 'Obtener usuario por email' })
+  @ApiResponse({ status: 200, description: 'Usuario encontrado', type: User })
+  @ApiResponse({ status: 404, description: 'Usuario no encontrado' })
+  async getUserByEmail(@Query('email') email: string): Promise<User> {
+    return await this.usersService.findOneByEmail(email);
+  }
 
   @Delete(':id')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
