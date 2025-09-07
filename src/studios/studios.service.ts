@@ -113,7 +113,6 @@ export class StudiosService {
     const studio = this.studioRepository.create({
       ...createStudioDto,
       owner: user,
-      studioType: createStudioDto.studioType ?? StudioType.GRABACION,
     });
     return this.studioRepository.save(studio);
   }
