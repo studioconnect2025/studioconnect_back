@@ -19,29 +19,32 @@ import { RolesGuard } from 'src/auth/guard/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from 'src/auth/enum/roles.enum';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { 
-  ApiTags, 
-  ApiOperation, 
-  ApiResponse, 
-  ApiBearerAuth, 
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
   ApiConsumes,
-  ApiBody 
+  ApiBody,
 } from '@nestjs/swagger';
 
 @ApiTags('Studios')
 @ApiBearerAuth()
 @Controller('studios')
 export class StudiosController {
-  constructor(private readonly studiosService: StudiosService) { }
+  constructor(private readonly studiosService: StudiosService) {}
 
   // --- RUTAS PÚBLICAS ---
 
   // La ruta para crear estudio ya no es necesaria aqui,
   // porque la creacíon se maneja durante el registro en AuthController.
-  
+
   @Get()
   @ApiOperation({ summary: 'Obtener todos los estudios' })
-  @ApiResponse({ status: 200, description: 'Lista de estudios obtenida con éxito.' })
+  @ApiResponse({
+    status: 200,
+    description: 'Lista de estudios obtenida con éxito.',
+  })
   findAll() {
     return this.studiosService.findAll();
   }
@@ -101,7 +104,7 @@ export class StudiosController {
   @Roles(UserRole.STUDIO_OWNER)
   @UseInterceptors(FileInterceptor('file'))
   uploadPhoto(
-    @Param('id', ParseUUIDPipe) id: string, 
+    @Param('id', ParseUUIDPipe) id: string,
     @UploadedFile() file: Express.Multer.File,
     @Request() req,
   ) {

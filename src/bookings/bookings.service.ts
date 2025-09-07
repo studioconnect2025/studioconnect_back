@@ -113,7 +113,9 @@ export class BookingsService {
     });
 
     if (!booking) {
-      throw new NotFoundException(`Reserva con ID #${bookingId} no encontrada.`);
+      throw new NotFoundException(
+        `Reserva con ID #${bookingId} no encontrada.`,
+      );
     }
 
     if (booking.studio.owner.id !== ownerId) {
@@ -125,4 +127,3 @@ export class BookingsService {
     return booking;
   }
 }
-

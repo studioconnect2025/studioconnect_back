@@ -6,14 +6,21 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  app.useGlobalPipes(new ValidationPipe());
+  // Pipes globales con configuración
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true, // elimina propiedades que no están en el DTO
+      forbidNonWhitelisted: true, // lanza error si envían propiedades extra
+      transform: true, // transforma automáticamente tipos según DTO
+    }),
+  );
 
   // Configuración de Swagger
   const config = new DocumentBuilder()
     .setTitle('API de Reservas de Estudio')
-    .setDescription('Documentación de los endpoints de la API') 
-    .setVersion('1.0') 
-    .addBearerAuth() 
+    .setDescription('Documentación de los endpoints de la API')
+    .setVersion('1.0')
+    .addBearerAuth()
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
