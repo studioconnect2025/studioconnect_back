@@ -11,7 +11,13 @@ import {
 import { AuthService } from './auth.service';
 import { StudioOwnerRegisterDto } from 'src/users/dto/owner.dto';
 import { LoginDto } from './dto/login.dto';
-import { ApiBearerAuth, ApiBody, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiBody,
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
 
 @ApiTags('Auth')
