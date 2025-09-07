@@ -152,4 +152,11 @@ export class UsersService {
 
     return `Estudio ${user.studio.isActive ? 'activado' : 'desactivado'}`;
   }
+
+  async updatePassword(id: string, passwordHash: string): Promise<void> {
+  const result = await this.usersRepository.update(id, { passwordHash });
+  if (result.affected === 0) {
+    throw new NotFoundException(`Usuario con ID "${id}" no encontrado.`);
+  }
+}
 }
