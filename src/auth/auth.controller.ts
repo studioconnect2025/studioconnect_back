@@ -81,8 +81,10 @@ export class AuthController {
   handleGoogleCallback(@Req() req) {
     return this.authService.googleLogin(req);
   }
-}
 
+  @ApiOperation({ summary: 'Cerrar sesión' })
+  @ApiResponse({ status: 200, description: 'Sesión cerrada correctamente' })
+  @ApiResponse({ status: 401, description: 'Token inválido o no autorizado' })
   @Post('logout')
   @ApiBearerAuth()
   @UseGuards(AuthGuard('jwt'))
@@ -93,4 +95,3 @@ export class AuthController {
     return this.authService.logout(token);
   }
 }
-
