@@ -2,7 +2,6 @@ import {
   Entity,
   PrimaryGeneratedColumn,
   Column,
-  ManyToOne,
   CreateDateColumn,
   UpdateDateColumn,
   OneToMany,
@@ -24,12 +23,12 @@ export class Studio {
   @Column({ length: 100 })
   name: string;
 
- @Column({
-  type: 'enum',
-  enum: StudioType,
-  default: StudioType.GRABACION, // 👈 AÑADE ESTA LÍNEA
-})
-studioType: StudioType;
+  @Column({
+    type: 'enum',
+    enum: StudioType,
+    default: StudioType.GRABACION, // 👈 AÑADE ESTA LÍNEA
+  })
+  studioType?: StudioType;
 
   @Column()
   city: string;
@@ -86,6 +85,9 @@ studioType: StudioType;
   @UpdateDateColumn()
   updatedAt: Date;
 
+  @Column({ default: true })
+  isActive: boolean;
+
   @Column({
     type: 'enum',
     enum: StudioStatus,
@@ -96,4 +98,3 @@ studioType: StudioType;
   @OneToMany(() => Room, (room) => room.studio, { cascade: true })
   rooms: Room[];
 }
-

@@ -36,6 +36,9 @@ export class Room {
   @Column({ type: 'json', nullable: true })
   availability: any;
 
+  @Column({ default: true })
+  isActive: boolean;
+
   @ManyToOne(() => Studio, (studio) => studio.rooms, { onDelete: 'CASCADE' })
   studio: Studio;
 }

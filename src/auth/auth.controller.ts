@@ -1,4 +1,13 @@
-import { Controller, Post, Body, HttpCode, HttpStatus, Get, UseGuards, Req } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  HttpCode,
+  HttpStatus,
+  Get,
+  UseGuards,
+  Req,
+} from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { StudioOwnerRegisterDto } from 'src/users/dto/owner.dto';
 import { LoginDto } from './dto/login.dto';
@@ -18,29 +27,29 @@ export class AuthController {
   @ApiResponse({ status: 400, description: 'Datos inválidos para el registro' })
   @ApiBody({
     type: StudioOwnerRegisterDto,
-    description: 'Estructura de datos para registrar un nuevo dueño de estudio.',
+    description:
+      'Estructura de datos para registrar un nuevo dueño de estudio.',
     examples: {
       a: {
         summary: 'Ejemplo de Registro',
         value: {
           ownerInfo: {
-            firstName: "Juan",
-            lastName: "Perez",
-            email: "juan.perez@example.com",
-            phoneNumber: "3101234567",
-            password: "password123"
+            firstName: 'Juan',
+            lastName: 'Perez',
+            email: 'juan.perez@example.com',
+            phoneNumber: '3101234567',
+            password: 'password123',
           },
           studioInfo: {
-            name: "Estudio de Grabación Sónico",
-            studioType: "Grabación y Ensayo",
-            city: "Bogotá",
-            province: "Cundinamarca",
-            address: "Calle Falsa 123",
-            description: "El mejor estudio para tus producciones musicales."
-          }
-        }
-      }
-    }
+            name: 'Estudio de Grabación Sónico',
+            city: 'Bogotá',
+            province: 'Cundinamarca',
+            address: 'Calle Falsa 123',
+            description: 'El mejor estudio para tus producciones musicales.',
+          },
+        },
+      },
+    },
   })
   @Post('register/studio-owner')
   registerStudioOwner(@Body() registerDto: StudioOwnerRegisterDto) {
@@ -72,6 +81,7 @@ export class AuthController {
   handleGoogleCallback(@Req() req) {
     return this.authService.googleLogin(req);
   }
+}
 
   @Post('logout')
   @ApiBearerAuth()
@@ -83,3 +93,4 @@ export class AuthController {
     return this.authService.logout(token);
   }
 }
+
