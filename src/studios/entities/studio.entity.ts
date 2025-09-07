@@ -23,13 +23,6 @@ export class Studio {
   @Column({ length: 100 })
   name: string;
 
-  @Column({
-    type: 'enum',
-    enum: StudioType,
-    default: StudioType.GRABACION, // 👈 AÑADE ESTA LÍNEA
-  })
-  studioType?: StudioType;
-
   @Column()
   city: string;
 
