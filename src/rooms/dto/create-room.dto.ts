@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, IsNumber, IsOptional, Min, IsUUID, ArrayNotEmpty, IsArray } from 'class-validator';
+import { IsString, IsNotEmpty, IsNumber, IsOptional, Min } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateRoomDto {
@@ -33,11 +33,9 @@ export class CreateRoomDto {
   @IsString()
   description?: string;
 
-  @ApiProperty({ description: 'IDs de los instrumentos disponibles', type: [String] })
-  @IsArray()
-  @ArrayNotEmpty({ message: 'Debes seleccionar al menos un instrumento' })
-  @IsUUID('4', { each: true, message: 'Cada instrumento debe ser un UUID válido' })
-  instrumentIds: string[];
+  @ApiPropertyOptional({ description: 'Características (ej. aire acondicionado, espejos, etc.)', type: [String] })
+  @IsOptional()
+  features?: string[];
 
   @ApiPropertyOptional({ description: 'Equipo adicional personalizado' })
   @IsOptional()
@@ -48,4 +46,3 @@ export class CreateRoomDto {
   @IsOptional()
   availability?: any;
 }
-
