@@ -11,6 +11,6 @@ import { Studio } from 'src/studios/entities/studio.entity';
   imports: [TypeOrmModule.forFeature([User, Studio, Booking, Room])],
   controllers: [UsersController],
   providers: [UsersService], // 1. Declara el servicio como parte de este módulo
-  exports: [UsersService], // 2. Exporta el servicio para que otros módulos puedan usarlo
+  exports: [UsersService, TypeOrmModule], // 2. Exporta el servicio para que otros módulos puedan usarlo
 })
 export class UsersModule {}
