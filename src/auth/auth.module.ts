@@ -9,12 +9,14 @@ import { JwtStrategy } from './jwt-strategy';
 import { TokenBlacklistService } from './token-blacklist.service';
 import { CacheModule } from '@nestjs/cache-manager';
 import { redisStore } from 'cache-manager-redis-store';
+import { PasswordResetModule } from './modules/password-reset.module';
 
 @Module({
   imports: [
     UsersModule,
     StudiosModule,
     ConfigModule,
+    PasswordResetModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],

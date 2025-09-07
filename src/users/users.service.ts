@@ -33,11 +33,17 @@ export class UsersService {
   }
 
    async findOneById(id: string): Promise<User> {
-  // 👇 Cambia esto de vuelta a la versión simple
   const user = await this.usersRepository.findOneBy({ id: id }); 
   if (!user) {
     throw new NotFoundException(`Usuario con ID "${id}" no encontrado.`);
   }
   return user;
+}
+
+  async updatePassword(id: string, passwordHash: string): Promise<void> {
+  const result = await this.usersRepository.update(id, { passwordHash });
+  if (result.affected === 0) {
+    throw new NotFoundException(`Usuario con ID "${id}" no encontrado.`);
+  }
 }
 }
