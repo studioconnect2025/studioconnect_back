@@ -3,8 +3,9 @@ import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { ConfigService } from '@nestjs/config';
 import { UsersService } from 'src/users/users.service';
+import { TokenBlacklistService } from './token-blacklist.service';
+import { Request } from 'express';
 
-// Interfaz para el payload del JWT
 interface JwtPayload {
   sub: string;
   email: string;
@@ -18,19 +19,33 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor(
     private usersService: UsersService,
     private configService: ConfigService,
+    private tokenBlacklistService: TokenBlacklistService,
   ) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
       secretOrKey: configService.get<string>('JWT_SECRET'),
-    } as any); // Forzar el tipo para evitar conflictos de TypeScript
+      passReqToCallback: true,
+    } as any);
   }
 
-  async validate(payload: JwtPayload): Promise<any> {
+  async validate(req: Request, payload: JwtPayload): Promise<any> {
+    const token = req.headers.authorization?.split(' ')[1];
+    
+    if (!token) {
+      throw new UnauthorizedException('No se encontró el token en la cabecera.');
+    }
+
+    const isBlacklisted = await this.tokenBlacklistService.isBlacklisted(token);
+    if (isBlacklisted) {
+      throw new UnauthorizedException('Token inválido o la sesión ha sido cerrada.');
+    }
+
     const user = await this.usersService.findOneById(payload.sub);
     if (!user) {
       throw new UnauthorizedException('Token inválido.');
     }
+
     return user;
   }
 }
