@@ -2,6 +2,7 @@ import {
   Injectable,
   ConflictException,
   NotFoundException,
+  BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -39,14 +40,27 @@ export class UsersService {
     return this.usersRepository.save(newUser);
   }
 
-  async findOneByEmail(email: string): Promise<User | undefined> {
+  // Buscar usuario por email (obligatorio)
+  async findOneByEmail(email: string): Promise<User> {
+    if (!email) throw new BadRequestException('El email es obligatorio.');
+
     const user = await this.usersRepository.findOneBy({ email });
-    return user ?? undefined;
+    if (!user) {
+      throw new NotFoundException(
+        `Usuario con email "${email}" no encontrado.`,
+      );
+    }
+
+    return user;
   }
 
   async findOneById(id: string): Promise<User> {
+    if (!id) throw new BadRequestException('El ID es obligatorio.');
     // 👇 Cambia esto de vuelta a la versión simple
-    const user = await this.usersRepository.findOneBy({ id: id });
+    const user = await this.usersRepository.findOne({
+      where: { id },
+      relations: ['bookings', 'studio', 'studio.bookings', 'studio.rooms'],
+    });
     if (!user) {
       throw new NotFoundException(`Usuario con ID "${id}" no encontrado.`);
     }
