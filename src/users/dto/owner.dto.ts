@@ -41,12 +41,13 @@ class StudioInfoDto {
   @IsString()
   @IsNotEmpty()
   name: string;
-  
+
   // CAMBIO AQUÍ: Se reemplaza IsString por IsEnum y se usa el tipo StudioType
+  @IsOptional()
   @IsEnum(StudioType, {
     message: 'El tipo de estudio debe ser grabacion, ensayo o produccion',
   })
-  studioType: StudioType;
+  studioType?: StudioType;
 
   @IsString()
   @IsNotEmpty()
@@ -64,11 +65,11 @@ class StudioInfoDto {
   @IsString()
   @IsOptional()
   phoneNumber?: string;
-  
+
   @IsEmail()
   @IsOptional()
   email?: string;
-  
+
   @IsString()
   @IsNotEmpty()
   @MaxLength(500)
@@ -91,13 +92,12 @@ class StudioInfoDto {
 
   @IsString()
   @IsOptional()
-  openingTime?: string; 
+  openingTime?: string;
 
   @IsString()
   @IsOptional()
-  closingTime?: string; 
+  closingTime?: string;
 }
-
 
 export class StudioOwnerRegisterDto {
   @IsNotEmpty()
