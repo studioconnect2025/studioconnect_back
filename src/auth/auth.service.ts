@@ -53,7 +53,7 @@ export class AuthService {
       user = await this.usersService.create({
         email: req.user.email,
         passwordHash: hashedPassword,
-        role: UserRole.STUDIO_OWNER, 
+        role: UserRole.STUDIO_OWNER,
       });
     }
     // Genera y retorna el token JWT para el usuario
