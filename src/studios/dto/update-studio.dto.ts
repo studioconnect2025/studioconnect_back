@@ -10,6 +10,8 @@ import {
 } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { StudioStatus } from '../enum/studio-status.enum';
+import { StudioTypeEnum } from '../enum/studio-type.enum';
+import { ServicesType } from '../enum/ServicesType.enum';
 
 export class UpdateStudioDto {
   @ApiPropertyOptional({ description: 'Nombre del estudio', example: 'Estudio Actualizado' })
@@ -17,6 +19,10 @@ export class UpdateStudioDto {
   @IsOptional()
   name?: string;
 
+  @ApiPropertyOptional({ description: 'Tipo de estudio', enum: StudioTypeEnum, example: 'GRABACION' })
+  @IsEnum(StudioTypeEnum)
+  @IsOptional()
+  studioType?: StudioTypeEnum;
 
   @ApiPropertyOptional({ description: 'Ciudad del estudio', example: 'Guadalajara' })
   @IsString()
@@ -49,43 +55,41 @@ export class UpdateStudioDto {
   @IsOptional()
   description?: string;
 
-  @ApiPropertyOptional({
-    description: 'Equipo disponible actualizado',
-    example: ['Micrófono Neumann', 'Batería Pearl'],
-  })
+  @ApiPropertyOptional({ description: 'Servicios disponibles', isArray: true, enum: ServicesType, example: ['SALA_DE_GRABACION', 'CAFETERIA'] })
+  @IsEnum(ServicesType, { each: true })
+  @IsArray()
+  @IsOptional()
+  services?: ServicesType[];
+
+  @ApiPropertyOptional({ description: 'Fotos del estudio', type: 'array', items: { type: 'string', format: 'binary' }, required: false })
+  @IsOptional()
+  photos?: string[];
+
+  @ApiPropertyOptional({ description: 'Registro comercial (PDF o imagen)', type: 'string', format: 'binary', required: false })
+  @IsOptional()
+  comercialRegister?: string;
+
+  @ApiPropertyOptional({ description: 'Equipo disponible actualizado', example: ['Micrófono Neumann', 'Batería Pearl'] })
   @IsArray()
   @IsString({ each: true })
   @IsOptional()
   availableEquipment?: string[];
 
-  @ApiPropertyOptional({ description: 'Tarifa por hora', example: 250 })
+  @ApiPropertyOptional({ description: 'Hora de apertura', example: 8 })
   @IsNumber()
   @Min(0)
   @IsOptional()
-  hourlyRate?: number;
+  openingTime?: number;
 
-  @ApiPropertyOptional({ description: 'Tarifa por día', example: 1800 })
+  @ApiPropertyOptional({ description: 'Hora de cierre', example: 22 })
   @IsNumber()
   @Min(0)
   @IsOptional()
-  dailyRate?: number;
+  closingTime?: number;
 
-  @ApiPropertyOptional({ description: 'Hora de apertura', example: '08:00' })
-  @IsString()
-  @IsOptional()
-  openingTime?: string;
-
-  @ApiPropertyOptional({ description: 'Hora de cierre', example: '22:00' })
-  @IsString()
-  @IsOptional()
-  closingTime?: string;
-
-  @ApiPropertyOptional({
-    description: 'Estado del estudio',
-    example: 'approved',
-    enum: StudioStatus,
-  })
+  @ApiPropertyOptional({ description: 'Estado del estudio', example: 'approved', enum: StudioStatus })
   @IsEnum(StudioStatus)
   @IsOptional()
   status?: StudioStatus;
 }
+

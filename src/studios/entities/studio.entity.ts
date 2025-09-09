@@ -1,19 +1,11 @@
-import {
-  Entity,
-  PrimaryGeneratedColumn,
-  Column,
-  CreateDateColumn,
-  UpdateDateColumn,
-  OneToMany,
-  JoinColumn,
-  OneToOne,
-} from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany, JoinColumn, OneToOne } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
 import { StudioStatus } from '../enum/studio-status.enum';
 import { Instruments } from 'src/instrumentos/entities/instrumento.entity';
 import { Booking } from 'src/bookings/dto/bookings.entity';
 import { Room } from 'src/rooms/entities/room.entity';
-
+import { StudioTypeEnum } from '../enum/studio-type.enum'; // tu enum existente
+import { ServicesType } from '../enum/ServicesType.enum'; // nuevo enum que crearás
 
 @Entity('studios')
 export class Studio {
@@ -22,6 +14,10 @@ export class Studio {
 
   @Column({ length: 100 })
   name: string;
+
+  @Column({ type: 'enum', enum: StudioTypeEnum, default: StudioTypeEnum.GRABACION })
+  studioType: StudioTypeEnum;
+
 
   @Column()
   city: string;
@@ -45,32 +41,32 @@ export class Studio {
   photos?: string[];
 
   @Column('text', { array: true, nullable: true })
+  services?: ServicesType[];
+
+  @Column('text', { array: true, nullable: true })
   availableEquipment?: string[];
 
-  @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
-  hourlyRate?: number;
+  @Column({ type: 'int', nullable: true })
+  openingTime?: number;
 
-  @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
-  dailyRate?: number;
-
-  @Column({ nullable: true })
-  openingTime?: string;
+  @Column({ type: 'int', nullable: true })
+  closingTime?: number;
 
   @Column({ nullable: true })
-  closingTime?: string;
+  comercialRegister?: string;
 
   @OneToOne(() => User, (user) => user.studio, { eager: true })
   @JoinColumn()
   owner: User;
 
-  @OneToMany(() => Instruments, (instrument) => instrument.studio, {
-    cascade: true,
-  })
+  @OneToMany(() => Instruments, (instrument) => instrument.studio, { cascade: true })
   instruments: Instruments[];
 
-  // --- LÍNEA AÑADIDA ---
   @OneToMany(() => Booking, (booking) => booking.studio)
   bookings: Booking[];
+
+  @OneToMany(() => Room, (room) => room.studio, { cascade: true })
+  rooms: Room[];
 
   @CreateDateColumn()
   createdAt: Date;
@@ -81,13 +77,6 @@ export class Studio {
   @Column({ default: true })
   isActive: boolean;
 
-  @Column({
-    type: 'enum',
-    enum: StudioStatus,
-    default: StudioStatus.PENDING,
-  })
+  @Column({ type: 'enum', enum: StudioStatus, default: StudioStatus.PENDING })
   status: StudioStatus;
-
-  @OneToMany(() => Room, (room) => room.studio, { cascade: true })
-  rooms: Room[];
 }

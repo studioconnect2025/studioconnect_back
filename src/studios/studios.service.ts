@@ -103,16 +103,49 @@ export class StudiosService {
   }
 
   async create(createStudioDto: CreateStudioDto, user: User): Promise<Studio> {
-    if (user.role !== UserRole.STUDIO_OWNER) {
-      throw new ForbiddenException(
-        'Solo los dueños de estudio pueden crear estudios',
-      );
-    }
-
-    const studio = this.studioRepository.create({
-      ...createStudioDto,
-      owner: user,
-    });
-    return this.studioRepository.save(studio);
+  if (user.role !== UserRole.STUDIO_OWNER) {
+    throw new ForbiddenException('Solo los dueños de estudio pueden crear estudios');
   }
+
+  const studio = this.studioRepository.create({
+    ...createStudioDto,
+    owner: user,
+  });
+
+  return this.studioRepository.save(studio);
+}
+
+async createWithFiles(
+  createStudioDto: CreateStudioDto,
+  user: User,
+  files: { photos?: Express.Multer.File[], comercialRegister?: Express.Multer.File[] },
+): Promise<Studio> {
+  if (user.role !== UserRole.STUDIO_OWNER) {
+    throw new ForbiddenException('Solo los dueños de estudio pueden crear estudios');
+  }
+
+  const studio = this.studioRepository.create({
+    ...createStudioDto,
+    owner: user,
+  });
+
+  // Subir fotos si vienen
+  if (files.photos) {
+    studio.photos = [];
+    for (const file of files.photos) {
+      const result = await this.fileUploadService.uploadFile(file);
+      studio.photos.push(result.secure_url);
+    }
+  }
+
+  // Subir registro comercial si viene
+  if (files.comercialRegister && files.comercialRegister[0]) {
+    const result = await this.fileUploadService.uploadFile(files.comercialRegister[0]);
+    studio.comercialRegister = result.secure_url;
+  }
+
+  return this.studioRepository.save(studio);
+}
+
+
 }
