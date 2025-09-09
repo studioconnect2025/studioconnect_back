@@ -1,4 +1,9 @@
-import { Injectable, UnauthorizedException, BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  UnauthorizedException,
+  BadRequestException,
+  NotFoundException,
+} from '@nestjs/common';
 import { UsersService } from '../users/users.service';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
@@ -44,7 +49,9 @@ export class AuthService {
   // --- MODIFICACIÓN IMPORTANTE AQUÍ ---
   async googleLogin(req: any) {
     if (!req.user) {
-      throw new BadRequestException('No se encontró información de usuario de Google.');
+      throw new BadRequestException(
+        'No se encontró información de usuario de Google.',
+      );
     }
 
     const { email } = req.user;
@@ -57,7 +64,7 @@ export class AuthService {
       // 2. Si el error es 'NotFoundException', significa que no existe y debemos registrarlo
       if (error instanceof NotFoundException) {
         console.log('Usuario no encontrado, procediendo a registrar...');
-        
+
         const randomPassword = Math.random().toString(36).slice(-8);
         const hashedPassword = await bcrypt.hash(randomPassword, 10);
 
@@ -76,7 +83,6 @@ export class AuthService {
     // 4. Si el usuario fue encontrado o recién creado, generamos su token
     return this.generateJwtToken(user);
   }
-
 
   private async generateJwtToken(user: User) {
     // ... (sin cambios en esta función)
