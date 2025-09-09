@@ -12,6 +12,8 @@ import { SeederModule } from './seeder/seeder.module';
 import { BookingsModule } from './bookings/bookings.module';
 import { FileUploadModule } from './file-upload/file-upload.module';
 import { RoomsModule } from './rooms/rooms.module';
+import { OwnersModule } from './owner/owner.module';
+import { OwnersController } from './owner/owner.controller';
 
 @Module({
   imports: [
@@ -43,8 +45,9 @@ import { RoomsModule } from './rooms/rooms.module';
     BookingsModule,
     FileUploadModule,
     RoomsModule,
+    OwnersModule,
   ],
-  controllers: [AppController],
+  controllers: [AppController, OwnersController],
   providers: [AppService],
 })
 export class AppModule {}

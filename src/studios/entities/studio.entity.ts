@@ -13,7 +13,7 @@ import { StudioStatus } from '../enum/studio-status.enum';
 import { Instruments } from 'src/instrumentos/entities/instrumento.entity';
 import { Booking } from 'src/bookings/dto/bookings.entity';
 import { Room } from 'src/rooms/entities/room.entity';
-import { StudioType } from '../enum/studio-type.enum';
+
 
 @Entity('studios')
 export class Studio {
@@ -22,13 +22,6 @@ export class Studio {
 
   @Column({ length: 100 })
   name: string;
-
-  @Column({
-    type: 'enum',
-    enum: StudioType,
-    default: StudioType.GRABACION, // 👈 AÑADE ESTA LÍNEA
-  })
-  studioType?: StudioType;
 
   @Column()
   city: string;

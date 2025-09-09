@@ -17,10 +17,6 @@ export class UpdateStudioDto {
   @IsOptional()
   name?: string;
 
-  @ApiPropertyOptional({ description: 'Tipo de estudio', example: 'Ensayo' })
-  @IsString()
-  @IsOptional()
-  studioType?: string;
 
   @ApiPropertyOptional({ description: 'Ciudad del estudio', example: 'Guadalajara' })
   @IsString()

@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, BadRequestException, NotFoundException } from '@nestjs/common';
 import { UsersService } from '../users/users.service';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
@@ -19,6 +19,7 @@ export class AuthService {
   ) {}
 
   async registerStudioOwner(registerDto: StudioOwnerRegisterDto) {
+    // ... (sin cambios en esta función)
     const { ownerInfo, studioInfo } = registerDto;
     const hashedPassword = await bcrypt.hash(ownerInfo.password, 10);
     const newUser = await this.usersService.create({
@@ -31,6 +32,7 @@ export class AuthService {
   }
 
   async login(loginDto: LoginDto) {
+    // ... (sin cambios en esta función)
     const { email, password } = loginDto;
     const user = await this.usersService.findOneByEmail(email);
     if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
@@ -39,29 +41,45 @@ export class AuthService {
     return this.generateJwtToken(user);
   }
 
-  async googleLogin(req) {
+  // --- MODIFICACIÓN IMPORTANTE AQUÍ ---
+  async googleLogin(req: any) {
     if (!req.user) {
-      throw new UnauthorizedException('Usuario de Google no encontrado.');
+      throw new BadRequestException('No se encontró información de usuario de Google.');
     }
-    // Verifica si el usuario ya existe en tu base de datos
-    let user = await this.usersService.findOneByEmail(req.user.email);
-    if (!user) {
-      // Si no existe, crea un nuevo usuario
-      // Se genera una contraseña aleatoria ya que no es necesaria para el login con Google
-      const randomPassword = Math.random().toString(36).slice(-8);
-      const hashedPassword = await bcrypt.hash(randomPassword, 10);
-      user = await this.usersService.create({
-        email: req.user.email,
-        passwordHash: hashedPassword,
-        role: UserRole.STUDIO_OWNER,
-      });
+
+    const { email } = req.user;
+    let user: User;
+
+    try {
+      // 1. Intentamos encontrar al usuario
+      user = await this.usersService.findOneByEmail(email);
+    } catch (error) {
+      // 2. Si el error es 'NotFoundException', significa que no existe y debemos registrarlo
+      if (error instanceof NotFoundException) {
+        console.log('Usuario no encontrado, procediendo a registrar...');
+        
+        const randomPassword = Math.random().toString(36).slice(-8);
+        const hashedPassword = await bcrypt.hash(randomPassword, 10);
+
+        // Creamos el nuevo usuario
+        user = await this.usersService.create({
+          email,
+          passwordHash: hashedPassword,
+          role: UserRole.STUDIO_OWNER, // Rol por defecto para usuarios de Google
+        });
+      } else {
+        // 3. Si es un error diferente, lo relanzamos para que no continúe
+        throw error;
+      }
     }
-    // Genera y retorna el token JWT para el usuario
+
+    // 4. Si el usuario fue encontrado o recién creado, generamos su token
     return this.generateJwtToken(user);
   }
 
+
   private async generateJwtToken(user: User) {
-    // Aseguramos que el ID en el token siempre esté en minúsculas
+    // ... (sin cambios en esta función)
     const payload = {
       sub: user.id.toLowerCase(),
       email: user.email,
@@ -74,6 +92,7 @@ export class AuthService {
   }
 
   async logout(token: string) {
+    // ... (sin cambios en esta función)
     const decoded = this.jwtService.decode(token) as { exp: number };
     if (decoded && decoded.exp) {
       await this.tokenBlacklistService.blacklist(token, decoded.exp);

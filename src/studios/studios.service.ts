@@ -12,7 +12,6 @@ import { UpdateStudioDto } from './dto/update-studio.dto';
 import { User } from 'src/users/entities/user.entity';
 import { UserRole } from 'src/auth/enum/roles.enum';
 import { FileUploadService } from '../file-upload/file-upload.service';
-import { StudioType } from './enum/studio-type.enum';
 
 @Injectable()
 export class StudiosService {
@@ -113,7 +112,6 @@ export class StudiosService {
     const studio = this.studioRepository.create({
       ...createStudioDto,
       owner: user,
-      studioType: createStudioDto.studioType ?? StudioType.GRABACION,
     });
     return this.studioRepository.save(studio);
   }

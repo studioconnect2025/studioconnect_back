@@ -7,6 +7,8 @@ import {
   Get,
   UseGuards,
   Req,
+  Session,
+  Res
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { StudioOwnerRegisterDto } from 'src/users/dto/owner.dto';
@@ -19,6 +21,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
+import type { Response } from 'express';
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -72,20 +75,31 @@ export class AuthController {
   }
 
   // --- Rutas para Google OAuth ---
-  @ApiOperation({ summary: 'Iniciar sesión con Google (Inicia el flujo)' })
-  @ApiResponse({ status: 302, description: 'Redirige al login de Google.' })
-  @Get('google/login')
+   @Get('google/login')
   @UseGuards(AuthGuard('google'))
-  handleGoogleLogin() {
-    // La estrategia de Passport se encarga de la redirección
+  handleGoogleLogin(@Req() req, @Session() session: Record<string, any>) {
+    // Guardamos la URI de redirección del frontend en la sesión
+    const redirectUri = req.query.redirect_uri as string;
+    if (redirectUri) {
+      session.redirectUri = redirectUri;
+    }
   }
 
-  @ApiOperation({ summary: 'Callback de Google (No usar directamente)' })
-  @ApiResponse({ status: 200, description: 'Login exitoso, retorna un JWT.' })
+  // 2. Modifica handleGoogleCallback para usar la sesión y redirigir
   @Get('google/callback')
   @UseGuards(AuthGuard('google'))
-  handleGoogleCallback(@Req() req) {
-    return this.authService.googleLogin(req);
+  async handleGoogleCallback(@Req() req, @Res() res: Response, @Session() session: Record<string, any>) {
+    const tokenData = await this.authService.googleLogin(req);
+    const jwtToken = tokenData.access_token;
+
+    // Leemos la URI guardada y la usamos para la redirección final
+    const redirectUri = session.redirectUri || process.env.FRONTEND_URL; // Un fallback por si acaso
+
+    // Limpiamos la sesión
+    session.redirectUri = null;
+    
+    // Redirigimos al frontend con el token en la URL
+    res.redirect(`${redirectUri}?token=${jwtToken}`);
   }
 
   @ApiOperation({ summary: 'Cerrar sesión' })
