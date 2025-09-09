@@ -11,11 +11,13 @@ import {
 } from '@nestjs/common';
 import { StudiosService } from 'src/studios/studios.service';
 import { RoomsService } from 'src/rooms/rooms.service';
+import { CreateStudioDto } from 'src/studios/dto/create-studio.dto';
 import { UpdateStudioDto } from 'src/studios/dto/update-studio.dto';
 import { CreateRoomDto } from 'src/rooms/dto/create-room.dto';
 import { UpdateRoomDto } from 'src/rooms/dto/update-room.dto';
 import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard } from 'src/auth/guard/roles.guard';
+import { UserRole } from 'src/auth/enum/roles.enum';
 import {
   ApiTags,
   ApiBearerAuth,
@@ -23,6 +25,7 @@ import {
   ApiResponse,
   ApiParam,
 } from '@nestjs/swagger';
+import { Roles } from 'src/auth/decorators/roles.decorator';
 
 @ApiTags('Owners')
 @ApiBearerAuth()
@@ -63,6 +66,17 @@ export class OwnersController {
     const user = req.user;
     const studios = await this.studiosService.findMyStudios(user);
     return studios[0] ?? {};
+  }
+
+  // POST /owners/me/studio
+  @Post('me')
+  @ApiOperation({ summary: 'Crear un estudio propio' })
+  @ApiResponse({ status: 201, description: 'Estudio creado exitosamente.' })
+  @ApiResponse({ status: 403, description: 'No autorizado.' })
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles(UserRole.STUDIO_OWNER)
+  async createMyStudio(@Body() createStudioDto: CreateStudioDto, @Request() req) {
+    return this.studiosService.create(createStudioDto, req.user);
   }
 
   // PUT /owners/me/studio
@@ -138,3 +152,4 @@ export class OwnersController {
     return { message: 'Sala eliminada con éxito' };
   }
 }
+

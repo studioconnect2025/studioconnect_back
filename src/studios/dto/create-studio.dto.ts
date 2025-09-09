@@ -9,7 +9,7 @@ export class CreateStudioDto {
   @IsNotEmpty()
   name: string;
 
-  @ApiProperty({ description: 'Tipo de estudio', example: 'GRABACION' })
+  @ApiProperty({ description: 'Tipo de estudio', example: 'grabacion' })
   @IsEnum(StudioTypeEnum)
   studioType: StudioTypeEnum;
 
@@ -34,7 +34,7 @@ export class CreateStudioDto {
   @MaxLength(500)
   description: string;
 
-  @ApiProperty({ description: 'Servicios disponibles', isArray: true, enum: ServicesType, example: ['SALA_DE_GRABACION', 'CAFETERIA'] })
+  @ApiProperty({ description: 'Servicios disponibles', isArray: true, enum: ServicesType, example: ['Sala de grabación', 'Cafetería'] })
   @IsEnum(ServicesType, { each: true })
   @IsArray()
   @IsOptional()

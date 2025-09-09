@@ -19,7 +19,7 @@ export class UpdateStudioDto {
   @IsOptional()
   name?: string;
 
-  @ApiPropertyOptional({ description: 'Tipo de estudio', enum: StudioTypeEnum, example: 'GRABACION' })
+  @ApiPropertyOptional({ description: 'Tipo de estudio', enum: StudioTypeEnum, example: 'grabacion' })
   @IsEnum(StudioTypeEnum)
   @IsOptional()
   studioType?: StudioTypeEnum;
@@ -55,7 +55,7 @@ export class UpdateStudioDto {
   @IsOptional()
   description?: string;
 
-  @ApiPropertyOptional({ description: 'Servicios disponibles', isArray: true, enum: ServicesType, example: ['SALA_DE_GRABACION', 'CAFETERIA'] })
+  @ApiPropertyOptional({ description: 'Servicios disponibles', isArray: true, enum: ServicesType, example: ['Sala de grabación', 'Cafetería'] })
   @IsEnum(ServicesType, { each: true })
   @IsArray()
   @IsOptional()
