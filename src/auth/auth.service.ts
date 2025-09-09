@@ -3,7 +3,7 @@ import { UsersService } from '../users/users.service';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { LoginDto } from './dto/login.dto';
-import { StudioOwnerRegisterDto } from 'src/users/dto/owner.dto';
+import { StudioOwnerRegisterDto } from 'src/users/dto/StudioOwnerRegisterDto';
 import { StudiosService } from 'src/studios/studios.service';
 import { UserRole } from './enum/roles.enum';
 import { User } from 'src/users/entities/user.entity';
@@ -18,16 +18,23 @@ export class AuthService {
     private tokenBlacklistService: TokenBlacklistService,
   ) {}
 
-  async registerStudioOwner(registerDto: StudioOwnerRegisterDto) {
-    // ... (sin cambios en esta función)
-    const { ownerInfo, studioInfo } = registerDto;
-    const hashedPassword = await bcrypt.hash(ownerInfo.password, 10);
+  async registerStudioOwner(dto: StudioOwnerRegisterDto) {
+    // 1. Validar que las contraseñas coincidan
+    if (dto.password !== dto.confirmPassword) {
+      throw new BadRequestException('Passwords do not match');
+    }
+
+    // 2. Encriptar la contraseña
+    const hashedPassword = await bcrypt.hash(dto.password, 10);
+
+    // 3. Crear el nuevo usuario con rol de dueño de estudio
     const newUser = await this.usersService.create({
-      ...ownerInfo,
+     ...dto,
       passwordHash: hashedPassword,
       role: UserRole.STUDIO_OWNER,
     });
-    await this.studiosService.create(studioInfo, newUser);
+
+    // 4. Generar y devolver el token JWT
     return this.generateJwtToken(newUser);
   }
 
@@ -57,7 +64,6 @@ export class AuthService {
       // 2. Si el error es 'NotFoundException', significa que no existe y debemos registrarlo
       if (error instanceof NotFoundException) {
         console.log('Usuario no encontrado, procediendo a registrar...');
-        
         const randomPassword = Math.random().toString(36).slice(-8);
         const hashedPassword = await bcrypt.hash(randomPassword, 10);
 
@@ -76,7 +82,6 @@ export class AuthService {
     // 4. Si el usuario fue encontrado o recién creado, generamos su token
     return this.generateJwtToken(user);
   }
-
 
   private async generateJwtToken(user: User) {
     // ... (sin cambios en esta función)

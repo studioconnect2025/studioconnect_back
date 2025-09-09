@@ -32,7 +32,7 @@ import {
 @ApiBearerAuth()
 @Controller('studios')
 export class StudiosController {
-  constructor(private readonly studiosService: StudiosService) {}
+  constructor(private readonly studiosService: StudiosService) { }
 
   // --- RUTAS PÚBLICAS ---
 
@@ -58,6 +58,17 @@ export class StudiosController {
   }
 
   // --- RUTAS PROTEGIDAS PARA DUEÑOS DE ESTUDIO ---
+
+  @Post('me')
+  @ApiOperation({ summary: 'Crear un estudio propio' })
+  @ApiResponse({ status: 201, description: 'Estudio creado exitosamente.' })
+  @ApiResponse({ status: 403, description: 'No autorizado.' })
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles(UserRole.STUDIO_OWNER)
+  createMyStudio(@Body() createStudioDto: CreateStudioDto, @Request() req) {
+    return this.studiosService.create(createStudioDto, req.user);
+  }
+
 
   @Get('me/my-studios')
   @ApiOperation({ summary: 'Obtener estudios del dueño autenticado' })
