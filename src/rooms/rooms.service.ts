@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Room } from './entities/room.entity';
@@ -16,7 +20,11 @@ export class RoomsService {
     private readonly studioRepository: Repository<Studio>,
   ) {}
 
-  async create(dto: CreateRoomDto, user: User, studioId: string): Promise<Room> {
+  async create(
+    dto: CreateRoomDto,
+    user: User,
+    studioId: string,
+  ): Promise<Room> {
     const studio = await this.studioRepository.findOne({
       where: { id: studioId },
       relations: ['owner'],
@@ -24,7 +32,9 @@ export class RoomsService {
 
     if (!studio) throw new NotFoundException('Estudio no encontrado');
     if (studio.owner.id !== user.id) {
-      throw new ForbiddenException('No puedes crear salas en un estudio que no es tuyo');
+      throw new ForbiddenException(
+        'No puedes crear salas en un estudio que no es tuyo',
+      );
     }
 
     const room = this.roomRepository.create({
