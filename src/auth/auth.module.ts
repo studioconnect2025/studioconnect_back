@@ -10,6 +10,7 @@ import { TokenBlacklistService } from './token-blacklist.service';
 import { CacheModule } from '@nestjs/cache-manager';
 import { redisStore } from 'cache-manager-redis-store';
 import { PasswordResetModule } from './modules/password-reset.module';
+import { GoogleStrategy } from './google.strategy';
 
 @Module({
   imports: [
@@ -38,6 +39,6 @@ import { PasswordResetModule } from './modules/password-reset.module';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy, TokenBlacklistService], // Se añade el nuevo servicio
+  providers: [AuthService, JwtStrategy, TokenBlacklistService, GoogleStrategy], 
 })
 export class AuthModule {}

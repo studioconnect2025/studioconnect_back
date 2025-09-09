@@ -72,7 +72,7 @@ export class AuthController {
   }
 
   // --- Rutas para Google OAuth ---
-  @ApiOperation({ summary: 'Iniciar sesión con Google (Inicia el flujo)' })
+   @ApiOperation({ summary: 'Iniciar sesión o registrarse con Google (Inicia el flujo)' }) // Pequeño cambio aquí
   @ApiResponse({ status: 302, description: 'Redirige al login de Google.' })
   @Get('google/login')
   @UseGuards(AuthGuard('google'))
@@ -80,8 +80,8 @@ export class AuthController {
     // La estrategia de Passport se encarga de la redirección
   }
 
-  @ApiOperation({ summary: 'Callback de Google (No usar directamente)' })
-  @ApiResponse({ status: 200, description: 'Login exitoso, retorna un JWT.' })
+  @ApiOperation({ summary: 'Callback de Google. Maneja el login y registro.' }) // Cambio aquí
+  @ApiResponse({ status: 200, description: 'Login o registro exitoso, retorna un JWT.' }) // Y aquí
   @Get('google/callback')
   @UseGuards(AuthGuard('google'))
   handleGoogleCallback(@Req() req) {
