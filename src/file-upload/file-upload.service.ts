@@ -37,4 +37,32 @@ export class FileUploadService {
       streamifier.createReadStream(file.buffer).pipe(uploadStream);
     });
   }
+
+  /**
+   * Elimina un archivo de Cloudinary usando su public_id
+   * @param publicId El public_id del archivo en Cloudinary
+   * @returns Promise con el resultado de la eliminación
+   */
+  async deleteFile(publicId: string): Promise<any> {
+    try {
+      const result = await cloudinary.uploader.destroy(publicId);
+      return result;
+    } catch (error) {
+      throw new BadRequestException(`Error al eliminar archivo: ${error.message}`);
+    }
+  }
+
+  /**
+   * Elimina múltiples archivos de Cloudinary
+   * @param publicIds Array de public_ids de los archivos
+   * @returns Promise con los resultados de las eliminaciones
+   */
+  async deleteFiles(publicIds: string[]): Promise<any[]> {
+    try {
+      const deletePromises = publicIds.map(publicId => this.deleteFile(publicId));
+      return await Promise.all(deletePromises);
+    } catch (error) {
+      throw new BadRequestException(`Error al eliminar archivos: ${error.message}`);
+    }
+  }
 }

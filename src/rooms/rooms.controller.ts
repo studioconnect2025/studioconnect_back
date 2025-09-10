@@ -1,12 +1,35 @@
-import { Controller, Post, Patch, Delete, Get, Param, Body, UseGuards, Request } from '@nestjs/common';
+import { 
+  Controller, 
+  Post, 
+  Patch, 
+  Delete, 
+  Get, 
+  Param, 
+  Body, 
+  UseGuards, 
+  Request,
+  UseInterceptors,
+  UploadedFiles,
+  BadRequestException,
+} from '@nestjs/common';
+import { FilesInterceptor } from '@nestjs/platform-express';
 import { RoomsService } from './rooms.service';
 import { CreateRoomDto } from './dto/create-room.dto';
 import { UpdateRoomDto } from './dto/update-room.dto';
+import { UpdateImageOrderDto } from './dto/update-room.dto';
 import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard } from 'src/auth/guard/roles.guard';
 import { Roles } from 'src/auth/decorators/roles.decorator';
 import { UserRole } from 'src/auth/enum/roles.enum';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam } from '@nestjs/swagger';
+import { 
+  ApiTags, 
+  ApiOperation, 
+  ApiResponse, 
+  ApiBearerAuth, 
+  ApiParam,
+  ApiConsumes,
+  ApiBody,
+} from '@nestjs/swagger';
 import { Room } from './entities/room.entity';
 
 @ApiTags('Rooms')
@@ -59,5 +82,97 @@ export class RoomsController {
   @ApiResponse({ status: 200, description: 'Listado de salas', type: [Room] })
   findRoomsByStudio(@Param('studioId') studioId: string) {
     return this.roomsService.findRoomsByStudio(studioId);
+  }
+
+  // ===================== ENDPOINTS DE IMÁGENES =====================
+
+  @Post(':roomId/images')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles(UserRole.STUDIO_OWNER)
+  @UseInterceptors(FilesInterceptor('images', 5, {
+    fileFilter: (req, file, cb) => {
+      if (!file.originalname.match(/\.(jpg|jpeg|png|gif|webp)$/)) {
+        return cb(new BadRequestException('Solo se permiten archivos de imagen'), false);
+      }
+      cb(null, true);
+    },
+    limits: {
+      fileSize: 5 * 1024 * 1024, // 5MB por archivo
+    },
+  }))
+  @ApiOperation({ summary: 'Subir imágenes a una sala' })
+  @ApiParam({ name: 'roomId', description: 'ID de la sala' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    description: 'Imágenes de la sala (máximo 5)',
+    schema: {
+      type: 'object',
+      properties: {
+        images: {
+          type: 'array',
+          items: {
+            type: 'string',
+            format: 'binary',
+          },
+        },
+      },
+    },
+  })
+  @ApiResponse({ 
+    status: 201, 
+    description: 'Imágenes subidas correctamente', 
+    type: Room 
+  })
+  uploadRoomImages(
+    @Param('roomId') roomId: string,
+    @UploadedFiles() files: Express.Multer.File[],
+    @Request() req,
+  ) {
+    return this.roomsService.uploadImages(roomId, files, req.user);
+  }
+
+  @Delete(':roomId/images/:imageIndex')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles(UserRole.STUDIO_OWNER)
+  @ApiOperation({ summary: 'Eliminar una imagen específica de la sala' })
+  @ApiParam({ name: 'roomId', description: 'ID de la sala' })
+  @ApiParam({ name: 'imageIndex', description: 'Índice de la imagen (0-based)' })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Imagen eliminada correctamente', 
+    type: Room 
+  })
+  deleteRoomImage(
+    @Param('roomId') roomId: string,
+    @Param('imageIndex') imageIndex: string,
+    @Request() req,
+  ) {
+    const index = parseInt(imageIndex, 10);
+    if (isNaN(index)) {
+      throw new BadRequestException('Índice de imagen debe ser un número');
+    }
+    return this.roomsService.deleteImage(roomId, index, req.user);
+  }
+
+  @Patch(':roomId/images/order')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles(UserRole.STUDIO_OWNER)
+  @ApiOperation({ summary: 'Reordenar las imágenes de la sala' })
+  @ApiParam({ name: 'roomId', description: 'ID de la sala' })
+  @ApiBody({
+    description: 'Nuevo orden de las URLs de imágenes',
+    type: UpdateImageOrderDto,
+  })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Orden de imágenes actualizado correctamente', 
+    type: Room 
+  })
+  updateImageOrder(
+    @Param('roomId') roomId: string,
+    @Body() dto: UpdateImageOrderDto,
+    @Request() req,
+  ) {
+    return this.roomsService.updateImageOrder(roomId, dto.imageUrls, req.user);
   }
 }
