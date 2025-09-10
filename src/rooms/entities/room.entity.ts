@@ -36,6 +36,13 @@ export class Room {
   @Column({ type: 'json', nullable: true })
   availability: any;
 
+  // Campos para las imágenes de Cloudinary
+  @Column('simple-array', { nullable: true })
+  imageUrls: string[];
+
+  @Column('simple-array', { nullable: true })
+  imagePublicIds: string[];
+
   @Column({ default: true })
   isActive: boolean;
 
