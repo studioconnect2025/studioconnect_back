@@ -38,13 +38,28 @@ import { Room } from './entities/room.entity';
 export class RoomsController {
   constructor(private readonly roomsService: RoomsService) {}
 
+  // NUEVA RUTA SIN NECESIDAD DE studioId en la URL
+  @Post()
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles(UserRole.STUDIO_OWNER)
+  @ApiOperation({ summary: 'Crear una sala (studioId se obtiene automáticamente del usuario)' })
+  @ApiResponse({ status: 201, description: 'Sala creada correctamente', type: Room })
+  createRoom(
+    @Body() dto: CreateRoomDto,
+    @Request() req,
+  ) {
+    // El studioId se obtiene automáticamente en el service
+    return this.roomsService.createWithAutoStudio(dto, req.user);
+  }
+
+  // MANTENER LA RUTA ORIGINAL PARA BACKWARD COMPATIBILITY (opcional)
   @Post(':studioId')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles(UserRole.STUDIO_OWNER)
-  @ApiOperation({ summary: 'Crear una sala en un estudio' })
+  @ApiOperation({ summary: 'Crear una sala en un estudio específico' })
   @ApiParam({ name: 'studioId', description: 'ID del estudio' })
   @ApiResponse({ status: 201, description: 'Sala creada correctamente', type: Room })
-  createRoom(
+  createRoomInStudio(
     @Param('studioId') studioId: string,
     @Body() dto: CreateRoomDto,
     @Request() req,
@@ -82,6 +97,16 @@ export class RoomsController {
   @ApiResponse({ status: 200, description: 'Listado de salas', type: [Room] })
   findRoomsByStudio(@Param('studioId') studioId: string) {
     return this.roomsService.findRoomsByStudio(studioId);
+  }
+
+  // NUEVO ENDPOINT PARA OBTENER SALAS DEL USUARIO AUTENTICADO
+  @Get('my-rooms')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles(UserRole.STUDIO_OWNER)
+  @ApiOperation({ summary: 'Obtener todas las salas del usuario autenticado' })
+  @ApiResponse({ status: 200, description: 'Listado de salas del usuario', type: [Room] })
+  findMyRooms(@Request() req) {
+    return this.roomsService.findRoomsByUser(req.user);
   }
 
   // ===================== ENDPOINTS DE IMÁGENES =====================

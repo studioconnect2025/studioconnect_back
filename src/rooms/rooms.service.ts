@@ -23,6 +23,34 @@ export class RoomsService {
     private readonly fileuploadService: FileUploadService,
   ) {}
 
+  /**
+   * Crear una sala obteniendo automáticamente el studioId del usuario autenticado
+   * NUEVO MÉTODO para flujo más fluido
+   */
+  async createWithAutoStudio(dto: CreateRoomDto, user: User): Promise<Room> {
+    // Buscar el studio del usuario
+    const studio = await this.studioRepository.findOne({
+      where: { owner: { id: user.id } },
+      relations: ['owner'],
+    });
+
+    if (!studio) {
+      throw new NotFoundException('No tienes un estudio asociado. Crea un estudio primero.');
+    }
+
+    const room = this.roomRepository.create({
+      ...dto,
+      studio,
+      imageUrls: [],
+      imagePublicIds: [],
+    });
+
+    return this.roomRepository.save(room);
+  }
+
+  /**
+   * Método original - mantiene compatibilidad hacia atrás
+   */
   async create(
     dto: CreateRoomDto,
     user: User,
@@ -78,7 +106,7 @@ export class RoomsService {
 
     // Eliminar imágenes de Cloudinary antes de borrar la sala
     if (room.imagePublicIds && room.imagePublicIds.length > 0) {
-      // await this.deleteImagesFromCloudinary(room.imagePublicIds);
+      await this.deleteImagesFromCloudinary(room.imagePublicIds);
     }
 
     await this.roomRepository.remove(room);
@@ -94,7 +122,24 @@ export class RoomsService {
     return studio.rooms;
   }
 
-  // Métodos para manejo de imágenes
+  /**
+   * NUEVO MÉTODO: Obtener todas las salas del usuario autenticado
+   */
+  async findRoomsByUser(user: User): Promise<Room[]> {
+    const studio = await this.studioRepository.findOne({
+      where: { owner: { id: user.id } },
+      relations: ['rooms'],
+    });
+
+    if (!studio) {
+      throw new NotFoundException('No tienes un estudio asociado');
+    }
+
+    return studio.rooms;
+  }
+
+  // ===================== MÉTODOS PARA MANEJO DE IMÁGENES =====================
+
   async uploadImages(
     roomId: string,
     files: Express.Multer.File[],
@@ -202,6 +247,8 @@ export class RoomsService {
     return await this.roomRepository.save(room);
   }
 
+  // ===================== MÉTODOS PRIVADOS/AUXILIARES =====================
+
   private async findRoomWithValidation(roomId: string, user: User): Promise<Room> {
     const room = await this.roomRepository.findOne({
       where: { id: roomId },
@@ -218,12 +265,41 @@ export class RoomsService {
     return room;
   }
 
-  // Método auxiliar para eliminar múltiples imágenes de Cloudinary
+  /**
+   * Método auxiliar para eliminar múltiples imágenes de Cloudinary
+   */
   private async deleteImagesFromCloudinary(publicIds: string[]): Promise<void> {
     try {
       await this.fileuploadService.deleteFiles(publicIds);
     } catch (error) {
       console.error('Error eliminando imágenes de Cloudinary:', error);
     }
+  }
+
+  /**
+   * MÉTODO ADICIONAL: Si el usuario puede tener múltiples studios
+   * Crear en el primer studio activo del usuario
+   */
+  async createWithAutoStudioMultiple(dto: CreateRoomDto, user: User): Promise<Room> {
+    const studios = await this.studioRepository.find({
+      where: { owner: { id: user.id } }, // Si tienes campo isActive: , isActive: true
+      relations: ['owner'],
+    });
+
+    if (!studios || studios.length === 0) {
+      throw new NotFoundException('No tienes estudios asociados. Crea un estudio primero.');
+    }
+
+    // Usar el primer studio o implementar lógica para seleccionar el principal
+    const studio = studios[0];
+
+    const room = this.roomRepository.create({
+      ...dto,
+      studio,
+      imageUrls: [],
+      imagePublicIds: [],
+    });
+
+    return this.roomRepository.save(room);
   }
 }
