@@ -41,7 +41,6 @@ export class PasswordResetService {
     
     if (!user) {
       // Por seguridad, siempre devolvemos el mismo mensaje
-      // aunque el usuario no exista
       return {
         message: 'Si el email existe, recibirás un enlace de recuperación',
       };
@@ -76,7 +75,6 @@ export class PasswordResetService {
       this.logger.log(`Token de recuperación generado para usuario: ${user.id}`);
     } catch (error) {
       this.logger.error('Error enviando email de recuperación:', error);
-      // Eliminar el token si no se pudo enviar el email
       await this.passwordResetTokenRepository.delete(passwordResetToken.id);
       throw new BadRequestException('Error al enviar el email de recuperación');
     }
@@ -89,7 +87,6 @@ export class PasswordResetService {
   async validateResetToken(validateTokenDto: ValidateTokenDto): Promise<{ valid: boolean }> {
     const { token } = validateTokenDto;
 
-    // Buscar tokens válidos (no usados y no expirados)
     const validTokens = await this.passwordResetTokenRepository.find({
       where: {
         isUsed: false,
@@ -98,7 +95,6 @@ export class PasswordResetService {
       relations: ['user'],
     });
 
-    // Verificar si algún token coincide
     for (const tokenRecord of validTokens) {
       const isValidToken = await bcrypt.compare(token, tokenRecord.token);
       if (isValidToken) {
@@ -112,7 +108,6 @@ export class PasswordResetService {
   async resetPassword(resetPasswordDto: ResetPasswordDto): Promise<{ message: string }> {
     const { token, newPassword } = resetPasswordDto;
 
-    // Buscar tokens válidos
     const validTokens = await this.passwordResetTokenRepository.find({
       where: {
         isUsed: false,
@@ -123,7 +118,6 @@ export class PasswordResetService {
 
     let tokenRecord: PasswordResetToken | null = null;
 
-    // Verificar si algún token coincide
     for (const record of validTokens) {
       const isValidToken = await bcrypt.compare(token, record.token);
       if (isValidToken) {
@@ -136,31 +130,28 @@ export class PasswordResetService {
       throw new BadRequestException('Token inválido o expirado');
     }
 
-    // Hashear la nueva contraseña
     const hashedPassword = await bcrypt.hash(newPassword, 12);
 
-    // Actualizar la contraseña del usuario usando UsersService
     await this.usersService.updatePassword(tokenRecord.userId, hashedPassword);
 
-    // Marcar el token como usado
     await this.passwordResetTokenRepository.update(tokenRecord.id, {
       isUsed: true,
     });
 
-    // Invalidar todos los tokens del usuario por seguridad
     await this.passwordResetTokenRepository.update(
       { userId: tokenRecord.userId, isUsed: false },
       { isUsed: true },
     );
+     
+    await this.emailService.sendPasswordChangedEmail(tokenRecord.user.email);
 
     this.logger.log(`Contraseña actualizada para usuario: ${tokenRecord.userId}`);
-
     return {
       message: 'Contraseña actualizada exitosamente',
     };
   }
 
-  // Método para limpiar tokens expirados (opcional, para ejecutar como cron job)
+
   async cleanExpiredTokens(): Promise<void> {
     const result = await this.passwordResetTokenRepository.delete({
       expiresAt: MoreThan(new Date()),

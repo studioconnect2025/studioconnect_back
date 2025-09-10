@@ -158,5 +158,25 @@ export class EmailService {
     `;
   }
 
+  async sendPasswordChangedEmail(to: string) {
+  try {
+    await this.transporter.sendMail({
+      from: `"Soporte" <${this.configService.get('EMAIL_USER')}>`,
+      to,
+      subject: 'Confirmación de cambio de contraseña',
+      text: `Hola, te confirmamos que tu contraseña fue cambiada exitosamente. 
+Si no realizaste este cambio, por favor contacta con soporte de inmediato.`,
+      html: `
+        <p>Hola,</p>
+        <p>Te confirmamos que tu contraseña ha sido <b>cambiada exitosamente</b>.</p>
+        <p>Si no realizaste este cambio, por favor contacta con soporte de inmediato.</p>
+        <br>
+        <p>Atentamente,<br>Equipo de soporte</p>
+      `,
+    });
+  } catch (error) {
+    this.logger.error(`Error enviando email de cambio de contraseña: ${error.message}`);
+  }
+}
 
 }
