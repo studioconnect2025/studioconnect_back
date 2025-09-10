@@ -8,6 +8,9 @@ import {
   Body,
   UseGuards,
   Request,
+  UseInterceptors,
+  UploadedFile,
+  UploadedFiles,
 } from '@nestjs/common';
 import { StudiosService } from 'src/studios/studios.service';
 import { RoomsService } from 'src/rooms/rooms.service';
@@ -24,8 +27,11 @@ import {
   ApiOperation,
   ApiResponse,
   ApiParam,
+  ApiBody,
+  ApiConsumes,
 } from '@nestjs/swagger';
 import { Roles } from 'src/auth/decorators/roles.decorator';
+import { FileFieldsInterceptor, FileInterceptor } from '@nestjs/platform-express';
 
 @ApiTags('Owners')
 @ApiBearerAuth()
@@ -35,7 +41,7 @@ export class OwnersController {
   constructor(
     private readonly studiosService: StudiosService,
     private readonly roomsService: RoomsService,
-  ) {}
+  ) { }
 
   // GET /owners/me/studio
   @Get()
@@ -68,16 +74,51 @@ export class OwnersController {
     return studios[0] ?? {};
   }
 
-  // POST /owners/me/studio
-  @Post('me')
-  @ApiOperation({ summary: 'Crear un estudio propio' })
-  @ApiResponse({ status: 201, description: 'Estudio creado exitosamente.' })
-  @ApiResponse({ status: 403, description: 'No autorizado.' })
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles(UserRole.STUDIO_OWNER)
-  async createMyStudio(@Body() createStudioDto: CreateStudioDto, @Request() req) {
-    return this.studiosService.create(createStudioDto, req.user);
+ // PUT /owners/me/studio/files
+@Put('files')
+@ApiOperation({ summary: 'Actualizar mi estudio con fotos y registro comercial' })
+@ApiConsumes('multipart/form-data')
+@ApiBody({
+  description: 'Datos del estudio con archivos',
+  schema: {
+    type: 'object',
+    properties: {
+      name: { type: 'string' },
+      studioType: { type: 'string' },
+      city: { type: 'string' },
+      province: { type: 'string' },
+      address: { type: 'string' },
+      description: { type: 'string' },
+      services: { type: 'array', items: { type: 'string' } },
+      openingTime: { type: 'number' },
+      closingTime: { type: 'number' },
+      photos: { type: 'array', items: { type: 'string', format: 'binary' } },
+      comercialRegister: { type: 'string', format: 'binary' },
+    },
+  },
+})
+@UseInterceptors(
+  FileFieldsInterceptor([
+    { name: 'photos', maxCount: 5 },
+    { name: 'comercialRegister', maxCount: 1 },
+  ]),
+)
+@Roles(UserRole.STUDIO_OWNER)
+async updateMyStudioWithFiles(
+  @Request() req,
+  @Body() dto: UpdateStudioDto,
+  @UploadedFiles() files: { photos?: Express.Multer.File[]; comercialRegister?: Express.Multer.File[] },
+) {
+  const user = req.user;
+  const studios = await this.studiosService.findMyStudios(user);
+  if (!studios[0]) {
+    return { message: 'No tienes estudios creados aún' };
   }
+  return this.studiosService.updateMyStudioWithFiles(user, studios[0].id, dto, files);
+}
+
+
+
 
   // PUT /owners/me/studio
   @Put()
@@ -151,5 +192,44 @@ export class OwnersController {
     await this.roomsService.remove(roomId, user);
     return { message: 'Sala eliminada con éxito' };
   }
+
+  // POST /owners/me/studio/files
+@Post('files')
+@ApiOperation({ summary: 'Crear un estudio propio con fotos y registro comercial' })
+@ApiConsumes('multipart/form-data')
+@ApiBody({
+  description: 'Datos del estudio con archivos',
+  schema: {
+    type: 'object',
+    properties: {
+      name: { type: 'string' },
+      studioType: { type: 'string' },
+      city: { type: 'string' },
+      province: { type: 'string' },
+      address: { type: 'string' },
+      description: { type: 'string' },
+      services: { type: 'array', items: { type: 'string' } },
+      openingTime: { type: 'number' },
+      closingTime: { type: 'number' },
+      photos: { type: 'array', items: { type: 'string', format: 'binary' } },
+      comercialRegister: { type: 'string', format: 'binary' },
+    },
+  },
+})
+@UseInterceptors(
+  FileFieldsInterceptor([
+    { name: 'photos', maxCount: 5 },
+    { name: 'comercialRegister', maxCount: 1 },
+  ]),
+)
+@Roles(UserRole.STUDIO_OWNER)
+async createMyStudioWithFiles(
+  @Body() createStudioDto: CreateStudioDto,
+  @UploadedFiles() files: { photos?: Express.Multer.File[]; comercialRegister?: Express.Multer.File[] },
+  @Request() req,
+) {
+  return this.studiosService.createWithFiles(createStudioDto, req.user, files);
+}
+
 }
 

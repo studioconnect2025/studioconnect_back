@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, BadRequestException } from '@nestjs/common';
 import { v2 as cloudinary, UploadApiResponse } from 'cloudinary';
 import * as streamifier from 'streamifier';
 
@@ -12,23 +12,28 @@ export class FileUploadService {
     });
   }
 
-  uploadFile(file: Express.Multer.File): Promise<UploadApiResponse> {
+  /**
+   * Sube un archivo a Cloudinary.
+   * @param file Archivo de multer
+   * @param folder Carpeta opcional en Cloudinary
+   * @returns Promise con la info del archivo subido
+   */
+  uploadFile(file: Express.Multer.File, folder: string = 'studios'): Promise<UploadApiResponse> {
+    // Validar tipo de archivo
+    if (!file.mimetype.startsWith('image/') && file.mimetype !== 'application/pdf') {
+      throw new BadRequestException('Solo se permiten imágenes o PDF.');
+    }
+
     return new Promise<UploadApiResponse>((resolve, reject) => {
       const uploadStream = cloudinary.uploader.upload_stream(
-        {
-          folder: 'studios',
-        },
-        // CAMBIO AQUÍ: Se añade una comprobación
+        { folder },
         (error, result) => {
-          // Si hay un error O si el resultado no existe, rechaza la promesa
           if (error || !result) {
             return reject(error || new Error('Cloudinary returned an empty result.'));
           }
-          // Si llegamos aquí, 'result' existe y es del tipo correcto
           resolve(result);
         },
       );
-
       streamifier.createReadStream(file.buffer).pipe(uploadStream);
     });
   }
