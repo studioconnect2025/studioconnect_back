@@ -19,7 +19,10 @@ import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard } from 'src/auth/guard/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from 'src/auth/enum/roles.enum';
-import { FileFieldsInterceptor, FileInterceptor } from '@nestjs/platform-express';
+import {
+  FileFieldsInterceptor,
+  FileInterceptor,
+} from '@nestjs/platform-express';
 import {
   ApiTags,
   ApiOperation,
@@ -38,7 +41,10 @@ export class StudiosController {
   // --- RUTAS PÚBLICAS ---
   @Get()
   @ApiOperation({ summary: 'Obtener todos los estudios' })
-  @ApiResponse({ status: 200, description: 'Lista de estudios obtenida con éxito.' })
+  @ApiResponse({
+    status: 200,
+    description: 'Lista de estudios obtenida con éxito.',
+  })
   findAll() {
     return this.studiosService.findAll();
   }
@@ -63,7 +69,9 @@ export class StudiosController {
 
   // --- CREAR ESTUDIO CON ARCHIVOS ---
   @Post('me')
-  @ApiOperation({ summary: 'Crear un estudio propio con fotos y registro comercial' })
+  @ApiOperation({
+    summary: 'Crear un estudio propio con fotos y registro comercial',
+  })
   @ApiConsumes('multipart/form-data')
   @ApiBody({
     description: 'Datos del estudio con archivos',
@@ -97,15 +105,25 @@ export class StudiosController {
   )
   createMyStudioWithFiles(
     @Body() createStudioDto: CreateStudioDto,
-    @UploadedFiles() files: { photos?: Express.Multer.File[]; comercialRegister?: Express.Multer.File[] },
+    @UploadedFiles()
+    files: {
+      photos?: Express.Multer.File[];
+      comercialRegister?: Express.Multer.File[];
+    },
     @Request() req,
   ) {
-    return this.studiosService.createWithFiles(createStudioDto, req.user, files);
+    return this.studiosService.createWithFiles(
+      createStudioDto,
+      req.user,
+      files,
+    );
   }
 
   // --- ACTUALIZAR ESTUDIO CON ARCHIVOS ---
   @Patch('me/:id')
-  @ApiOperation({ summary: 'Actualizar un estudio propio con fotos y registro comercial' })
+  @ApiOperation({
+    summary: 'Actualizar un estudio propio con fotos y registro comercial',
+  })
   @ApiConsumes('multipart/form-data')
   @ApiBody({
     description: 'Actualizar estudio con archivos',
@@ -127,7 +145,10 @@ export class StudiosController {
       },
     },
   })
-  @ApiResponse({ status: 200, description: 'Estudio actualizado exitosamente.' })
+  @ApiResponse({
+    status: 200,
+    description: 'Estudio actualizado exitosamente.',
+  })
   @ApiResponse({ status: 403, description: 'No autorizado.' })
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles(UserRole.STUDIO_OWNER)
@@ -140,10 +161,19 @@ export class StudiosController {
   updateMyStudioWithFiles(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() updateStudioDto: UpdateStudioDto,
-    @UploadedFiles() files: { photos?: Express.Multer.File[]; comercialRegister?: Express.Multer.File[] },
+    @UploadedFiles()
+    files: {
+      photos?: Express.Multer.File[];
+      comercialRegister?: Express.Multer.File[];
+    },
     @Request() req,
   ) {
-    return this.studiosService.updateMyStudioWithFiles(req.user, id, updateStudioDto, files);
+    return this.studiosService.updateMyStudioWithFiles(
+      req.user,
+      id,
+      updateStudioDto,
+      files,
+    );
   }
 
   // --- SUBIR FOTO INDIVIDUAL ---
@@ -172,5 +202,3 @@ export class StudiosController {
     return this.studiosService.uploadPhoto(req.user, id, file);
   }
 }
-
-

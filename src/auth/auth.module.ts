@@ -39,6 +39,6 @@ import { GoogleStrategy } from './google.strategy';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy, TokenBlacklistService, GoogleStrategy], 
+  providers: [AuthService, JwtStrategy, TokenBlacklistService, GoogleStrategy],
 })
 export class AuthModule {}
