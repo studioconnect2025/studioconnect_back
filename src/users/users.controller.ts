@@ -18,12 +18,26 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { User } from './entities/user.entity';
+import { Roles } from 'src/auth/decorators/roles.decorator';
+import { UserRole } from 'src/auth/enum/roles.enum';
 
 @ApiTags('Users')
 @ApiBearerAuth()
 @Controller('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
+
+  @Get('me/profile')
+  @ApiOperation({ summary: 'Obtener perfil del usuario autenticado' })
+  @ApiResponse({
+    status: 200,
+    description: 'perfil del usuario y sus estudios.',
+  })
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles(UserRole.STUDIO_OWNER, UserRole.MUSICIAN)
+  async findOne(@Req() req) {
+    return await this.usersService.findOne(req.user);
+  }
 
   @Get(':id')
   @UseGuards(AuthGuard('jwt'), RolesGuard)

@@ -1,4 +1,9 @@
-import { Injectable, UnauthorizedException, BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  UnauthorizedException,
+  BadRequestException,
+  NotFoundException,
+} from '@nestjs/common';
 import { UsersService } from '../users/users.service';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
@@ -51,7 +56,9 @@ export class AuthService {
   // --- MODIFICACIÓN IMPORTANTE AQUÍ ---
   async googleLogin(req: any) {
     if (!req.user) {
-      throw new BadRequestException('No se encontró información de usuario de Google.');
+      throw new BadRequestException(
+        'No se encontró información de usuario de Google.',
+      );
     }
 
     const { email } = req.user;

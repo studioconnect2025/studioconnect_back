@@ -40,6 +40,13 @@ export class UsersService {
     return this.usersRepository.save(newUser);
   }
 
+  async findOne(user: User): Promise<User> {
+    return this.usersRepository.findOneOrFail({
+      where: { id: user.id },
+      relations: ['bookings', 'studio', 'studio.bookings', 'studio.rooms'],
+    });
+  }
+
   // Buscar usuario por email (obligatorio)
   async findOneByEmail(email: string): Promise<User> {
     if (!email) throw new BadRequestException('El email es obligatorio.');

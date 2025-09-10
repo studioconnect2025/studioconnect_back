@@ -8,7 +8,7 @@ import {
   UseGuards,
   Req,
   Session,
-  Res
+  Res,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { StudioOwnerRegisterDto } from 'src/users/dto/StudioOwnerRegisterDto';
@@ -28,33 +28,34 @@ import type { Response } from 'express';
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
-@ApiOperation({ summary: 'Registro de un nuevo dueño de estudio' })
-@ApiResponse({
-  status: 201,
-  description: 'Dueño de estudio registrado correctamente',
-})
-@ApiResponse({ status: 400, description: 'Datos inválidos para el registro' })
-@ApiBody({
-  type: StudioOwnerRegisterDto,
-  description: 'Estructura de datos para registrar un nuevo dueño de estudio.',
-  examples: {
-    a: {
-      summary: 'Ejemplo de Registro',
-      value: {
-        name: 'Juan',
-        lastName: 'Perez',
-        email: 'juan.perez@example.com',
-        phoneNumber: '+573101234567',
-        password: 'password123',
-        confirmPassword: 'password123',
+  @ApiOperation({ summary: 'Registro de un nuevo dueño de estudio' })
+  @ApiResponse({
+    status: 201,
+    description: 'Dueño de estudio registrado correctamente',
+  })
+  @ApiResponse({ status: 400, description: 'Datos inválidos para el registro' })
+  @ApiBody({
+    type: StudioOwnerRegisterDto,
+    description:
+      'Estructura de datos para registrar un nuevo dueño de estudio.',
+    examples: {
+      a: {
+        summary: 'Ejemplo de Registro',
+        value: {
+          name: 'Juan',
+          lastName: 'Perez',
+          email: 'juan.perez@example.com',
+          phoneNumber: '+573101234567',
+          password: 'password123',
+          confirmPassword: 'password123',
+        },
       },
     },
-  },
-})
-@Post('register/studio-owner')
-registerStudioOwner(@Body() registerDto: StudioOwnerRegisterDto) {
-  return this.authService.registerStudioOwner(registerDto);
-}
+  })
+  @Post('register/studio-owner')
+  registerStudioOwner(@Body() registerDto: StudioOwnerRegisterDto) {
+    return this.authService.registerStudioOwner(registerDto);
+  }
 
   @ApiOperation({ summary: 'Iniciar sesión' })
   @ApiResponse({ status: 200, description: 'Login exitoso, retorna un JWT' })
@@ -66,7 +67,7 @@ registerStudioOwner(@Body() registerDto: StudioOwnerRegisterDto) {
   }
 
   // --- Rutas para Google OAuth ---
-   @Get('google/login')
+  @Get('google/login')
   @UseGuards(AuthGuard('google'))
   handleGoogleLogin(@Req() req, @Session() session: Record<string, any>) {
     // Guardamos la URI de redirección del frontend en la sesión
@@ -79,7 +80,11 @@ registerStudioOwner(@Body() registerDto: StudioOwnerRegisterDto) {
   // 2. Modifica handleGoogleCallback para usar la sesión y redirigir
   @Get('google/callback')
   @UseGuards(AuthGuard('google'))
-  async handleGoogleCallback(@Req() req, @Res() res: Response, @Session() session: Record<string, any>) {
+  async handleGoogleCallback(
+    @Req() req,
+    @Res() res: Response,
+    @Session() session: Record<string, any>,
+  ) {
     const tokenData = await this.authService.googleLogin(req);
     const jwtToken = tokenData.access_token;
 
@@ -88,7 +93,7 @@ registerStudioOwner(@Body() registerDto: StudioOwnerRegisterDto) {
 
     // Limpiamos la sesión
     session.redirectUri = null;
-    
+
     // Redirigimos al frontend con el token en la URL
     res.redirect(`${redirectUri}?token=${jwtToken}`);
   }
