@@ -11,6 +11,9 @@ import { Booking } from 'src/bookings/dto/bookings.entity';
 
 @Entity({ name: 'users' })
 export class User {
+  static email(email: any) {
+    throw new Error('Method not implemented.');
+  }
   name(name: any, email: string) {
     throw new Error('Method not implemented.');
   }
