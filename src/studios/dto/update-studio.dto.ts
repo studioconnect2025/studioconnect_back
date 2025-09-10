@@ -8,6 +8,7 @@ import {
   Min,
   IsEnum,
   ArrayMaxSize,
+  Matches,
 } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { StudioStatus } from '../enum/studio-status.enum';
@@ -72,17 +73,13 @@ export class UpdateStudioDto {
   @IsOptional()
   comercialRegister?: Express.Multer.File;
 
-  @ApiPropertyOptional({ description: 'Hora de apertura', example: 8 })
-  @IsNumber()
-  @Min(0)
-  @IsOptional()
-  openingTime?: number;
+  @ApiPropertyOptional({ description: 'Hora de apertura, formato HH:MM', example: '09:30' })
+  @Matches(/^([0-1]\d|2[0-3]):([0-5]\d)$/, { message: 'Hora debe tener formato HH:MM' })
+  openingTime?: string;
 
-  @ApiPropertyOptional({ description: 'Hora de cierre', example: 22 })
-  @IsNumber()
-  @Min(0)
-  @IsOptional()
-  closingTime?: number;
+  @ApiPropertyOptional({ description: 'Hora de cierre, formato HH:MM', example: '21:00' })
+  @Matches(/^([0-1]\d|2[0-3]):([0-5]\d)$/, { message: 'Hora debe tener formato HH:MM' })
+  closingTime?: string;
 
   @ApiPropertyOptional({ description: 'Estado del estudio', example: 'approved', enum: StudioStatus })
   @IsEnum(StudioStatus)
