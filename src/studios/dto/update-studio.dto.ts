@@ -7,6 +7,7 @@ import {
   IsNumber,
   Min,
   IsEnum,
+  ArrayMaxSize,
 } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { StudioStatus } from '../enum/studio-status.enum';
@@ -49,7 +50,7 @@ export class UpdateStudioDto {
   @IsOptional()
   email?: string;
 
-  @ApiPropertyOptional({ description: 'Descripción del estudio', example: 'Nueva descripción del estudio' })
+  @ApiPropertyOptional({ description: 'Descripción del estudio', example: 'Nueva descripción del estudio', maxLength: 500 })
   @IsString()
   @MaxLength(500)
   @IsOptional()
@@ -61,19 +62,15 @@ export class UpdateStudioDto {
   @IsOptional()
   services?: ServicesType[];
 
-  @ApiPropertyOptional({ description: 'Fotos del estudio', type: 'array', items: { type: 'string', format: 'binary' }, required: false })
+  @ApiPropertyOptional({ description: 'Fotos del estudio (máximo 5)', type: 'array', items: { type: 'string', format: 'binary' }, required: false })
   @IsOptional()
-  photos?: string[];
+  @IsArray()
+  @ArrayMaxSize(5, { message: 'Solo se permiten hasta 5 fotos' })
+  photos?: Express.Multer.File[];
 
   @ApiPropertyOptional({ description: 'Registro comercial (PDF o imagen)', type: 'string', format: 'binary', required: false })
   @IsOptional()
-  comercialRegister?: string;
-
-  @ApiPropertyOptional({ description: 'Equipo disponible actualizado', example: ['Micrófono Neumann', 'Batería Pearl'] })
-  @IsArray()
-  @IsString({ each: true })
-  @IsOptional()
-  availableEquipment?: string[];
+  comercialRegister?: Express.Multer.File;
 
   @ApiPropertyOptional({ description: 'Hora de apertura', example: 8 })
   @IsNumber()
@@ -92,4 +89,5 @@ export class UpdateStudioDto {
   @IsOptional()
   status?: StudioStatus;
 }
+
 

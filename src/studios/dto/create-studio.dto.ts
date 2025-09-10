@@ -1,5 +1,8 @@
-import { IsString, IsNotEmpty, MaxLength, IsOptional, IsArray, IsNumber, Min, IsEnum } from 'class-validator';
+import { 
+  IsString, IsNotEmpty, MaxLength, IsOptional, IsArray, IsNumber, Min, IsEnum, ArrayMaxSize 
+} from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
 import { StudioTypeEnum } from '../enum/studio-type.enum';
 import { ServicesType } from '../enum/ServicesType.enum';
 
@@ -9,7 +12,7 @@ export class CreateStudioDto {
   @IsNotEmpty()
   name: string;
 
-  @ApiProperty({ description: 'Tipo de estudio', example: 'grabacion' })
+  @ApiProperty({ description: 'Tipo de estudio', example: 'grabacion', enum: StudioTypeEnum })
   @IsEnum(StudioTypeEnum)
   studioType: StudioTypeEnum;
 
@@ -40,30 +43,28 @@ export class CreateStudioDto {
   @IsOptional()
   services?: ServicesType[];
 
-  @ApiProperty({ description: 'Fotos del estudio', type: 'array', items: { type: 'string', format: 'binary' }, required: false })
+  @ApiProperty({ description: 'Fotos del estudio (máximo 5)', type: 'array', items: { type: 'string', format: 'binary' }, required: false })
   @IsOptional()
-  photos?: string[];
+  @IsArray()
+  @ArrayMaxSize(5, { message: 'Solo se permiten hasta 5 fotos' })
+  photos?: Express.Multer.File[];
 
   @ApiProperty({ description: 'Registro comercial (PDF o imagen)', type: 'string', format: 'binary', required: false })
   @IsOptional()
-  comercialRegister?: string;
+  comercialRegister?: Express.Multer.File;
 
   @ApiProperty({ description: 'Hora de apertura', example: 9 })
   @IsNumber()
   @Min(0)
   @IsOptional()
+  @Type(() => Number)
   openingTime?: number;
 
   @ApiProperty({ description: 'Hora de cierre', example: 21 })
   @IsNumber()
   @Min(0)
   @IsOptional()
+  @Type(() => Number)
   closingTime?: number;
 
-  @ApiProperty({ description: 'Equipo disponible', isArray: true, example: ['Micrófono Shure SM7B'], required: false })
-  @IsArray()
-  @IsString({ each: true })
-  @IsOptional()
-  availableEquipment?: string[];
 }
-

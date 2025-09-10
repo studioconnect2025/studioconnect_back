@@ -28,12 +28,6 @@ export class Studio {
   @Column()
   address: string;
 
-  @Column({ nullable: true })
-  phoneNumber?: string;
-
-  @Column({ nullable: true })
-  email?: string;
-
   @Column({ type: 'text' })
   description: string;
 
@@ -42,9 +36,6 @@ export class Studio {
 
   @Column('text', { array: true, nullable: true })
   services?: ServicesType[];
-
-  @Column('text', { array: true, nullable: true })
-  availableEquipment?: string[];
 
   @Column({ type: 'int', nullable: true })
   openingTime?: number;
