@@ -14,7 +14,6 @@ import { Instruments } from 'src/instrumentos/entities/instrumento.entity';
 import { Booking } from 'src/bookings/dto/bookings.entity';
 import { Room } from 'src/rooms/entities/room.entity';
 
-
 @Entity('studios')
 export class Studio {
   @PrimaryGeneratedColumn('uuid')
