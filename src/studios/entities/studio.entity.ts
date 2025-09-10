@@ -1,4 +1,13 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany, JoinColumn, OneToOne } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  OneToMany,
+  JoinColumn,
+  OneToOne,
+} from 'typeorm';
 import { User } from '../../users/entities/user.entity';
 import { StudioStatus } from '../enum/studio-status.enum';
 import { Instruments } from 'src/instrumentos/entities/instrumento.entity';
@@ -15,9 +24,12 @@ export class Studio {
   @Column({ length: 100 })
   name: string;
 
-  @Column({ type: 'enum', enum: StudioTypeEnum, default: StudioTypeEnum.GRABACION })
+  @Column({
+    type: 'enum',
+    enum: StudioTypeEnum,
+    default: StudioTypeEnum.GRABACION,
+  })
   studioType: StudioTypeEnum;
-
 
   @Column()
   city: string;
@@ -50,7 +62,9 @@ export class Studio {
   @JoinColumn()
   owner: User;
 
-  @OneToMany(() => Instruments, (instrument) => instrument.studio, { cascade: true })
+  @OneToMany(() => Instruments, (instrument) => instrument.studio, {
+    cascade: true,
+  })
   instruments: Instruments[];
 
   @OneToMany(() => Booking, (booking) => booking.studio)
