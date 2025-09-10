@@ -11,6 +11,7 @@ import { CacheModule } from '@nestjs/cache-manager';
 import { redisStore } from 'cache-manager-redis-store';
 import { PasswordResetModule } from './modules/password-reset.module';
 import { GoogleStrategy } from './google.strategy';
+import { EmailService } from './services/email.service';
 
 @Module({
   imports: [
@@ -39,6 +40,6 @@ import { GoogleStrategy } from './google.strategy';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy, TokenBlacklistService, GoogleStrategy],
+  providers: [AuthService, JwtStrategy, TokenBlacklistService, GoogleStrategy, EmailService],
 })
 export class AuthModule {}
