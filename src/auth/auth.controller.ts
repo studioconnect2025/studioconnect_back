@@ -11,7 +11,7 @@ import {
   Res
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { StudioOwnerRegisterDto } from 'src/users/dto/owner.dto';
+import { StudioOwnerRegisterDto } from 'src/users/dto/StudioOwnerRegisterDto';
 import { LoginDto } from './dto/login.dto';
 import {
   ApiBearerAuth,
@@ -28,42 +28,33 @@ import type { Response } from 'express';
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
-  @ApiOperation({ summary: 'Registro de un nuevo dueño de estudio' })
-  @ApiResponse({
-    status: 201,
-    description: 'Dueño de estudio registrado correctamente',
-  })
-  @ApiResponse({ status: 400, description: 'Datos inválidos para el registro' })
-  @ApiBody({
-    type: StudioOwnerRegisterDto,
-    description:
-      'Estructura de datos para registrar un nuevo dueño de estudio.',
-    examples: {
-      a: {
-        summary: 'Ejemplo de Registro',
-        value: {
-          ownerInfo: {
-            firstName: 'Juan',
-            lastName: 'Perez',
-            email: 'juan.perez@example.com',
-            phoneNumber: '3101234567',
-            password: 'password123',
-          },
-          studioInfo: {
-            name: 'Estudio de Grabación Sónico',
-            city: 'Bogotá',
-            province: 'Cundinamarca',
-            address: 'Calle Falsa 123',
-            description: 'El mejor estudio para tus producciones musicales.',
-          },
-        },
+@ApiOperation({ summary: 'Registro de un nuevo dueño de estudio' })
+@ApiResponse({
+  status: 201,
+  description: 'Dueño de estudio registrado correctamente',
+})
+@ApiResponse({ status: 400, description: 'Datos inválidos para el registro' })
+@ApiBody({
+  type: StudioOwnerRegisterDto,
+  description: 'Estructura de datos para registrar un nuevo dueño de estudio.',
+  examples: {
+    a: {
+      summary: 'Ejemplo de Registro',
+      value: {
+        name: 'Juan',
+        lastName: 'Perez',
+        email: 'juan.perez@example.com',
+        phoneNumber: '+573101234567',
+        password: 'password123',
+        confirmPassword: 'password123',
       },
     },
-  })
-  @Post('register/studio-owner')
-  registerStudioOwner(@Body() registerDto: StudioOwnerRegisterDto) {
-    return this.authService.registerStudioOwner(registerDto);
-  }
+  },
+})
+@Post('register/studio-owner')
+registerStudioOwner(@Body() registerDto: StudioOwnerRegisterDto) {
+  return this.authService.registerStudioOwner(registerDto);
+}
 
   @ApiOperation({ summary: 'Iniciar sesión' })
   @ApiResponse({ status: 200, description: 'Login exitoso, retorna un JWT' })

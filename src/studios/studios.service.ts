@@ -3,6 +3,7 @@ import {
   NotFoundException,
   ForbiddenException,
   InternalServerErrorException,
+  BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -22,7 +23,6 @@ export class StudiosService {
   ) {}
 
   // --- MÉTODOS PÚBLICOS ---
-
   async findAll(): Promise<Studio[]> {
     return this.studioRepository.find();
   }
@@ -35,8 +35,7 @@ export class StudiosService {
     return studio;
   }
 
-  // --- MÉTODOS PROTEGIDOS (PARA DUEÑOS DE ESTUDIO) ---
-
+  // --- MÉTODOS PROTEGIDOS ---
   async findMyStudios(user: User): Promise<Studio[]> {
     return this.studioRepository.find({
       where: { owner: { id: user.id } },
@@ -48,13 +47,11 @@ export class StudiosService {
     studioId: string,
     dto: UpdateStudioDto,
   ): Promise<Studio> {
-    // Se busca el estudio por su ID, asegurando que pertenezca al usuario.
     const studio = await this.studioRepository.findOne({
       where: { id: studioId, owner: { id: user.id } },
     });
 
     if (!studio) {
-      // Mensaje de error más claro de la rama 'develop'.
       throw new NotFoundException(
         'No se encontró el estudio o no te pertenece.',
       );
@@ -64,55 +61,135 @@ export class StudiosService {
     return this.studioRepository.save(studio);
   }
 
+  // --- SUBIR FOTOS INDIVIDUALES ---
   async uploadPhoto(
     user: User,
     id: string,
     file: Express.Multer.File,
   ): Promise<Studio> {
-    if (!file) {
-      throw new Error('El archivo no fue recibido por el servicio.');
-    }
+    if (!file) throw new BadRequestException('No se recibió ningún archivo.');
 
     const studio = await this.studioRepository.findOne({
       where: { id },
       relations: ['owner'],
     });
 
-    if (!studio) {
-      throw new NotFoundException('Estudio no encontrado');
-    }
-    // Se añade esta verificación de seguridad crucial.
-    if (studio.owner.id !== user.id) {
+    if (!studio) throw new NotFoundException('Estudio no encontrado.');
+    if (studio.owner.id !== user.id)
       throw new ForbiddenException(
         'No tienes permiso para modificar este estudio.',
       );
+
+    // Validar máximo 5 fotos
+    if ((studio.photos?.length || 0) >= 5) {
+      throw new BadRequestException('Ya tienes 5 fotos cargadas.');
     }
 
     try {
       const result = await this.fileUploadService.uploadFile(file);
-
       studio.photos = [...(studio.photos || []), result.secure_url];
-
       return this.studioRepository.save(studio);
     } catch (error) {
-      // Se mantiene el manejo de errores robusto de 'develop'.
       throw new InternalServerErrorException(
         `Error al subir la imagen: ${error.message}`,
       );
     }
   }
 
-  async create(createStudioDto: CreateStudioDto, user: User): Promise<Studio> {
-    if (user.role !== UserRole.STUDIO_OWNER) {
-      throw new ForbiddenException(
-        'Solo los dueños de estudio pueden crear estudios',
-      );
+ // --- CREAR ESTUDIO CON ARCHIVOS ---
+async createWithFiles(
+  createStudioDto: CreateStudioDto,
+  user: User,
+  files: { photos?: Express.Multer.File[]; comercialRegister?: Express.Multer.File[] },
+): Promise<Studio> {
+  if (user.role !== UserRole.STUDIO_OWNER) {
+    throw new ForbiddenException(
+      'Solo los dueños de estudio pueden crear estudios',
+    );
+  }
+
+  // Validar cantidad máxima de fotos
+  if (files.photos && files.photos.length > 5) {
+    throw new BadRequestException('Solo se permiten hasta 5 fotos.');
+  }
+
+  // 🔹 Clonar DTO y quitar campos que no deben ir directo a create
+  const { photos, comercialRegister, ...cleanDto } = createStudioDto;
+
+  const studio = this.studioRepository.create({
+    ...cleanDto, // ✅ solo campos simples que sí mapean al entity
+  });
+
+  studio.owner = user;
+
+  // Subir fotos
+  if (files.photos) {
+    studio.photos = [];
+    for (const file of files.photos) {
+      const result = await this.fileUploadService.uploadFile(file);
+      studio.photos.push(result.secure_url);
+    }
+  }
+
+  // Subir registro comercial si existe
+  if (files.comercialRegister && files.comercialRegister[0]) {
+    const result = await this.fileUploadService.uploadFile(
+      files.comercialRegister[0],
+    );
+    studio.comercialRegister = result.secure_url;
+  }
+
+  return this.studioRepository.save(studio);
+}
+
+// --- ACTUALIZAR ESTUDIO CON ARCHIVOS ---
+async updateMyStudioWithFiles(
+  user: User,
+  studioId: string,
+  dto: UpdateStudioDto,
+  files: { photos?: Express.Multer.File[]; comercialRegister?: Express.Multer.File[] },
+): Promise<Studio> {
+  const studio = await this.studioRepository.findOne({
+    where: { id: studioId },
+    relations: ['owner'],
+  });
+
+  if (!studio) {
+    throw new NotFoundException('Estudio no encontrado.');
+  }
+
+  if (studio.owner.id !== user.id) {
+    throw new ForbiddenException(
+      'No tienes permiso para actualizar este estudio.',
+    );
+  }
+
+  // --- Actualizar datos básicos
+  Object.assign(studio, dto);
+
+  // --- Manejo de fotos (máx. 5)
+  if (files.photos && files.photos.length > 0) {
+    const currentPhotos = studio.photos || [];
+
+    if (currentPhotos.length + files.photos.length > 5) {
+      throw new BadRequestException('Solo se permiten hasta 5 fotos en total.');
     }
 
-    const studio = this.studioRepository.create({
-      ...createStudioDto,
-      owner: user,
-    });
-    return this.studioRepository.save(studio);
+    for (const file of files.photos) {
+      const result = await this.fileUploadService.uploadFile(file);
+      currentPhotos.push(result.secure_url);
+    }
+
+    studio.photos = currentPhotos;
   }
+
+  // --- Manejo del registro comercial
+  if (files.comercialRegister && files.comercialRegister[0]) {
+    const result = await this.fileUploadService.uploadFile(files.comercialRegister[0]);
+    studio.comercialRegister = result.secure_url;
+  }
+
+  return this.studioRepository.save(studio);
+}
+
 }

@@ -1,127 +1,75 @@
-import {
-  IsString,
-  IsNotEmpty,
-  MaxLength,
-  IsOptional,
-  IsEmail,
-  IsArray,
-  IsNumber,
-  Min,
-  IsEnum,
+import { 
+  IsString, IsNotEmpty, MaxLength, IsOptional, IsArray, IsNumber, Min, IsEnum, ArrayMaxSize, 
+  Matches
 } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
-
+import { Type } from 'class-transformer';
+import { StudioTypeEnum } from '../enum/studio-type.enum';
+import { ServicesType } from '../enum/ServicesType.enum';
 
 export class CreateStudioDto {
-  @ApiProperty({
-    description: 'Nombre del estudio',
-    example: 'Estudio Sonido Pro',
-  })
+  @ApiProperty({ description: 'Nombre del estudio', example: 'Estudio Sonido Pro' })
   @IsString()
   @IsNotEmpty()
   name: string;
 
-  @ApiProperty({
-    description: 'Tipo de estudio',
-    example: 'El tipo de estudio debe ser grabacion, ensayo o produccion',
-  })
- 
-  @ApiProperty({
-    description: 'Ciudad donde se ubica el estudio',
-    example: 'Monterrey',
-  })
+  @ApiProperty({ description: 'Tipo de estudio', example: 'grabacion', enum: StudioTypeEnum })
+  @IsEnum(StudioTypeEnum)
+  studioType: StudioTypeEnum;
+
+  @ApiProperty({ description: 'Ciudad', example: 'Monterrey' })
   @IsString()
   @IsNotEmpty()
   city: string;
 
-  @ApiProperty({
-    description: 'Provincia o estado del estudio',
-    example: 'Nuevo León',
-  })
+  @ApiProperty({ description: 'Provincia', example: 'Nuevo León' })
   @IsString()
   @IsNotEmpty()
   province: string;
 
-  @ApiProperty({
-    description: 'Dirección del estudio',
-    example: 'Av. Siempre Viva 123',
-  })
+  @ApiProperty({ description: 'Dirección', example: 'Av. Siempre Viva 123' })
   @IsString()
   @IsNotEmpty()
   address: string;
 
-  @ApiProperty({
-    description: 'Teléfono de contacto',
-    example: '+52 8112345678',
-    required: false,
-  })
-  @IsString()
-  @IsOptional()
-  phoneNumber?: string;
-
-  @ApiProperty({
-    description: 'Correo de contacto',
-    example: 'contacto@estudiopro.com',
-    required: false,
-  })
-  @IsEmail()
-  @IsOptional()
-  email?: string;
-
-  @ApiProperty({
-    description: 'Descripción del estudio',
-    example: 'Estudio con cabina profesional y acústica optimizada',
-  })
+  @ApiProperty({ description: 'Descripción del estudio', example: 'Estudio con cabina profesional', maxLength: 500 })
   @IsString()
   @IsNotEmpty()
   @MaxLength(500)
   description: string;
 
-  @ApiProperty({
-    description: 'Equipo disponible en el estudio',
-    example: ['Consola Yamaha', 'Micrófono Shure SM7B'],
-    required: false,
-  })
+  @ApiProperty({ description: 'Servicios disponibles', isArray: true, enum: ServicesType, example: ['Sala de grabación', 'Cafetería'] })
+  @IsEnum(ServicesType, { each: true })
   @IsArray()
-  @IsString({ each: true })
   @IsOptional()
-  availableEquipment?: string[];
+  services?: ServicesType[];
 
-  @ApiProperty({
-    description: 'Tarifa por hora',
-    example: 200,
-    required: false,
-  })
-  @IsNumber()
-  @Min(0)
+  @ApiProperty({ description: 'Fotos del estudio (máximo 5)', type: 'array', items: { type: 'string', format: 'binary' }, required: false })
   @IsOptional()
-  hourlyRate?: number;
+  @IsArray()
+  @ArrayMaxSize(5, { message: 'Solo se permiten hasta 5 fotos' })
+  photos?: Express.Multer.File[];
 
-  @ApiProperty({
-    description: 'Tarifa por día',
-    example: 1500,
-    required: false,
-  })
-  @IsNumber()
-  @Min(0)
+  @ApiProperty({ description: 'Registro comercial (PDF o imagen)', type: 'string', format: 'binary', required: false })
   @IsOptional()
-  dailyRate?: number;
+  comercialRegister?: Express.Multer.File;
 
-  @ApiProperty({
-    description: 'Hora de apertura (HH:mm)',
-    example: '09:00',
-    required: false,
-  })
-  @IsString()
-  @IsOptional()
+  @ApiProperty({ description: 'Hora de apertura, formato HH:MM', example: '09:30' })
+  @Matches(/^([0-1]\d|2[0-3]):([0-5]\d)$/, { message: 'Hora debe tener formato HH:MM' })
   openingTime?: string;
 
-  @ApiProperty({
-    description: 'Hora de cierre (HH:mm)',
-    example: '21:00',
-    required: false,
-  })
-  @IsString()
-  @IsOptional()
+  @ApiProperty({ description: 'Hora de cierre, formato HH:MM', example: '21:00' })
+  @Matches(/^([0-1]\d|2[0-3]):([0-5]\d)$/, { message: 'Hora debe tener formato HH:MM' })
   closingTime?: string;
+
 }
+
+// @ApiPropertyOptional({ description: 'Hora de apertura, formato HH:MM', example: '09:30' })
+// @IsOptional()
+// @Matches(/^([0-1]\d|2[0-3]):([0-5]\d)$/, { message: 'Hora debe tener formato HH:MM' })
+// openingTime?: string;
+
+// @ApiPropertyOptional({ description: 'Hora de cierre, formato HH:MM', example: '21:00' })
+// @IsOptional()
+// @Matches(/^([0-1]\d|2[0-3]):([0-5]\d)$/, { message: 'Hora debe tener formato HH:MM' })
+// closingTime?: string;
