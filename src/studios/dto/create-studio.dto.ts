@@ -1,5 +1,6 @@
 import { 
-  IsString, IsNotEmpty, MaxLength, IsOptional, IsArray, IsNumber, Min, IsEnum, ArrayMaxSize 
+  IsString, IsNotEmpty, MaxLength, IsOptional, IsArray, IsNumber, Min, IsEnum, ArrayMaxSize, 
+  Matches
 } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
@@ -53,18 +54,22 @@ export class CreateStudioDto {
   @IsOptional()
   comercialRegister?: Express.Multer.File;
 
-  @ApiProperty({ description: 'Hora de apertura', example: 9 })
-  @IsNumber()
-  @Min(0)
-  @IsOptional()
-  @Type(() => Number)
-  openingTime?: number;
+  @ApiProperty({ description: 'Hora de apertura, formato HH:MM', example: '09:30' })
+  @Matches(/^([0-1]\d|2[0-3]):([0-5]\d)$/, { message: 'Hora debe tener formato HH:MM' })
+  openingTime?: string;
 
-  @ApiProperty({ description: 'Hora de cierre', example: 21 })
-  @IsNumber()
-  @Min(0)
-  @IsOptional()
-  @Type(() => Number)
-  closingTime?: number;
+  @ApiProperty({ description: 'Hora de cierre, formato HH:MM', example: '21:00' })
+  @Matches(/^([0-1]\d|2[0-3]):([0-5]\d)$/, { message: 'Hora debe tener formato HH:MM' })
+  closingTime?: string;
 
 }
+
+// @ApiPropertyOptional({ description: 'Hora de apertura, formato HH:MM', example: '09:30' })
+// @IsOptional()
+// @Matches(/^([0-1]\d|2[0-3]):([0-5]\d)$/, { message: 'Hora debe tener formato HH:MM' })
+// openingTime?: string;
+
+// @ApiPropertyOptional({ description: 'Hora de cierre, formato HH:MM', example: '21:00' })
+// @IsOptional()
+// @Matches(/^([0-1]\d|2[0-3]):([0-5]\d)$/, { message: 'Hora debe tener formato HH:MM' })
+// closingTime?: string;

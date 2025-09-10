@@ -37,11 +37,11 @@ export class Studio {
   @Column('text', { array: true, nullable: true })
   services?: ServicesType[];
 
-  @Column({ type: 'int', nullable: true })
-  openingTime?: number;
+  @Column({ type: 'varchar', length: 5, nullable: true })
+  openingTime?: string; // formato 'HH:MM'
 
-  @Column({ type: 'int', nullable: true })
-  closingTime?: number;
+  @Column({ type: 'varchar', length: 5, nullable: true })
+  closingTime?: string; // formato 'HH:MM'
 
   @Column({ nullable: true })
   comercialRegister?: string;
