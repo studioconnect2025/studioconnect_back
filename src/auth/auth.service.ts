@@ -13,6 +13,7 @@ import { StudiosService } from 'src/studios/studios.service';
 import { UserRole } from './enum/roles.enum';
 import { User } from 'src/users/entities/user.entity';
 import { TokenBlacklistService } from './token-blacklist.service';
+import { EmailService } from './services/email.service';
 
 @Injectable()
 export class AuthService {
@@ -21,6 +22,7 @@ export class AuthService {
     private studiosService: StudiosService,
     private jwtService: JwtService,
     private tokenBlacklistService: TokenBlacklistService,
+     private readonly emailService: EmailService,
   ) {}
 
   async registerStudioOwner(dto: StudioOwnerRegisterDto) {
@@ -38,7 +40,8 @@ export class AuthService {
       passwordHash: hashedPassword,
       role: UserRole.STUDIO_OWNER,
     });
-
+ 
+    await this.emailService.sendWelcomeEmail(dto.name, newUser.email);
     // 4. Generar y devolver el token JWT
     return this.generateJwtToken(newUser);
   }
@@ -61,7 +64,7 @@ export class AuthService {
       );
     }
 
-    const { email } = req.user;
+    const { email, firstName, lastName } = req.user;
     let user: User;
 
     try {
@@ -75,11 +78,17 @@ export class AuthService {
         const hashedPassword = await bcrypt.hash(randomPassword, 10);
 
         // Creamos el nuevo usuario
-        user = await this.usersService.create({
+       user = await this.usersService.create({
           email,
+          name: firstName, // Mapeamos 'firstName' de Google a 'name'
+          lastName: lastName, // Mapeamos 'lastName' de Google a 'lastName'
           passwordHash: hashedPassword,
-          role: UserRole.STUDIO_OWNER, // Rol por defecto para usuarios de Google
+          role: UserRole.STUDIO_OWNER,
+          // No necesitamos phoneNumber ni password/confirmPassword aquí
         });
+
+       await this.emailService.sendWelcomeEmail(req.user.firstName, user.email);
+
       } else {
         // 3. Si es un error diferente, lo relanzamos para que no continúe
         throw error;

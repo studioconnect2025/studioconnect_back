@@ -11,6 +11,9 @@ import { Booking } from 'src/bookings/dto/bookings.entity';
 
 @Entity({ name: 'users' })
 export class User {
+  name(name: any, email: string) {
+    throw new Error('Method not implemented.');
+  }
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
