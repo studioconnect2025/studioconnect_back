@@ -130,7 +130,7 @@ export class RoomsService {
   async findRoomsByUser(user: User): Promise<Room[]> {
     const studio = await this.studioRepository.findOne({
       where: { owner: { id: user.id } },
-      relations: ['rooms'],
+      relations: ['rooms', 'rooms.instruments'],
     });
 
     if (!studio) {
