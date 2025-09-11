@@ -4,10 +4,10 @@ import { InstrumentsController } from './instrumentos.controller';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Instruments } from './entities/instrumento.entity';
 import { Category } from 'src/categories/entities/category.entity';
-import { Studio } from 'src/studios/entities/studio.entity';
+import { Room } from 'src/rooms/entities/room.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Instruments, Category, Studio])],
+  imports: [TypeOrmModule.forFeature([Instruments, Category, Room])],
   controllers: [InstrumentsController],
   providers: [InstrumentosService],
 })
