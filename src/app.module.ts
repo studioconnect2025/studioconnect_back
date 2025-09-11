@@ -14,6 +14,7 @@ import { FileUploadModule } from './file-upload/file-upload.module';
 import { RoomsModule } from './rooms/rooms.module';
 import { OwnersModule } from './owner/owner.module';
 import { OwnersController } from './owner/owner.controller';
+import { PaymentsModule } from './payment/payment.module';
 
 @Module({
   imports: [
@@ -46,9 +47,9 @@ import { OwnersController } from './owner/owner.controller';
     FileUploadModule,
     RoomsModule,
     OwnersModule,
+    PaymentsModule,
   ],
   controllers: [AppController, OwnersController],
   providers: [AppService],
 })
 export class AppModule {}
-

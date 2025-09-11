@@ -14,7 +14,12 @@ import { RolesGuard } from 'src/auth/guard/roles.guard';
 import { Roles } from 'src/auth/decorators/roles.decorator';
 import { UserRole } from 'src/auth/enum/roles.enum';
 import { CreateBookingDto } from './dto/create-booking';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 
 @ApiTags('Bookings')
 @ApiBearerAuth() // CAMBIO AQUÍ: Se aplica la seguridad a todo el controlador
@@ -39,7 +44,9 @@ export class BookingsController {
 
   // --- RUTAS PARA DUEÑOS DE ESTUDIO ---
 
-  @ApiOperation({ summary: 'Obtener todas las reservas de mis estudios (solo dueño)' })
+  @ApiOperation({
+    summary: 'Obtener todas las reservas de mis estudios (solo dueño)',
+  })
   @ApiResponse({ status: 200, description: 'Lista de reservas recuperada' })
   @ApiResponse({ status: 401, description: 'No autenticado' })
   // CAMBIO AQUÍ: Se documenta el error de rol no autorizado
@@ -60,10 +67,7 @@ export class BookingsController {
   @Patch('owner/:bookingId/confirm')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles(UserRole.STUDIO_OWNER)
-  async confirmBooking(
-    @Param('bookingId') bookingId: string,
-    @Request() req,
-  ) {
+  async confirmBooking(@Param('bookingId') bookingId: string, @Request() req) {
     return this.bookingsService.confirmBooking(bookingId, req.user);
   }
 
@@ -76,10 +80,7 @@ export class BookingsController {
   @Patch('owner/:bookingId/reject')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles(UserRole.STUDIO_OWNER)
-  async rejectBooking(
-    @Param('bookingId') bookingId: string,
-    @Request() req,
-  ) {
+  async rejectBooking(@Param('bookingId') bookingId: string, @Request() req) {
     return this.bookingsService.rejectBooking(bookingId, req.user);
   }
 }
