@@ -1,6 +1,6 @@
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne } from 'typeorm';
-import { Studio } from 'src/studios/entities/studio.entity';
 import { Category } from 'src/categories/entities/category.entity';
+import { Room } from 'src/rooms/entities/room.entity';
 
 @Entity({
   name: 'INSTRUMENTOS',
@@ -33,19 +33,13 @@ export class Instruments {
   @Column({ default: true })
   available: boolean;
 
-  @Column({
-    type: 'text',
-    default: 'No image',
-  })
-  imgUrl?: string;
-
   @ManyToOne(() => Category, (category) => category.instruments, {
     eager: true,
   })
   category: Category;
 
-  @ManyToOne(() => Studio, (studio) => studio.instruments, {
+  @ManyToOne(() => Room, (room) => room.instruments, {
     onDelete: 'CASCADE',
   })
-  studio: Studio;
+  room: Room;
 }

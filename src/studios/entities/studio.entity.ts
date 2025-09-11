@@ -10,7 +10,6 @@ import {
 } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
 import { StudioStatus } from '../enum/studio-status.enum';
-import { Instruments } from 'src/instrumentos/entities/instrumento.entity';
 import { Booking } from 'src/bookings/dto/bookings.entity';
 import { Room } from 'src/rooms/entities/room.entity';
 import { StudioTypeEnum } from '../enum/studio-type.enum'; // tu enum existente
@@ -61,11 +60,6 @@ export class Studio {
   @OneToOne(() => User, (user) => user.studio, { eager: true })
   @JoinColumn()
   owner: User;
-
-  @OneToMany(() => Instruments, (instrument) => instrument.studio, {
-    cascade: true,
-  })
-  instruments: Instruments[];
 
   @OneToMany(() => Booking, (booking) => booking.studio)
   bookings: Booking[];

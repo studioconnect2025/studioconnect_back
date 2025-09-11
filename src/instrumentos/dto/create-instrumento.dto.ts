@@ -2,7 +2,6 @@ import {
   IsBoolean,
   IsNotEmpty,
   IsNumber,
-  IsOptional,
   IsString,
   IsUUID,
   MaxLength,
@@ -45,15 +44,6 @@ export class CreateInstrumentDto {
   available: boolean;
 
   @ApiProperty({
-    description: 'URL de la imagen del instrumento',
-    example: 'https://misfotos.com/guitarra.png',
-    required: false,
-  })
-  @IsString()
-  @IsOptional()
-  imgUrl?: string;
-
-  @ApiProperty({
     description: 'Categoría del instrumento',
     example: 'Instrumento de cuerda',
   })
@@ -62,10 +52,10 @@ export class CreateInstrumentDto {
   categoryName: string;
 
   @ApiProperty({
-    description: 'ID del estudio al que pertenece el instrumento',
+    description: 'ID de la sala al que pertenece el instrumento',
     example: '8f8b6e34-12ab-4c9e-b6d5-f9a123456789',
   })
   @IsUUID()
   @IsNotEmpty()
-  studioId: string;
+  roomId: string;
 }

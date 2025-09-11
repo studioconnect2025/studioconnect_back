@@ -50,7 +50,6 @@ export class SeederService implements OnApplicationBootstrap {
       instrument.name = item.name;
       instrument.description = item.description;
       instrument.price = item.price;
-      instrument.imgUrl = item.imgUrl;
       instrument.available = item.available;
 
       const matchedCategory = categories.find(
