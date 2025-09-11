@@ -28,8 +28,15 @@ export class InstrumentosService {
 
     // 1. Buscar eRoom
     const room = await this.roomRepository.findOne({
-      where: { id: roomId, studio: { id: ownerId } },
+      where: {
+        id: roomId,
+        studio: {
+          owner: { id: ownerId },
+        },
+      },
+      relations: ['studio', 'studio.owner'], // necesario para que funcione la condición
     });
+
     if (!room) {
       throw new NotFoundException(
         `La sala con id ${roomId} no existe o no pertenece al dueño autenticado `,
@@ -80,7 +87,7 @@ export class InstrumentosService {
           },
         },
       },
-      relations: ['category', 'Room'],
+      relations: ['category', 'room'],
     });
   }
 
