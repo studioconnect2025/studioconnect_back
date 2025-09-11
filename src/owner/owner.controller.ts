@@ -145,25 +145,29 @@ export class OwnersController {
   }
 
   // GET /owners/me/studio/rooms
-  @Get('rooms')
-  @ApiOperation({ summary: 'Listar todas las salas de mi estudio' })
-  @ApiResponse({
-    status: 200,
-    description: 'Listado de salas',
-    schema: {
-      example: [
-        { id: 'room1', name: 'Sala A', capacity: 5, price: 300 },
-        { id: 'room2', name: 'Sala B', capacity: 10, price: 600 },
-      ],
-    },
-  })
+    @Get('rooms')
+  @ApiOperation({ summary: 'Listar todas las salas de mi estudio con imágenes' })
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles(UserRole.STUDIO_OWNER)
   async getMyRooms(@Request() req) {
     const user = req.user;
-    const studios = await this.studiosService.findMyStudios(user);
-    if (!studios[0]) {
-      return [];
-    }
-    return this.roomsService.findRoomsByStudio(studios[0].id);
+    const rooms = await this.roomsService.findRoomsByUser(user);
+
+    return rooms.map((room) => ({
+      id: room.id,
+      name: room.name,
+      type: room.type,
+      capacity: room.capacity,
+      size: room.size,
+      pricePerHour: room.pricePerHour,
+      minHours: room.minHours,
+      description: room.description,
+      features: room.features,
+      customEquipment: room.customEquipment,
+      availability: room.availability,
+      imageUrls: room.imageUrls || [],
+      isActive: room.isActive,
+    }));
   }
 
   // POST /owners/me/studio/rooms
