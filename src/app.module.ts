@@ -24,16 +24,14 @@ import { PaymentsModule } from './payment/payment.module';
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: (configService: ConfigService) => {
+      useFactory: (cfg: ConfigService) => {
         return {
-          type: 'postgres',
-          host: configService.get<string>('DB_HOST'),
-          port: configService.get<number>('DB_PORT'),
-          username: configService.get<string>('DB_USERNAME'),
-          password: configService.get<string>('DB_PASSWORD'),
-          database: configService.get<string>('DB_DATABASE'),
-          autoLoadEntities: true,
-          synchronize: true,
+       type: 'postgres',
+    url: cfg.get<string>('DATABASE_URL'),
+    ssl: { rejectUnauthorized: false },
+    extra: { ssl: { rejectUnauthorized: false } },
+    autoLoadEntities: true,
+    synchronize: false,
         };
       },
     }),
@@ -52,4 +50,4 @@ import { PaymentsModule } from './payment/payment.module';
   controllers: [AppController, OwnersController],
   providers: [AppService],
 })
-export class AppModule {}
+export class AppModule { }
