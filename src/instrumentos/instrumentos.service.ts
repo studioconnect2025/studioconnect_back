@@ -24,19 +24,19 @@ export class InstrumentosService {
     ownerId: string,
     createInstrumentoDto: CreateInstrumentDto,
   ): Promise<{ message: string; instrument: Instruments }> {
-    const { categoryName, studioId, ...instrumentData } = createInstrumentoDto;
+    const { categoryName, roomId, ...instrumentData } = createInstrumentoDto;
 
     // 1. Buscar estudio
     const studio = await this.studioRepository.findOne({
-      where: { id: studioId, owner: { id: ownerId } },
+      where: { id: roomId, owner: { id: ownerId } },
     });
     if (!studio) {
       throw new NotFoundException(
-        `El estudio con id ${studioId} no existe o no pertenece al dueño autenticado `,
+        `La sala con id ${roomId} no existe o no pertenece al dueño autenticado `,
       );
     }
     const newInstrumentExisting = await this.instrumentsRepository.findOne({
-      where: { name: instrumentData.name, studio: { id: studioId } },
+      where: { name: instrumentData.name, room: { id: roomId } },
     });
 
     if (newInstrumentExisting) {
@@ -57,14 +57,14 @@ export class InstrumentosService {
     const newInstrument = this.instrumentsRepository.create({
       ...instrumentData,
       category,
-      studio,
+      room: { id: roomId },
     });
 
     const newInstrumentDb =
       await this.instrumentsRepository.save(newInstrument);
 
     return {
-      message: `Producto ${newInstrument.name} agregado con exito`,
+      message: `Instrumento ${newInstrument.name} agregado con exito`,
       instrument: newInstrumentDb,
     };
   }
@@ -72,9 +72,11 @@ export class InstrumentosService {
   async findAllForStudio(ownerId: string): Promise<Instruments[]> {
     return this.instrumentsRepository.find({
       where: {
-        studio: {
-          owner: {
-            id: ownerId,
+        room: {
+          studio: {
+            owner: {
+              id: ownerId,
+            },
           },
         },
       },

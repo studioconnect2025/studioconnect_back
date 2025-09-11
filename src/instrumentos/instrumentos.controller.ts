@@ -56,7 +56,7 @@ export class InstrumentsController {
 
   @Post('/create')
   @Roles(UserRole.STUDIO_OWNER)
-  @ApiOperation({ summary: 'Crear un nuevo instrumento para un estudio' })
+  @ApiOperation({ summary: 'Crear un nuevo instrumento para una sala' })
   @ApiResponse({ status: 201, description: 'Instrumento creado con éxito.' })
   async createInstrument(@Body() dto: CreateInstrumentDto, @Req() req: any) {
     return await this.instrumentsService.createForStudio(req.user.id, dto);

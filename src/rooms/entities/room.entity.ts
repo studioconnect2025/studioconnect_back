@@ -1,5 +1,12 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  OneToMany,
+} from 'typeorm';
 import { Studio } from 'src/studios/entities/studio.entity';
+import { Instruments } from 'src/instrumentos/entities/instrumento.entity';
 
 @Entity('ROOMS')
 export class Room {
@@ -48,4 +55,9 @@ export class Room {
 
   @ManyToOne(() => Studio, (studio) => studio.rooms, { onDelete: 'CASCADE' })
   studio: Studio;
+
+  @OneToMany(() => Instruments, (instruments) => instruments.room, {
+    onDelete: 'CASCADE',
+  })
+  instruments: Instruments[];
 }
