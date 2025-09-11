@@ -42,14 +42,8 @@ export class InstrumentsController {
     status: 200,
     description: 'Lista de instrumentos obtenida con éxito.',
   })
-  async findAllInstruments(
-    @Body() createInstrumentoDto: CreateInstrumentDto,
-    @Req() req,
-  ) {
-    return this.instrumentsService.createForRoom(
-      req.user.id,
-      createInstrumentoDto,
-    );
+  async findAllInstruments(@Req() req) {
+    return this.instrumentsService.findAllForRoom(req.user.id);
   }
 
   @Get(':name')
