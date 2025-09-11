@@ -1,5 +1,5 @@
 // main.ts
-
+import * as bodyParser from 'body-parser';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
@@ -46,6 +46,8 @@ async function bootstrap() {
 
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api', app, document);
+
+  app.use('/payments/webhook', bodyParser.raw({ type: 'application/json' }));
 
   await app.listen(process.env.PORT ?? 3000);
 }

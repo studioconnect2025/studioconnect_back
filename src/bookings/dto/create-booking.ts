@@ -15,7 +15,10 @@ export class CreateBookingDto {
     example: '2025-09-03T10:00:00Z',
   })
   @IsNotEmpty({ message: 'La fecha de inicio es obligatoria.' })
-  @IsDateString({}, { message: 'La fecha de inicio debe ser una fecha válida.' })
+  @IsDateString(
+    {},
+    { message: 'La fecha de inicio debe ser una fecha válida.' },
+  )
   startTime: Date;
 
   @ApiProperty({
@@ -25,4 +28,12 @@ export class CreateBookingDto {
   @IsNotEmpty({ message: 'La fecha de fin es obligatoria.' })
   @IsDateString({}, { message: 'La fecha de fin debe ser una fecha válida.' })
   endTime: Date;
+
+  @ApiProperty({
+    description: 'ID de la room (sala) dentro del studio que se reserva',
+    example: '550e8400-e29b-41d4-a716-446655440000',
+  })
+  @IsNotEmpty({ message: 'El ID de la sala (roomId) es obligatorio.' })
+  @IsUUID('4', { message: 'El ID de la sala debe ser un UUID válido.' })
+  roomId: string;
 }

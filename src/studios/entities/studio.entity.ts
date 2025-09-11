@@ -79,7 +79,7 @@ export class Studio {
   @UpdateDateColumn()
   updatedAt: Date;
 
-  @Column({ default: true })
+  @Column({ default: false })
   isActive: boolean;
 
   @Column({ type: 'enum', enum: StudioStatus, default: StudioStatus.PENDING })

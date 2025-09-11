@@ -8,6 +8,7 @@ import {
 import { Studio } from 'src/studios/entities/studio.entity';
 import { User } from 'src/users/entities/user.entity';
 import { BookingStatus } from '../enum/enums-bookings';
+import { Room } from 'src/rooms/entities/room.entity';
 
 @Entity('bookings')
 export class Booking {
@@ -35,5 +36,23 @@ export class Booking {
 
   @CreateDateColumn()
   createdAt: Date;
-}
 
+  @ManyToOne(() => Room, (room) => room, { nullable: true, eager: true })
+  room: Room;
+
+  @Column('decimal', { precision: 10, scale: 2, nullable: true })
+  totalPrice: number;
+
+  @Column({
+    type: 'enum',
+    enum: ['PENDING', 'SUCCEEDED', 'FAILED'], // NEW
+    default: 'PENDING',
+  })
+  paymentStatus: string;
+
+  @Column({ nullable: true })
+  paymentIntentId: string;
+
+  @Column({ default: false })
+  isPaid: boolean;
+}
