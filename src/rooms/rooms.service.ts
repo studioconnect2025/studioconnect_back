@@ -35,7 +35,9 @@ export class RoomsService {
     });
 
     if (!studio) {
-      throw new NotFoundException('No tienes un estudio asociado. Crea un estudio primero.');
+      throw new NotFoundException(
+        'No tienes un estudio asociado. Crea un estudio primero.',
+      );
     }
 
     const room = this.roomRepository.create({
@@ -141,47 +143,47 @@ export class RoomsService {
   // ===================== MÉTODOS PARA MANEJO DE IMÁGENES =====================
 
   async uploadImages(
-  roomId: string,
-  files: Express.Multer.File[],
-  user: User,
-): Promise<Room> {
-  const room = await this.findRoomWithValidation(roomId, user);
+    roomId: string,
+    files: Express.Multer.File[],
+    user: User,
+  ): Promise<Room> {
+    const room = await this.findRoomWithValidation(roomId, user);
 
-  if (!files || files.length === 0) {
-    throw new BadRequestException('No se proporcionaron archivos');
+    if (!files || files.length === 0) {
+      throw new BadRequestException('No se proporcionaron archivos');
+    }
+
+    // Validar límite de imágenes
+    const currentImageCount = room.imageUrls?.length || 0;
+    const maxImages = 1;
+
+    if (currentImageCount + files.length > maxImages) {
+      throw new BadRequestException(
+        `No puedes subir más de ${maxImages} imágenes por sala`,
+      );
+    }
+
+    try {
+      // 📌 Usar tu FileUploadService en lugar de simular
+      const uploadPromises = files.map((file) =>
+        this.fileUploadService.uploadFile(file, `rooms/${roomId}`),
+      );
+
+      const uploadResults = await Promise.all(uploadPromises);
+
+      // Guardar las URLs reales y public_ids que Cloudinary devuelve
+      const newImageUrls = uploadResults.map((result) => result.secure_url);
+      const newPublicIds = uploadResults.map((result) => result.public_id);
+
+      room.imageUrls = [...(room.imageUrls || []), ...newImageUrls];
+      room.imagePublicIds = [...(room.imagePublicIds || []), ...newPublicIds];
+
+      return await this.roomRepository.save(room);
+    } catch (error) {
+      console.error('❌ Error al subir imágenes a Cloudinary:', error);
+      throw new BadRequestException('Error al subir las imágenes');
+    }
   }
-
-  // Validar límite de imágenes
-  const currentImageCount = room.imageUrls?.length || 0;
-  const maxImages = 1;
-
-  if (currentImageCount + files.length > maxImages) {
-    throw new BadRequestException(
-      `No puedes subir más de ${maxImages} imágenes por sala`,
-    );
-  }
-
-  try {
-    // 📌 Usar tu FileUploadService en lugar de simular
-    const uploadPromises = files.map(file =>
-      this.fileUploadService.uploadFile(file, `rooms/${roomId}`),
-    );
-
-    const uploadResults = await Promise.all(uploadPromises);
-
-    // Guardar las URLs reales y public_ids que Cloudinary devuelve
-    const newImageUrls = uploadResults.map(result => result.secure_url);
-    const newPublicIds = uploadResults.map(result => result.public_id);
-
-    room.imageUrls = [...(room.imageUrls || []), ...newImageUrls];
-    room.imagePublicIds = [...(room.imagePublicIds || []), ...newPublicIds];
-
-    return await this.roomRepository.save(room);
-  } catch (error) {
-    console.error('❌ Error al subir imágenes a Cloudinary:', error);
-    throw new BadRequestException('Error al subir las imágenes');
-  }
-}
 
   async deleteImage(
     roomId: string,
@@ -226,13 +228,13 @@ export class RoomsService {
     }
 
     // Validar que todas las URLs proporcionadas existen en la sala
-    const validUrls = imageUrls.every(url => room.imageUrls.includes(url));
+    const validUrls = imageUrls.every((url) => room.imageUrls.includes(url));
     if (!validUrls || imageUrls.length !== room.imageUrls.length) {
       throw new BadRequestException('URLs de imagen inválidas');
     }
 
     // Reordenar los public IDs en el mismo orden
-    const reorderedPublicIds = imageUrls.map(url => {
+    const reorderedPublicIds = imageUrls.map((url) => {
       const index = room.imageUrls.indexOf(url);
       return room.imagePublicIds[index];
     });
@@ -245,7 +247,10 @@ export class RoomsService {
 
   // ===================== MÉTODOS PRIVADOS/AUXILIARES =====================
 
-  private async findRoomWithValidation(roomId: string, user: User): Promise<Room> {
+  private async findRoomWithValidation(
+    roomId: string,
+    user: User,
+  ): Promise<Room> {
     const room = await this.roomRepository.findOne({
       where: { id: roomId },
       relations: ['studio', 'studio.owner'],
@@ -276,14 +281,19 @@ export class RoomsService {
    * MÉTODO ADICIONAL: Si el usuario puede tener múltiples studios
    * Crear en el primer studio activo del usuario
    */
-  async createWithAutoStudioMultiple(dto: CreateRoomDto, user: User): Promise<Room> {
+  async createWithAutoStudioMultiple(
+    dto: CreateRoomDto,
+    user: User,
+  ): Promise<Room> {
     const studios = await this.studioRepository.find({
       where: { owner: { id: user.id } }, // Si tienes campo isActive: , isActive: true
       relations: ['owner'],
     });
 
     if (!studios || studios.length === 0) {
-      throw new NotFoundException('No tienes estudios asociados. Crea un estudio primero.');
+      throw new NotFoundException(
+        'No tienes estudios asociados. Crea un estudio primero.',
+      );
     }
 
     // Usar el primer studio o implementar lógica para seleccionar el principal

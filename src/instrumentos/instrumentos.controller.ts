@@ -33,20 +33,27 @@ export class InstrumentsController {
   constructor(private readonly instrumentsService: InstrumentosService) {}
 
   @Get()
-  @Roles(UserRole.STUDIO_OWNER)
+  @Roles(UserRole.STUDIO_OWNER, UserRole.MUSICIAN)
   @ApiOperation({
     summary:
-      'Obtener todos los instrumentos del estudio del usuario autenticado',
+      'Obtener todos los instrumentos de la sala del usuario autenticado',
   })
   @ApiResponse({
     status: 200,
     description: 'Lista de instrumentos obtenida con éxito.',
   })
-  async findAllInstruments(@Req() req) {
-    return this.instrumentsService.findAllForStudio(req.user.id);
+  async findAllInstruments(
+    @Body() createInstrumentoDto: CreateInstrumentDto,
+    @Req() req,
+  ) {
+    return this.instrumentsService.createForRoom(
+      req.user.id,
+      createInstrumentoDto,
+    );
   }
 
   @Get(':name')
+  @Roles(UserRole.STUDIO_OWNER, UserRole.MUSICIAN)
   @ApiOperation({ summary: 'Obtener un instrumento por su nombre' })
   @ApiResponse({ status: 200, description: 'Instrumento encontrado.' })
   @ApiResponse({ status: 404, description: 'Instrumento no encontrado.' })
@@ -59,7 +66,7 @@ export class InstrumentsController {
   @ApiOperation({ summary: 'Crear un nuevo instrumento para una sala' })
   @ApiResponse({ status: 201, description: 'Instrumento creado con éxito.' })
   async createInstrument(@Body() dto: CreateInstrumentDto, @Req() req: any) {
-    return await this.instrumentsService.createForStudio(req.user.id, dto);
+    return await this.instrumentsService.createForRoom(req.user.id, dto);
   }
 
   @Put(':id')

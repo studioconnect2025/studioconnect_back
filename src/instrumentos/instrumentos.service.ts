@@ -8,7 +8,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Category } from 'src/categories/entities/category.entity';
 import { Repository } from 'typeorm';
 import { Instruments } from './entities/instrumento.entity';
-import { Studio } from 'src/studios/entities/studio.entity';
+import { Room } from 'src/rooms/entities/room.entity';
 
 @Injectable()
 export class InstrumentosService {
@@ -17,20 +17,20 @@ export class InstrumentosService {
     private readonly categoryRepository: Repository<Category>,
     @InjectRepository(Instruments)
     private readonly instrumentsRepository: Repository<Instruments>,
-    @InjectRepository(Studio)
-    private readonly studioRepository: Repository<Studio>,
+    @InjectRepository(Room)
+    private readonly roomRepository: Repository<Room>,
   ) {}
-  async createForStudio(
+  async createForRoom(
     ownerId: string,
     createInstrumentoDto: CreateInstrumentDto,
   ): Promise<{ message: string; instrument: Instruments }> {
     const { categoryName, roomId, ...instrumentData } = createInstrumentoDto;
 
-    // 1. Buscar estudio
-    const studio = await this.studioRepository.findOne({
-      where: { id: roomId, owner: { id: ownerId } },
+    // 1. Buscar eRoom
+    const room = await this.roomRepository.findOne({
+      where: { id: roomId, studio: { id: ownerId } },
     });
-    if (!studio) {
+    if (!room) {
       throw new NotFoundException(
         `La sala con id ${roomId} no existe o no pertenece al dueño autenticado `,
       );
@@ -69,7 +69,7 @@ export class InstrumentosService {
     };
   }
 
-  async findAllForStudio(ownerId: string): Promise<Instruments[]> {
+  async findAllForRoom(ownerId: string): Promise<Instruments[]> {
     return this.instrumentsRepository.find({
       where: {
         room: {
@@ -80,7 +80,7 @@ export class InstrumentosService {
           },
         },
       },
-      relations: ['category', 'studio'],
+      relations: ['category', 'Room'],
     });
   }
 
