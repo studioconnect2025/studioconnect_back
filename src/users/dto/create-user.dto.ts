@@ -1,24 +1,34 @@
-import { IsEmail, IsEnum, IsNotEmpty, IsString, IsOptional } from 'class-validator';
+// src/users/dto/create-user.dto.ts
+import { IsEmail, IsEnum, IsString, MinLength, ValidateNested } from 'class-validator';
+import { Type } from 'class-transformer';
 import { UserRole } from '../../auth/enum/roles.enum';
+import { PerfilMusicalDto } from '../../Musico/dto/perfil-musical.dto'; 
+import { PreferenciasDto } from '../../Musico/dto/preferencias.dto';
+
+// DTO para el objeto anidado 'profile'
+class ProfileDto {
+  @IsString() @MinLength(2) nombre: string;
+  @IsString() @MinLength(2) apellido: string;
+  
+  @ValidateNested() @Type(() => PerfilMusicalDto)
+  perfilMusical: PerfilMusicalDto;
+
+  @ValidateNested() @Type(() => PreferenciasDto)
+  preferencias: PreferenciasDto;
+}
 
 export class CreateUserDto {
-  @IsEmail({}, { message: 'El email proporcionado no es válido.' })
-  @IsNotEmpty({ message: 'El email no puede estar vacío.' })
+  @IsEmail()
   email: string;
 
-  @IsString()
-  @IsNotEmpty({ message: 'El hash de la contraseña no puede estar vacío.' })
-  passwordHash: string;
+  @IsString() @MinLength(8)
+  password: string;
+  
+  @IsEnum(UserRole)
+  role: UserRole; // Para definir si es MUSICIAN o STUDIO_OWNER
 
-  @IsEnum(UserRole, { message: 'El rol proporcionado no es válido.' })
-  @IsNotEmpty({ message: 'El rol no puede estar vacío.' })
-  role: UserRole;
-
-  @IsString()
-  @IsOptional()
-  name?: string;
-
-  @IsString()
-  @IsOptional()
-  lastName?: string;
+  // El perfil será opcional (?): puede que un dueño se registre sin él
+  @ValidateNested()
+  @Type(() => ProfileDto)
+  profile?: ProfileDto; 
 }

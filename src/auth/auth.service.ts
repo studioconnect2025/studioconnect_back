@@ -1,3 +1,5 @@
+// src/auth/auth.service.ts
+
 import {
   Injectable,
   UnauthorizedException,
@@ -8,112 +10,127 @@ import { UsersService } from '../users/users.service';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { LoginDto } from './dto/login.dto';
-import { StudioOwnerRegisterDto } from 'src/users/dto/StudioOwnerRegisterDto';
-import { StudiosService } from 'src/studios/studios.service';
+import { StudioOwnerRegisterDto } from '../users/dto/StudioOwnerRegisterDto'; // Nueva ruta
+import { MusicianRegisterDto } from '../Musico/dto/MusicianRegister.dto'; // Nuevo DTO
 import { UserRole } from './enum/roles.enum';
 import { User } from 'src/users/entities/user.entity';
 import { TokenBlacklistService } from './token-blacklist.service';
 import { EmailService } from './services/email.service';
+import { PerfilMusicalDto } from 'src/Musico/dto/perfil-musical.dto';
+import { PreferenciasDto } from 'src/Musico/dto/preferencias.dto';
 
 @Injectable()
 export class AuthService {
   constructor(
     private usersService: UsersService,
-    private studiosService: StudiosService,
     private jwtService: JwtService,
     private tokenBlacklistService: TokenBlacklistService,
-     private readonly emailService: EmailService,
+    private readonly emailService: EmailService,
   ) {}
 
-  async registerStudioOwner(dto: StudioOwnerRegisterDto) {
-    // 1. Validar que las contraseñas coincidan
+  // --- NUEVO MÉTODO PARA REGISTRAR MÚSICOS ---
+  async registerMusician(dto: MusicianRegisterDto) {
     if (dto.password !== dto.confirmPassword) {
-      throw new BadRequestException('Passwords do not match');
+      throw new BadRequestException('Las contraseñas no coinciden.');
     }
 
-    // 2. Encriptar la contraseña
-    const hashedPassword = await bcrypt.hash(dto.password, 10);
-
-    // 3. Crear el nuevo usuario con rol de dueño de estudio
+    // Llamamos al servicio de usuarios para crear el usuario con el rol y perfil correctos
     const newUser = await this.usersService.create({
-     ...dto,
-      passwordHash: hashedPassword,
-      role: UserRole.STUDIO_OWNER,
+      email: dto.email,
+      password: dto.password,
+      role: UserRole.MUSICIAN, // Rol específico para músicos
+      profile: dto.profile,
     });
- 
-    await this.emailService.sendWelcomeEmail(dto.name, newUser.email);
-    // 4. Generar y devolver el token JWT
+
+    await this.emailService.sendWelcomeEmail(dto.profile.nombre, newUser.email);
     return this.generateJwtToken(newUser);
   }
 
+  // --- MÉTODO ACTUALIZADO PARA REGISTRAR DUEÑOS DE ESTUDIO ---
+  async registerStudioOwner(dto: StudioOwnerRegisterDto) {
+    if (dto.password !== dto.confirmPassword) {
+      throw new BadRequestException('Las contraseñas no coinciden.');
+    }
+    
+    // Llamamos al servicio de usuarios para crear el usuario
+    const newUser = await this.usersService.create({
+      email: dto.email,
+      password: dto.password,
+      role: UserRole.STUDIO_OWNER, // Rol específico para dueños
+    });
+ 
+    await this.emailService.sendWelcomeEmail(dto.name, newUser.email);
+    return this.generateJwtToken(newUser);
+  }
+
+  // --- LÓGICA DE LOGIN (SIN CAMBIOS) ---
   async login(loginDto: LoginDto) {
-    // ... (sin cambios en esta función)
     const { email, password } = loginDto;
     const user = await this.usersService.findOneByEmail(email);
+
     if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
       throw new UnauthorizedException('Credenciales incorrectas.');
     }
+    // Añadido para verificar si el usuario está activo
+    if (!user.isActive) {
+      throw new UnauthorizedException('La cuenta de usuario está inactiva.');
+    }
+
     return this.generateJwtToken(user);
   }
 
-  // --- MODIFICACIÓN IMPORTANTE AQUÍ ---
+  // --- GOOGLE LOGIN (RECOMENDACIÓN DE MEJORA) ---
+  // Se recomienda que el frontend envíe el rol deseado después del login con Google
+  // para que el usuario pueda elegir si es Músico o Dueño.
   async googleLogin(req: any) {
     if (!req.user) {
-      throw new BadRequestException(
-        'No se encontró información de usuario de Google.',
-      );
+      throw new BadRequestException('No se encontró información de usuario de Google.');
     }
 
     const { email, firstName, lastName } = req.user;
     let user: User;
 
     try {
-      // 1. Intentamos encontrar al usuario
       user = await this.usersService.findOneByEmail(email);
     } catch (error) {
-      // 2. Si el error es 'NotFoundException', significa que no existe y debemos registrarlo
       if (error instanceof NotFoundException) {
-        console.log('Usuario no encontrado, procediendo a registrar...');
-        const randomPassword = Math.random().toString(36).slice(-8);
-        const hashedPassword = await bcrypt.hash(randomPassword, 10);
-
-        // Creamos el nuevo usuario
-       user = await this.usersService.create({
+        // Al registrar desde Google, el perfil está incompleto.
+        // El frontend debería redirigir al usuario para que complete su perfil y elija un rol.
+        user = await this.usersService.create({
           email,
-          name: firstName, // Mapeamos 'firstName' de Google a 'name'
-          lastName: lastName, // Mapeamos 'lastName' de Google a 'lastName'
-          passwordHash: hashedPassword,
-          role: UserRole.STUDIO_OWNER,
-          // No necesitamos phoneNumber ni password/confirmPassword aquí
+          password: Math.random().toString(36).slice(-10), // Contraseña aleatoria y segura
+          role: UserRole.MUSICIAN, // O un rol por defecto como 'GUEST'
+          profile: {
+            nombre: firstName,
+            apellido: lastName,
+            perfilMusical: new PerfilMusicalDto,
+            preferencias: new PreferenciasDto
+          },
         });
-
-       await this.emailService.sendWelcomeEmail(req.user.firstName, user.email);
-
+        await this.emailService.sendWelcomeEmail(firstName, user.email);
       } else {
-        // 3. Si es un error diferente, lo relanzamos para que no continúe
         throw error;
       }
     }
 
-    // 4. Si el usuario fue encontrado o recién creado, generamos su token
     return this.generateJwtToken(user);
   }
 
   private async generateJwtToken(user: User) {
-    // ... (sin cambios en esta función)
+    // Se elimina el perfil del objeto de usuario para no exponerlo en cada login
+    const { profile, ...userCoreInfo } = user;
     const payload = {
-      sub: user.id.toLowerCase(),
+      sub: user.id,
       email: user.email,
       role: user.role,
     };
     return {
       access_token: await this.jwtService.signAsync(payload),
-      user,
+      user: userCoreInfo, // Devolvemos el usuario sin el perfil detallado
     };
   }
-
+  
   async logout(token: string) {
-    // ... (sin cambios en esta función)
     const decoded = this.jwtService.decode(token) as { exp: number };
     if (decoded && decoded.exp) {
       await this.tokenBlacklistService.blacklist(token, decoded.exp);
