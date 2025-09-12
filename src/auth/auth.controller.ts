@@ -23,6 +23,7 @@ import { AuthGuard } from '@nestjs/passport';
 import type { Response } from 'express';
 import { MusicianRegisterDto } from '../Musico/dto/MusicianRegister.dto';
 import { StudioOwnerRegisterDto } from '../users/dto/StudioOwnerRegisterDto';
+import { ReactivateAccountDto } from './dto/reactivate-account.dto';
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -102,6 +103,29 @@ export class AuthController {
   login(@Body() loginDto: LoginDto) {
     return this.authService.login(loginDto);
   }
+
+ @Post('reactivate')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Reactivar una cuenta inactiva' })
+  @ApiResponse({ status: 200, description: 'Cuenta reactivada exitosamente.' })
+  @ApiResponse({ status: 404, description: 'Usuario no encontrado.' })
+  // --- DECORADOR AGREGADO CON EJEMPLO ---
+  @ApiBody({
+    type: ReactivateAccountDto,
+    description: 'Estructura para reactivar una cuenta usando el correo electrónico.',
+    examples: {
+      ejemplo1: {
+        summary: 'Correo de la cuenta a reactivar',
+        value: {
+          "email": "cuenta.inactiva@example.com"
+        }
+      }
+    }
+  })
+  reactivateAccount(@Body() reactivateDto: ReactivateAccountDto) {
+    return this.authService.reactivateAccount(reactivateDto);
+  }
+
 
   // --- Rutas para Google OAuth ---
   @Get('google/login')
