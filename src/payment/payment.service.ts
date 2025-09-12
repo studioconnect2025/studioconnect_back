@@ -1,7 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-call */
-/* eslint-disable @typescript-eslint/no-redundant-type-constituents */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import {
   Injectable,
   NotFoundException,
@@ -9,7 +5,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, Repository } from 'typeorm';
+import { Repository } from 'typeorm';
 import Stripe from 'stripe';
 import { Booking } from 'src/bookings/dto/bookings.entity';
 import { Room } from 'src/rooms/entities/room.entity';
@@ -22,6 +18,7 @@ import {
   CreateMembershipPaymentDto,
   MembershipPlan,
 } from './dto/Create-Membership-Paymentdto';
+import { PricingService } from 'src/pricingTotal/pricing.service';
 
 @Injectable()
 export class PaymentsService {
@@ -35,6 +32,7 @@ export class PaymentsService {
     private readonly instrumentRepo: Repository<Instruments>,
     @InjectRepository(User) private readonly userRepo: Repository<User>,
     @InjectRepository(Studio) private readonly studioRepo: Repository<Studio>,
+    private readonly pricingService: PricingService,
   ) {
     const stripeKey = process.env.STRIPE_SECRET_KEY;
     if (!stripeKey) throw new Error('STRIPE_SECRET_KEY no definido');
@@ -74,42 +72,27 @@ export class PaymentsService {
     }
 
     // 🔹 Calcular precio de sala
-    const hours = this.getHours(booking.startTime, booking.endTime);
-    const roomPrice = Number(booking.room.pricePerHour) * hours;
+    const pricing = await this.pricingService.calculatePrice(
+      booking.room.id,
+      booking.startTime,
+      booking.endTime,
+      dto.instrumentIds,
+    );
 
-    // 🔹 Calcular precio de instrumentos
-    let instrumentsPrice = 0;
-    let instrumentsList: Instruments[] = [];
-    if (dto.instrumentIds?.length) {
-      instrumentsList = await this.instrumentRepo.find({
-        where: { id: In(dto.instrumentIds) },
-      });
-      instrumentsPrice = instrumentsList.reduce(
-        (sum, i) => sum + Number(i.price),
-        0,
-      );
-    }
-
-    // 🔹 Comisiones y totales
-    const roomCommission = roomPrice * 0.15; // 15% app
-    const roomOwnerAmount = roomPrice * 0.85; // 85% para dueño
-    const instrumentsAmount = instrumentsPrice; // 100% para dueño
-    const totalPrice = roomPrice + instrumentsPrice;
-
-    booking.totalPrice = totalPrice;
+    booking.totalPrice = pricing.totalPrice;
 
     // 🔹 Crear PaymentIntent en Stripe
     const paymentIntent = await this.stripe.paymentIntents.create({
-      amount: Math.round(totalPrice * 100), // centavos
+      amount: Math.round(pricing.totalPrice * 100), // centavos
       currency: 'usd',
       metadata: {
         bookingId: booking.id,
         studioId: booking.studio.id,
         roomId: booking.room.id,
-        instruments: instrumentsList.map((i) => i.id).join(','),
-        roomCommission: roomCommission.toFixed(2),
-        roomOwnerAmount: roomOwnerAmount.toFixed(2),
-        instrumentsAmount: instrumentsAmount.toFixed(2),
+        instruments: pricing.instrumentsList.map((i) => i.id).join(','),
+        roomCommission: pricing.roomCommission.toFixed(2),
+        roomOwnerAmount: pricing.roomOwnerAmount.toFixed(2),
+        instrumentsAmount: pricing.instrumentsAmount.toFixed(2),
       },
     });
 
@@ -121,7 +104,7 @@ export class PaymentsService {
       clientSecret: paymentIntent.client_secret ?? '',
       bookingId: booking.id,
       paymentIntentId: paymentIntent.id,
-      totalPrice,
+      totalPrice: pricing.totalPrice,
     };
   }
 
@@ -190,11 +173,5 @@ export class PaymentsService {
     }
 
     return paymentIntent;
-  }
-
-  // 🔹 Método auxiliar para calcular horas
-  private getHours(start: Date, end: Date): number {
-    const diffMs = new Date(end).getTime() - new Date(start).getTime();
-    return diffMs / (1000 * 60 * 60);
   }
 }

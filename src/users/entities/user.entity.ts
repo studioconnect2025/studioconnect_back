@@ -16,9 +16,6 @@ export class User {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column()
-  name: string;
-
   // --- Campos de Autenticación y Rol ---
   @Column({ unique: true, nullable: false })
   email: string;

@@ -7,19 +7,21 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { LessThan, MoreThan, Repository } from 'typeorm';
-import { Studio } from 'src/studios/entities/studio.entity';
 import { Booking } from './dto/bookings.entity';
 import { CreateBookingDto } from './dto/create-booking';
 import { User } from 'src/users/entities/user.entity';
 import { BookingStatus } from './enum/enums-bookings';
+import { Room } from 'src/rooms/entities/room.entity';
+import { PricingService } from 'src/pricingTotal/pricing.service';
 
 @Injectable()
 export class BookingsService {
   constructor(
     @InjectRepository(Booking)
     private readonly bookingRepository: Repository<Booking>,
-    @InjectRepository(Studio)
-    private readonly studioRepository: Repository<Studio>,
+    @InjectRepository(Room)
+    private readonly roomRepository: Repository<Room>,
+    private readonly pricingService: PricingService,
   ) {}
 
   /**
@@ -31,13 +33,25 @@ export class BookingsService {
   ): Promise<Booking> {
     const { roomId, startTime, endTime } = createBookingDto;
 
+    const start = new Date(startTime);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(today.getDate() + 1);
+
+    if (start < tomorrow) {
+      throw new BadRequestException(
+        'Las reservas deben realizarse para fechas posteriores al día actual.',
+      );
+    }
+
     if (new Date(startTime) >= new Date(endTime)) {
       throw new BadRequestException(
         'La fecha de fin debe ser posterior a la fecha de inicio.',
       );
     }
 
-    const room = await this.studioRepository.findOne({
+    const room = await this.roomRepository.findOne({
       where: { id: roomId },
       relations: ['studio'],
     });
@@ -49,7 +63,7 @@ export class BookingsService {
     // Lógica de validación de disponibilidad
     const conflictingBooking = await this.bookingRepository.findOne({
       where: {
-        studio: { id: roomId },
+        room: { id: roomId },
         status: BookingStatus.CONFIRMED, // Solo chocar con reservas confirmadas
         startTime: LessThan(endTime),
         endTime: MoreThan(startTime),
@@ -62,11 +76,19 @@ export class BookingsService {
       );
     }
 
+    const { totalPrice } = await this.pricingService.calculatePrice(
+      roomId,
+      startTime,
+      endTime,
+    );
+
     const newBooking = this.bookingRepository.create({
       room,
+      studio: room.studio,
       musician,
       startTime,
       endTime,
+      totalPrice,
       status: BookingStatus.PENDING,
     });
 
@@ -90,7 +112,7 @@ export class BookingsService {
       id: b.id,
       room: b.room.name,
       studio: b.room.studio.name,
-      musician: b.musician.name,
+      musician: b.musician.email,
       startTime: b.startTime,
       endTime: b.endTime,
       totalPrice: b.totalPrice,

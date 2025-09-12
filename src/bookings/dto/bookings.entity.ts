@@ -37,7 +37,10 @@ export class Booking {
   @CreateDateColumn()
   createdAt: Date;
 
-  @ManyToOne(() => Room, (room) => room, { nullable: true, eager: true })
+  @ManyToOne(() => Room, (room) => room.bookings, {
+    nullable: true,
+    eager: true,
+  })
   room: Room;
 
   @Column('decimal', { precision: 10, scale: 2, nullable: true })
