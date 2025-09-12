@@ -12,7 +12,7 @@ import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { LoginDto } from './dto/login.dto';
 import { StudioOwnerRegisterDto } from 'src/users/dto/StudioOwnerRegisterDto';
-import { MusicianRegisterDto } from 'src/Musico/dto/MusicianRegister.dto';
+import { MusicianRegisterDto } from 'src/Musico/dto/musician-register.dto';
 import { ReactivateAccountDto } from 'src/auth/dto/reactivate-account.dto';
 import { UserRole } from './enum/roles.enum';
 import { User } from '../users/entities/user.entity';

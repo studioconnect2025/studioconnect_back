@@ -21,7 +21,7 @@ import {
 } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
 import type { Response } from 'express';
-import { MusicianRegisterDto } from 'src/Musico/dto/MusicianRegister.dto'; // Ruta corregida
+import { MusicianRegisterDto } from 'src/Musico/dto/musician-register.dto'; // Ruta corregida
 import { StudioOwnerRegisterDto } from 'src/users/dto/StudioOwnerRegisterDto'; // Ruta corregida
 import { ReactivateAccountDto } from './dto/reactivate-account.dto';
 
