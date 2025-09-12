@@ -21,8 +21,8 @@ import {
 } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
 import type { Response } from 'express';
-import { MusicianRegisterDto } from '../Musico/dto/MusicianRegister.dto';
-import { StudioOwnerRegisterDto } from '../users/dto/StudioOwnerRegisterDto';
+import { MusicianRegisterDto } from 'src/Musico/dto/MusicianRegister.dto'; // Ruta corregida
+import { StudioOwnerRegisterDto } from 'src/users/dto/StudioOwnerRegisterDto'; // Ruta corregida
 import { ReactivateAccountDto } from './dto/reactivate-account.dto';
 
 @ApiTags('Auth')
@@ -37,23 +37,24 @@ export class AuthController {
   @ApiResponse({ status: 400, description: 'Datos inválidos para el registro' })
   @ApiBody({
     type: MusicianRegisterDto,
+    // Conservamos la versión simplificada de la rama 'develop'
     description: 'Estructura de datos simplificada para registrar un nuevo músico.',
     examples: {
       ejemplo1: {
         summary: 'Registro Básico de Músico',
         value: {
-          email: "nuevo.musico@example.com",
-          password: "PasswordSegura123!",
-          confirmPassword: "PasswordSegura123!",
-          profile: {
-            nombre: "Carlos",
-            apellido: "Ruiz",
-            numeroDeTelefono: "+5491112345678",
-            ubicacion: {
-              ciudad: "Buenos Aires",
-              provincia: "CABA",
-              calle: "Av. Corrientes 1234",
-              codigoPostal: "C1043AAS"
+          "email": "nuevo.musico@example.com",
+          "password": "PasswordSegura123!",
+          "confirmPassword": "PasswordSegura123!",
+          "profile": {
+            "nombre": "Carlos",
+            "apellido": "Ruiz",
+            "numeroDeTelefono": "+5491112345678",
+            "ubicacion": {
+              "ciudad": "Buenos Aires",
+              "provincia": "CABA",
+              "calle": "Av. Corrientes 1234",
+              "codigoPostal": "C1043AAS"
             }
           }
         }
@@ -65,6 +66,7 @@ export class AuthController {
   }
 
   // --- ENDPOINT PARA REGISTRAR DUEÑOS DE ESTUDIO ---
+  @Post('register/studio-owner')
   @ApiOperation({ summary: 'Registro de un nuevo dueño de estudio' })
   @ApiResponse({
     status: 201,
@@ -79,37 +81,35 @@ export class AuthController {
       a: {
         summary: 'Ejemplo de Registro',
         value: {
-          name: 'Juan',
-          lastName: 'Perez',
+          profile: {
+            nombre: 'Juan',
+            apellido: 'Perez',
+          },
           email: 'juan.perez@example.com',
-          phoneNumber: '+573101234567',
           password: 'password123',
           confirmPassword: 'password123',
         },
       },
     },
   })
-  @Post('register/studio-owner')
   registerStudioOwner(@Body() registerDto: StudioOwnerRegisterDto) {
     return this.authService.registerStudioOwner(registerDto);
   }
-  
 
+  @Post('login')
+  @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Iniciar sesión' })
   @ApiResponse({ status: 200, description: 'Login exitoso, retorna un JWT' })
   @ApiResponse({ status: 401, description: 'Credenciales inválidas' })
-  @HttpCode(HttpStatus.OK)
-  @Post('login')
   login(@Body() loginDto: LoginDto) {
     return this.authService.login(loginDto);
   }
 
- @Post('reactivate')
+  @Post('reactivate')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Reactivar una cuenta inactiva' })
   @ApiResponse({ status: 200, description: 'Cuenta reactivada exitosamente.' })
   @ApiResponse({ status: 404, description: 'Usuario no encontrado.' })
-  // --- DECORADOR AGREGADO CON EJEMPLO ---
   @ApiBody({
     type: ReactivateAccountDto,
     description: 'Estructura para reactivar una cuenta usando el correo electrónico.',
@@ -151,13 +151,13 @@ export class AuthController {
     res.redirect(`${redirectUri}?token=${jwtToken}`);
   }
 
-  @ApiOperation({ summary: 'Cerrar sesión' })
-  @ApiResponse({ status: 200, description: 'Sesión cerrada correctamente' })
-  @ApiResponse({ status: 401, description: 'Token inválido o no autorizado' })
   @Post('logout')
   @ApiBearerAuth()
   @UseGuards(AuthGuard('jwt'))
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Cerrar sesión' })
+  @ApiResponse({ status: 200, description: 'Sesión cerrada correctamente' })
+  @ApiResponse({ status: 401, description: 'Token inválido o no autorizado' })
   async logout(@Req() req) {
     const token = req.headers.authorization.split(' ')[1];
     return this.authService.logout(token);

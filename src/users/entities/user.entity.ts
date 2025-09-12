@@ -27,7 +27,7 @@ export class User {
     nullable: false, // Es mejor que el rol siempre sea obligatorio
   })
   role: UserRole;
-  
+
   @Column({ default: true })
   isActive: boolean;
 
