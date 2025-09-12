@@ -76,6 +76,14 @@ export class InstrumentosService {
     };
   }
 
+  async findNamesByRoom(roomId: string): Promise<string[]> {
+    const instruments = await this.instrumentsRepository.find({
+      where: { room: { id: roomId } },
+      select: ['name'],
+    });
+    return instruments.map((i) => i.name);
+  }
+
   async findAllForRoom(ownerId: string): Promise<Instruments[]> {
     return this.instrumentsRepository.find({
       where: {

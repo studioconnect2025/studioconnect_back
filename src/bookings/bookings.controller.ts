@@ -20,6 +20,7 @@ import {
   ApiResponse,
   ApiBearerAuth,
 } from '@nestjs/swagger';
+import { User } from 'src/users/entities/user.entity';
 
 @ApiTags('Bookings')
 @ApiBearerAuth() // CAMBIO AQUÍ: Se aplica la seguridad a todo el controlador
@@ -38,7 +39,10 @@ export class BookingsController {
   @Post()
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles(UserRole.MUSICIAN)
-  create(@Body() createBookingDto: CreateBookingDto, @Request() req) {
+  create(
+    @Body() createBookingDto: CreateBookingDto,
+    @Request() req: { user: User },
+  ) {
     return this.bookingsService.create(createBookingDto, req.user);
   }
 
@@ -54,8 +58,19 @@ export class BookingsController {
   @Get('owner/my-bookings')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles(UserRole.STUDIO_OWNER)
-  getMyStudioBookings(@Request() req) {
+  getMyStudioBookings(@Request() req: { user: User }) {
     return this.bookingsService.findOwnerBookings(req.user.id);
+  }
+
+  @ApiOperation({ summary: 'Obtener todas mis reservas (solo músicos)' })
+  @ApiResponse({ status: 200, description: 'Lista de reservas del músico' })
+  @ApiResponse({ status: 401, description: 'No autenticado' })
+  @ApiResponse({ status: 403, description: 'Rol no autorizado' })
+  @Get('musician/my-bookings')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles(UserRole.MUSICIAN)
+  getMyBookings(@Request() req: { user: User }) {
+    return this.bookingsService.findMusicianBookings(req.user.id);
   }
 
   @ApiOperation({ summary: 'Confirmar una reserva (solo dueño)' })
@@ -67,7 +82,10 @@ export class BookingsController {
   @Patch('owner/:bookingId/confirm')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles(UserRole.STUDIO_OWNER)
-  async confirmBooking(@Param('bookingId') bookingId: string, @Request() req) {
+  async confirmBooking(
+    @Param('bookingId') bookingId: string,
+    @Request() req: { user: User },
+  ) {
     return this.bookingsService.confirmBooking(bookingId, req.user);
   }
 
@@ -80,7 +98,10 @@ export class BookingsController {
   @Patch('owner/:bookingId/reject')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles(UserRole.STUDIO_OWNER)
-  async rejectBooking(@Param('bookingId') bookingId: string, @Request() req) {
+  async rejectBooking(
+    @Param('bookingId') bookingId: string,
+    @Request() req: { user: User },
+  ) {
     return this.bookingsService.rejectBooking(bookingId, req.user);
   }
 }

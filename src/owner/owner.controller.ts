@@ -145,8 +145,10 @@ export class OwnersController {
   }
 
   // GET /owners/me/studio/rooms
-    @Get('rooms')
-  @ApiOperation({ summary: 'Listar todas las salas de mi estudio con imágenes' })
+  @Get('rooms')
+  @ApiOperation({
+    summary: 'Listar todas las salas de mi estudio con imágenes',
+  })
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles(UserRole.STUDIO_OWNER)
   async getMyRooms(@Request() req) {

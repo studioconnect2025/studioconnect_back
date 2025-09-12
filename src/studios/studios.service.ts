@@ -96,100 +96,109 @@ export class StudiosService {
     }
   }
 
- // --- CREAR ESTUDIO CON ARCHIVOS ---
-async createWithFiles(
-  createStudioDto: CreateStudioDto,
-  user: User,
-  files: { photos?: Express.Multer.File[]; comercialRegister?: Express.Multer.File[] },
-): Promise<Studio> {
-  if (user.role !== UserRole.STUDIO_OWNER) {
-    throw new ForbiddenException(
-      'Solo los dueños de estudio pueden crear estudios',
-    );
-  }
-
-  // Validar cantidad máxima de fotos
-  if (files.photos && files.photos.length > 5) {
-    throw new BadRequestException('Solo se permiten hasta 5 fotos.');
-  }
-
-  // 🔹 Clonar DTO y quitar campos que no deben ir directo a create
-  const { photos, comercialRegister, ...cleanDto } = createStudioDto;
-
-  const studio = this.studioRepository.create({
-    ...cleanDto, // ✅ solo campos simples que sí mapean al entity
-  });
-
-  studio.owner = user;
-
-  // Subir fotos
-  if (files.photos) {
-    studio.photos = [];
-    for (const file of files.photos) {
-      const result = await this.fileUploadService.uploadFile(file);
-      studio.photos.push(result.secure_url);
-    }
-  }
-
-  // Subir registro comercial si existe
-  if (files.comercialRegister && files.comercialRegister[0]) {
-    const result = await this.fileUploadService.uploadFile(
-      files.comercialRegister[0],
-    );
-    studio.comercialRegister = result.secure_url;
-  }
-
-  return this.studioRepository.save(studio);
-}
-
-// --- ACTUALIZAR ESTUDIO CON ARCHIVOS ---
-async updateMyStudioWithFiles(
-  user: User,
-  studioId: string,
-  dto: UpdateStudioDto,
-  files: { photos?: Express.Multer.File[]; comercialRegister?: Express.Multer.File[] },
-): Promise<Studio> {
-  const studio = await this.studioRepository.findOne({
-    where: { id: studioId },
-    relations: ['owner'],
-  });
-
-  if (!studio) {
-    throw new NotFoundException('Estudio no encontrado.');
-  }
-
-  if (studio.owner.id !== user.id) {
-    throw new ForbiddenException(
-      'No tienes permiso para actualizar este estudio.',
-    );
-  }
-
-  // --- Actualizar datos básicos
-  Object.assign(studio, dto);
-
-  // --- Manejo de fotos (máx. 5)
-  if (files.photos && files.photos.length > 0) {
-    const currentPhotos = studio.photos || [];
-
-    if (currentPhotos.length + files.photos.length > 5) {
-      throw new BadRequestException('Solo se permiten hasta 5 fotos en total.');
+  // --- CREAR ESTUDIO CON ARCHIVOS ---
+  async createWithFiles(
+    createStudioDto: CreateStudioDto,
+    user: User,
+    files: {
+      photos?: Express.Multer.File[];
+      comercialRegister?: Express.Multer.File[];
+    },
+  ): Promise<Studio> {
+    if (user.role !== UserRole.STUDIO_OWNER) {
+      throw new ForbiddenException(
+        'Solo los dueños de estudio pueden crear estudios',
+      );
     }
 
-    for (const file of files.photos) {
-      const result = await this.fileUploadService.uploadFile(file);
-      currentPhotos.push(result.secure_url);
+    // Validar cantidad máxima de fotos
+    if (files.photos && files.photos.length > 5) {
+      throw new BadRequestException('Solo se permiten hasta 5 fotos.');
     }
 
-    studio.photos = currentPhotos;
+    // 🔹 Clonar DTO y quitar campos que no deben ir directo a create
+    const { photos, comercialRegister, ...cleanDto } = createStudioDto;
+
+    const studio = this.studioRepository.create({
+      ...cleanDto, // ✅ solo campos simples que sí mapean al entity
+    });
+
+    studio.owner = user;
+
+    // Subir fotos
+    if (files.photos) {
+      studio.photos = [];
+      for (const file of files.photos) {
+        const result = await this.fileUploadService.uploadFile(file);
+        studio.photos.push(result.secure_url);
+      }
+    }
+
+    // Subir registro comercial si existe
+    if (files.comercialRegister && files.comercialRegister[0]) {
+      const result = await this.fileUploadService.uploadFile(
+        files.comercialRegister[0],
+      );
+      studio.comercialRegister = result.secure_url;
+    }
+
+    return this.studioRepository.save(studio);
   }
 
-  // --- Manejo del registro comercial
-  if (files.comercialRegister && files.comercialRegister[0]) {
-    const result = await this.fileUploadService.uploadFile(files.comercialRegister[0]);
-    studio.comercialRegister = result.secure_url;
+  // --- ACTUALIZAR ESTUDIO CON ARCHIVOS ---
+  async updateMyStudioWithFiles(
+    user: User,
+    studioId: string,
+    dto: UpdateStudioDto,
+    files: {
+      photos?: Express.Multer.File[];
+      comercialRegister?: Express.Multer.File[];
+    },
+  ): Promise<Studio> {
+    const studio = await this.studioRepository.findOne({
+      where: { id: studioId },
+      relations: ['owner'],
+    });
+
+    if (!studio) {
+      throw new NotFoundException('Estudio no encontrado.');
+    }
+
+    if (studio.owner.id !== user.id) {
+      throw new ForbiddenException(
+        'No tienes permiso para actualizar este estudio.',
+      );
+    }
+
+    // --- Actualizar datos básicos
+    Object.assign(studio, dto);
+
+    // --- Manejo de fotos (máx. 5)
+    if (files.photos && files.photos.length > 0) {
+      const currentPhotos = studio.photos || [];
+
+      if (currentPhotos.length + files.photos.length > 5) {
+        throw new BadRequestException(
+          'Solo se permiten hasta 5 fotos en total.',
+        );
+      }
+
+      for (const file of files.photos) {
+        const result = await this.fileUploadService.uploadFile(file);
+        currentPhotos.push(result.secure_url);
+      }
+
+      studio.photos = currentPhotos;
+    }
+
+    // --- Manejo del registro comercial
+    if (files.comercialRegister && files.comercialRegister[0]) {
+      const result = await this.fileUploadService.uploadFile(
+        files.comercialRegister[0],
+      );
+      studio.comercialRegister = result.secure_url;
+    }
+
+    return this.studioRepository.save(studio);
   }
-
-  return this.studioRepository.save(studio);
-}
-
 }
