@@ -2,7 +2,7 @@
 import { IsEmail, IsEnum, IsString, MinLength, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 import { UserRole } from '../../auth/enum/roles.enum';
-import { PerfilMusicalDto } from '../../Musico/dto/perfil-musical.dto'; 
+
 import { PreferenciasDto } from '../../Musico/dto/preferencias.dto';
 
 // DTO para el objeto anidado 'profile'
@@ -10,9 +10,6 @@ class ProfileDto {
   @IsString() @MinLength(2) nombre: string;
   @IsString() @MinLength(2) apellido: string;
   
-  @ValidateNested() @Type(() => PerfilMusicalDto)
-  perfilMusical: PerfilMusicalDto;
-
   @ValidateNested() @Type(() => PreferenciasDto)
   preferencias: PreferenciasDto;
 }
