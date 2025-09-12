@@ -1,20 +1,150 @@
-import { Controller, Post, Body, HttpCode, HttpStatus } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  HttpCode,
+  HttpStatus,
+  Get,
+  UseGuards,
+  Req,
+  Session,
+  Res,
+} from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { StudioOwnerRegisterDto } from 'src/users/dto/owner.dto';
 import { LoginDto } from './dto/login.dto';
+import {
+  ApiBearerAuth,
+  ApiBody,
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
+import { AuthGuard } from '@nestjs/passport';
+import type { Response } from 'express';
+import { MusicianRegisterDto } from '../Musico/dto/MusicianRegister.dto';
+import { StudioOwnerRegisterDto } from '../users/dto/StudioOwnerRegisterDto';
 
+@ApiTags('Auth')
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
+  // --- ENDPOINT PARA REGISTRAR MÚSICOS ---
+  @Post('register/musician')
+  @ApiOperation({ summary: 'Registro de un nuevo músico' })
+  @ApiResponse({
+    status: 201,
+    description: 'Músico registrado correctamente',
+  })
+  @ApiResponse({ status: 400, description: 'Datos inválidos para el registro' })
+  // --- DECORADOR AGREGADO ---
+  @ApiBody({
+    type: MusicianRegisterDto,
+    description: 'Estructura de datos para registrar un nuevo músico con su perfil detallado.',
+    examples: {
+      ejemplo1: {
+        summary: 'Registro de Músico Completo',
+        value: {
+          email: "sofia.guitar@example.com",
+          password: "PasswordMusico2025!",
+          confirmPassword: "PasswordMusico2025!",
+          profile: {
+            nombre: "Sofía",
+            apellido: "Ramírez",
+            perfilMusical: {
+              rolPrincipal: "Guitarrista Solista",
+              generosMusicales: ["Blues Rock", "Hard Rock", "Funk"],
+              instrumentosHabilidades: ["Guitarra Eléctrica", "Guitarra Acústica", "Slide Guitar"],
+              nivelDeExperiencia: "Avanzado" 
+            },
+            preferencias: {
+              ciudad: "Bogotá",
+              provincia: "Bogotá D.C.",
+              pais: "Colombia",
+              distanciaDeEstudioPreferida: 15
+            }
+          }
+        }
+      }
+    }
+  })
+  registerMusician(@Body() registerDto: MusicianRegisterDto) {
+    return this.authService.registerMusician(registerDto);
+  }
+
+  // --- ENDPOINT PARA REGISTRAR DUEÑOS DE ESTUDIO ---
+  @ApiOperation({ summary: 'Registro de un nuevo dueño de estudio' })
+  @ApiResponse({
+    status: 201,
+    description: 'Dueño de estudio registrado correctamente',
+  })
+  @ApiResponse({ status: 400, description: 'Datos inválidos para el registro' })
+  @ApiBody({
+    type: StudioOwnerRegisterDto,
+    description:
+      'Estructura de datos para registrar un nuevo dueño de estudio.',
+    examples: {
+      a: {
+        summary: 'Ejemplo de Registro',
+        value: {
+          name: 'Juan',
+          lastName: 'Perez',
+          email: 'juan.perez@example.com',
+          phoneNumber: '+573101234567',
+          password: 'password123',
+          confirmPassword: 'password123',
+        },
+      },
+    },
+  })
   @Post('register/studio-owner')
   registerStudioOwner(@Body() registerDto: StudioOwnerRegisterDto) {
     return this.authService.registerStudioOwner(registerDto);
   }
+  
 
+  @ApiOperation({ summary: 'Iniciar sesión' })
+  @ApiResponse({ status: 200, description: 'Login exitoso, retorna un JWT' })
+  @ApiResponse({ status: 401, description: 'Credenciales inválidas' })
   @HttpCode(HttpStatus.OK)
   @Post('login')
   login(@Body() loginDto: LoginDto) {
     return this.authService.login(loginDto);
+  }
+
+  // --- Rutas para Google OAuth ---
+  @Get('google/login')
+  @UseGuards(AuthGuard('google'))
+  handleGoogleLogin(@Req() req, @Session() session: Record<string, any>) {
+    const redirectUri = req.query.redirect_uri as string;
+    if (redirectUri) {
+      session.redirectUri = redirectUri;
+    }
+  }
+
+  @Get('google/callback')
+  @UseGuards(AuthGuard('google'))
+  async handleGoogleCallback(
+    @Req() req,
+    @Res() res: Response,
+    @Session() session: Record<string, any>,
+  ) {
+    const tokenData = await this.authService.googleLogin(req);
+    const jwtToken = tokenData.access_token;
+    const redirectUri = session.redirectUri || process.env.FRONTEND_URL;
+    session.redirectUri = null;
+    res.redirect(`${redirectUri}?token=${jwtToken}`);
+  }
+
+  @ApiOperation({ summary: 'Cerrar sesión' })
+  @ApiResponse({ status: 200, description: 'Sesión cerrada correctamente' })
+  @ApiResponse({ status: 401, description: 'Token inválido o no autorizado' })
+  @Post('logout')
+  @ApiBearerAuth()
+  @UseGuards(AuthGuard('jwt'))
+  @HttpCode(HttpStatus.OK)
+  async logout(@Req() req) {
+    const token = req.headers.authorization.split(' ')[1];
+    return this.authService.logout(token);
   }
 }

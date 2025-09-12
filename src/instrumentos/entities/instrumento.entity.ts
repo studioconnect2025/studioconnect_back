@@ -1,26 +1,45 @@
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne } from 'typeorm';
-import { Studio } from 'src/studios/entities/studio.entity';
+import { Category } from 'src/categories/entities/category.entity';
+import { Room } from 'src/rooms/entities/room.entity';
 
-@Entity()
-export class Instrument {
+@Entity({
+  name: 'INSTRUMENTOS',
+})
+export class Instruments {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
   @Column({
     type: 'varchar',
     length: 50,
-    nullable: false,
+    unique: true,
   })
   name: string;
 
-  @Column({ nullable: false, type: 'text' })
+  @Column({
+    nullable: false,
+    type: 'text',
+  })
   description: string;
+
+  @Column({
+    type: 'decimal',
+    precision: 10,
+    scale: 2,
+    nullable: false,
+  })
+  price: number;
 
   @Column({ default: true })
   available: boolean;
 
-  @ManyToOne(() => Studio, (studio) => studio.instruments, {
+  @ManyToOne(() => Category, (category) => category.instruments, {
+    eager: true,
+  })
+  category: Category;
+
+  @ManyToOne(() => Room, (room) => room.instruments, {
     onDelete: 'CASCADE',
   })
-  studio: Studio;
+  room: Room;
 }
