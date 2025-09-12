@@ -40,33 +40,38 @@ export class AuthController {
   // --- DECORADOR AGREGADO ---
   @ApiBody({
     type: MusicianRegisterDto,
-    description: 'Estructura de datos para registrar un nuevo músico con su perfil detallado.',
+    description:
+      'Estructura de datos para registrar un nuevo músico con su perfil detallado.',
     examples: {
       ejemplo1: {
         summary: 'Registro de Músico Completo',
         value: {
-          email: "sofia.guitar@example.com",
-          password: "PasswordMusico2025!",
-          confirmPassword: "PasswordMusico2025!",
+          email: 'sofia.guitar@example.com',
+          password: 'PasswordMusico2025!',
+          confirmPassword: 'PasswordMusico2025!',
           profile: {
-            nombre: "Sofía",
-            apellido: "Ramírez",
+            nombre: 'Sofía',
+            apellido: 'Ramírez',
             perfilMusical: {
-              rolPrincipal: "Guitarrista Solista",
-              generosMusicales: ["Blues Rock", "Hard Rock", "Funk"],
-              instrumentosHabilidades: ["Guitarra Eléctrica", "Guitarra Acústica", "Slide Guitar"],
-              nivelDeExperiencia: "Avanzado" 
+              rolPrincipal: 'Guitarrista Solista',
+              generosMusicales: ['Blues Rock', 'Hard Rock', 'Funk'],
+              instrumentosHabilidades: [
+                'Guitarra Eléctrica',
+                'Guitarra Acústica',
+                'Slide Guitar',
+              ],
+              nivelDeExperiencia: 'Avanzado',
             },
             preferencias: {
-              ciudad: "Bogotá",
-              provincia: "Bogotá D.C.",
-              pais: "Colombia",
-              distanciaDeEstudioPreferida: 15
-            }
-          }
-        }
-      }
-    }
+              ciudad: 'Bogotá',
+              provincia: 'Bogotá D.C.',
+              pais: 'Colombia',
+              distanciaDeEstudioPreferida: 15,
+            },
+          },
+        },
+      },
+    },
   })
   registerMusician(@Body() registerDto: MusicianRegisterDto) {
     return this.authService.registerMusician(registerDto);
@@ -101,7 +106,6 @@ export class AuthController {
   registerStudioOwner(@Body() registerDto: StudioOwnerRegisterDto) {
     return this.authService.registerStudioOwner(registerDto);
   }
-  
 
   @ApiOperation({ summary: 'Iniciar sesión' })
   @ApiResponse({ status: 200, description: 'Login exitoso, retorna un JWT' })

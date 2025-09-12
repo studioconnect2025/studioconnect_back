@@ -30,7 +30,7 @@ export class UsersService {
     private readonly roomRepository: Repository<Room>,
   ) {}
 
-   async create(createUserDto: CreateUserDto): Promise<User> {
+  async create(createUserDto: CreateUserDto): Promise<User> {
     const { email, password, role, profile } = createUserDto;
 
     // 1. Verificar si el email ya existe
@@ -50,14 +50,13 @@ export class UsersService {
         role,
         profile,
       });
-      
+
       // 4. Guardar en la base de datos
       await this.usersRepository.save(newUser);
 
       // 5. Devolver el usuario sin la contraseña
       const { passwordHash: _, ...userResult } = newUser;
       return userResult as User;
-
     } catch (error) {
       console.error(error);
       throw new InternalServerErrorException('No se pudo crear el usuario.');
