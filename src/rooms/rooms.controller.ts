@@ -1,12 +1,12 @@
-import { 
-  Controller, 
-  Post, 
-  Patch, 
-  Delete, 
-  Get, 
-  Param, 
-  Body, 
-  UseGuards, 
+import {
+  Controller,
+  Post,
+  Patch,
+  Delete,
+  Get,
+  Param,
+  Body,
+  UseGuards,
   Request,
   UseInterceptors,
   UploadedFiles,
@@ -21,11 +21,11 @@ import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard } from 'src/auth/guard/roles.guard';
 import { Roles } from 'src/auth/decorators/roles.decorator';
 import { UserRole } from 'src/auth/enum/roles.enum';
-import { 
-  ApiTags, 
-  ApiOperation, 
-  ApiResponse, 
-  ApiBearerAuth, 
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
   ApiParam,
   ApiConsumes,
   ApiBody,
@@ -42,12 +42,15 @@ export class RoomsController {
   @Post()
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles(UserRole.STUDIO_OWNER)
-  @ApiOperation({ summary: 'Crear una sala (studioId se obtiene automáticamente del usuario)' })
-  @ApiResponse({ status: 201, description: 'Sala creada correctamente', type: Room })
-  createRoom(
-    @Body() dto: CreateRoomDto,
-    @Request() req,
-  ) {
+  @ApiOperation({
+    summary: 'Crear una sala (studioId se obtiene automáticamente del usuario)',
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Sala creada correctamente',
+    type: Room,
+  })
+  createRoom(@Body() dto: CreateRoomDto, @Request() req) {
     // El studioId se obtiene automáticamente en el service
     return this.roomsService.createWithAutoStudio(dto, req.user);
   }
@@ -58,7 +61,11 @@ export class RoomsController {
   @Roles(UserRole.STUDIO_OWNER)
   @ApiOperation({ summary: 'Crear una sala en un estudio específico' })
   @ApiParam({ name: 'studioId', description: 'ID del estudio' })
-  @ApiResponse({ status: 201, description: 'Sala creada correctamente', type: Room })
+  @ApiResponse({
+    status: 201,
+    description: 'Sala creada correctamente',
+    type: Room,
+  })
   createRoomInStudio(
     @Param('studioId') studioId: string,
     @Body() dto: CreateRoomDto,
@@ -72,7 +79,11 @@ export class RoomsController {
   @Roles(UserRole.STUDIO_OWNER)
   @ApiOperation({ summary: 'Actualizar una sala existente' })
   @ApiParam({ name: 'roomId', description: 'ID de la sala' })
-  @ApiResponse({ status: 200, description: 'Sala actualizada correctamente', type: Room })
+  @ApiResponse({
+    status: 200,
+    description: 'Sala actualizada correctamente',
+    type: Room,
+  })
   updateRoom(
     @Param('roomId') roomId: string,
     @Body() dto: UpdateRoomDto,
@@ -104,7 +115,11 @@ export class RoomsController {
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles(UserRole.STUDIO_OWNER)
   @ApiOperation({ summary: 'Obtener todas las salas del usuario autenticado' })
-  @ApiResponse({ status: 200, description: 'Listado de salas del usuario', type: [Room] })
+  @ApiResponse({
+    status: 200,
+    description: 'Listado de salas del usuario',
+    type: [Room],
+  })
   findMyRooms(@Request() req) {
     return this.roomsService.findRoomsByUser(req.user);
   }
@@ -114,17 +129,22 @@ export class RoomsController {
   @Post(':roomId/images')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles(UserRole.STUDIO_OWNER)
-  @UseInterceptors(FilesInterceptor('images', 5, {
-    fileFilter: (req, file, cb) => {
-      if (!file.originalname.match(/\.(jpg|jpeg|png|gif|webp)$/)) {
-        return cb(new BadRequestException('Solo se permiten archivos de imagen'), false);
-      }
-      cb(null, true);
-    },
-    limits: {
-      fileSize: 5 * 1024 * 1024, // 5MB por archivo
-    },
-  }))
+  @UseInterceptors(
+    FilesInterceptor('images', 5, {
+      fileFilter: (req, file, cb) => {
+        if (!file.originalname.match(/\.(jpg|jpeg|png|gif|webp)$/)) {
+          return cb(
+            new BadRequestException('Solo se permiten archivos de imagen'),
+            false,
+          );
+        }
+        cb(null, true);
+      },
+      limits: {
+        fileSize: 5 * 1024 * 1024, // 5MB por archivo
+      },
+    }),
+  )
   @ApiOperation({ summary: 'Subir imágenes a una sala' })
   @ApiParam({ name: 'roomId', description: 'ID de la sala' })
   @ApiConsumes('multipart/form-data')
@@ -143,10 +163,10 @@ export class RoomsController {
       },
     },
   })
-  @ApiResponse({ 
-    status: 201, 
-    description: 'Imágenes subidas correctamente', 
-    type: Room 
+  @ApiResponse({
+    status: 201,
+    description: 'Imágenes subidas correctamente',
+    type: Room,
   })
   uploadRoomImages(
     @Param('roomId') roomId: string,
@@ -161,11 +181,14 @@ export class RoomsController {
   @Roles(UserRole.STUDIO_OWNER)
   @ApiOperation({ summary: 'Eliminar una imagen específica de la sala' })
   @ApiParam({ name: 'roomId', description: 'ID de la sala' })
-  @ApiParam({ name: 'imageIndex', description: 'Índice de la imagen (0-based)' })
-  @ApiResponse({ 
-    status: 200, 
-    description: 'Imagen eliminada correctamente', 
-    type: Room 
+  @ApiParam({
+    name: 'imageIndex',
+    description: 'Índice de la imagen (0-based)',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Imagen eliminada correctamente',
+    type: Room,
   })
   deleteRoomImage(
     @Param('roomId') roomId: string,
@@ -188,10 +211,10 @@ export class RoomsController {
     description: 'Nuevo orden de las URLs de imágenes',
     type: UpdateImageOrderDto,
   })
-  @ApiResponse({ 
-    status: 200, 
-    description: 'Orden de imágenes actualizado correctamente', 
-    type: Room 
+  @ApiResponse({
+    status: 200,
+    description: 'Orden de imágenes actualizado correctamente',
+    type: Room,
   })
   updateImageOrder(
     @Param('roomId') roomId: string,

@@ -1,4 +1,10 @@
-import { IsDateString, IsNotEmpty, IsUUID } from 'class-validator';
+import {
+  IsArray,
+  IsDateString,
+  IsNotEmpty,
+  IsOptional,
+  IsUUID,
+} from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class CreateBookingDto {
@@ -36,4 +42,14 @@ export class CreateBookingDto {
   @IsNotEmpty({ message: 'El ID de la sala (roomId) es obligatorio.' })
   @IsUUID('4', { message: 'El ID de la sala debe ser un UUID válido.' })
   roomId: string;
+
+  @ApiProperty({
+    description: 'IDs de los instrumentos seleccionados (opcional)',
+    required: false,
+    type: [String],
+  })
+  @IsOptional()
+  @IsArray()
+  @IsUUID('4', { each: true })
+  instrumentIds?: string[];
 }

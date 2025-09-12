@@ -16,9 +16,13 @@ import { UserRole } from 'src/auth/enum/roles.enum';
 import { BookingStatus } from 'src/bookings/enum/enums-bookings';
 import { Room } from 'src/rooms/entities/room.entity';
 import * as bcrypt from 'bcrypt';
+import { UpdateMusicianProfileDto } from 'src/Musico/dto/update-musician-profile.dto';
 
 @Injectable()
 export class UsersService {
+  async updateUser(user: User): Promise<User> {
+    return this.usersRepository.save(user);
+  }
   constructor(
     @InjectRepository(User)
     private usersRepository: Repository<User>,
@@ -30,7 +34,7 @@ export class UsersService {
     private readonly roomRepository: Repository<Room>,
   ) {}
 
-   async create(createUserDto: CreateUserDto): Promise<User> {
+  async create(createUserDto: CreateUserDto): Promise<User> {
     const { email, password, role, profile } = createUserDto;
 
     // 1. Verificar si el email ya existe
@@ -50,14 +54,13 @@ export class UsersService {
         role,
         profile,
       });
-      
+
       // 4. Guardar en la base de datos
       await this.usersRepository.save(newUser);
 
       // 5. Devolver el usuario sin la contraseña
       const { passwordHash: _, ...userResult } = newUser;
       return userResult as User;
-
     } catch (error) {
       console.error(error);
       throw new InternalServerErrorException('No se pudo crear el usuario.');
@@ -180,6 +183,35 @@ export class UsersService {
 
     return 'No se pudo eliminar el usuario';
   }
+
+  async updateUserProfile(userId: string, updateDto: UpdateMusicianProfileDto): Promise<Omit<User, 'passwordHash'>> {
+  const user = await this.findOneById(userId);
+
+  if (updateDto.profile) {
+    user.profile = Object.assign(user.profile || {}, updateDto.profile);
+  }
+  
+  await this.usersRepository.save(user);
+  
+  const { passwordHash, ...result } = user;
+  
+  // Ahora el 'result' coincide perfectamente con el tipo de retorno
+  return result;
+  }
+
+  // --- NUEVO MÉTODO PARA BORRADO LÓGICO ---
+  async softDeleteAccount(userId: string): Promise<{ message: string }> {
+    const user = await this.findOneById(userId);
+    
+    // Aquí puedes expandir la lógica para manejar reservas activas si es necesario,
+    // similar a como lo hiciste en 'softDeleteUser'
+    
+    user.isActive = false;
+    await this.usersRepository.save(user);
+    
+    return { message: 'Tu cuenta ha sido desactivada exitosamente.' };
+  }
+
 
   async toggleOwnStudioStatus(ownerId: string): Promise<string> {
     const user = await this.usersRepository.findOne({

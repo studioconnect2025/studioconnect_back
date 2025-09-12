@@ -7,6 +7,7 @@ import {
 } from 'typeorm';
 import { Studio } from 'src/studios/entities/studio.entity';
 import { Instruments } from 'src/instrumentos/entities/instrumento.entity';
+import { Booking } from 'src/bookings/dto/bookings.entity';
 
 @Entity('ROOMS')
 export class Room {
@@ -60,4 +61,7 @@ export class Room {
     onDelete: 'CASCADE',
   })
   instruments: Instruments[];
+
+  @OneToMany(() => Booking, (booking) => booking.room)
+  bookings: Booking[];
 }

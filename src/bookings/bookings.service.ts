@@ -7,19 +7,21 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { LessThan, MoreThan, Repository } from 'typeorm';
-import { Studio } from 'src/studios/entities/studio.entity';
 import { Booking } from './dto/bookings.entity';
 import { CreateBookingDto } from './dto/create-booking';
 import { User } from 'src/users/entities/user.entity';
 import { BookingStatus } from './enum/enums-bookings';
+import { Room } from 'src/rooms/entities/room.entity';
+import { PricingService } from 'src/pricingTotal/pricing.service';
 
 @Injectable()
 export class BookingsService {
   constructor(
     @InjectRepository(Booking)
     private readonly bookingRepository: Repository<Booking>,
-    @InjectRepository(Studio)
-    private readonly studioRepository: Repository<Studio>,
+    @InjectRepository(Room)
+    private readonly roomRepository: Repository<Room>,
+    private readonly pricingService: PricingService,
   ) {}
 
   /**
@@ -29,7 +31,19 @@ export class BookingsService {
     createBookingDto: CreateBookingDto,
     musician: User,
   ): Promise<Booking> {
-    const { studioId, startTime, endTime } = createBookingDto;
+    const { roomId, startTime, endTime } = createBookingDto;
+
+    const start = new Date(startTime);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(today.getDate() + 1);
+
+    if (start < tomorrow) {
+      throw new BadRequestException(
+        'Las reservas deben realizarse para fechas posteriores al día actual.',
+      );
+    }
 
     if (new Date(startTime) >= new Date(endTime)) {
       throw new BadRequestException(
@@ -37,15 +51,19 @@ export class BookingsService {
       );
     }
 
-    const studio = await this.studioRepository.findOneBy({ id: studioId });
-    if (!studio) {
-      throw new NotFoundException(`Estudio con ID #${studioId} no encontrado.`);
-    }
+    const room = await this.roomRepository.findOne({
+      where: { id: roomId },
+      relations: ['studio'],
+    });
+    if (!room)
+      throw new NotFoundException(`sala con ID #${roomId} no encontrado.`);
+    if (!room.isActive)
+      throw new ForbiddenException('El estudio no esta activo');
 
     // Lógica de validación de disponibilidad
     const conflictingBooking = await this.bookingRepository.findOne({
       where: {
-        studio: { id: studioId },
+        room: { id: roomId },
         status: BookingStatus.CONFIRMED, // Solo chocar con reservas confirmadas
         startTime: LessThan(endTime),
         endTime: MoreThan(startTime),
@@ -58,12 +76,20 @@ export class BookingsService {
       );
     }
 
+    const { totalPrice } = await this.pricingService.calculatePrice(
+      roomId,
+      startTime,
+      endTime,
+    );
+
     const newBooking = this.bookingRepository.create({
-      studio,
+      room,
+      studio: room.studio,
       musician,
       startTime,
       endTime,
-      // El estado PENDING se asigna por defecto desde la entidad
+      totalPrice,
+      status: BookingStatus.PENDING,
     });
 
     return this.bookingRepository.save(newBooking);
@@ -72,32 +98,79 @@ export class BookingsService {
   /**
    * Devuelve todas las reservas de los estudios que pertenecen a un dueño.
    */
-  async findOwnerBookings(ownerId: string): Promise<Booking[]> {
-    const studios = await this.studioRepository.find({
-      where: { owner: { id: ownerId } },
-      relations: ['bookings', 'bookings.musician'], // Carga las reservas y los músicos asociados
+  async findOwnerBookings(ownerId: string) {
+    const bookings = await this.bookingRepository
+      .createQueryBuilder('booking')
+      .leftJoinAndSelect('booking.room', 'room')
+      .leftJoinAndSelect('room.studio', 'studio')
+      .leftJoinAndSelect('booking.musician', 'musician')
+      .where('studio.ownerId = :ownerId', { ownerId })
+      .getMany();
+
+    // Retornamos solo los campos relevantes y el estado
+    return bookings.map((b) => ({
+      id: b.id,
+      room: b.room.name,
+      studio: b.room.studio.name,
+      musician: b.musician.email,
+      startTime: b.startTime,
+      endTime: b.endTime,
+      totalPrice: b.totalPrice,
+      status: b.status, // PENDIENTE, CONFIRMADA, RECHAZADA, COMPLETADA
+      isPaid: b.isPaid,
+    }));
+  }
+
+  async findMusicianBookings(musicianId: string) {
+    const bookings = await this.bookingRepository.find({
+      where: { musician: { id: musicianId } },
+      relations: ['room', 'room.studio'],
+      order: { startTime: 'DESC' }, // opcional, ordenadas por fecha
     });
 
-    // Aplanar el array de arrays de reservas en un solo array
-    return studios.flatMap((studio) => studio.bookings);
+    return bookings.map((b) => ({
+      id: b.id,
+      room: b.room.name,
+      studio: b.room.studio.name,
+      startTime: b.startTime,
+      endTime: b.endTime,
+      totalPrice: b.totalPrice,
+      status: b.status, // PENDIENTE, CONFIRMADA, RECHAZADA, COMPLETADA
+      isPaid: b.isPaid,
+    }));
   }
 
   /**
    * Confirma una reserva específica, verificando la propiedad.
    */
-  async confirmBooking(bookingId: string, owner: User): Promise<Booking> {
-    const booking = await this.verifyBookingOwnership(bookingId, owner.id);
+  async confirmBooking(bookingId: string, user: User) {
+    const booking = await this.bookingRepository.findOne({
+      where: { id: bookingId },
+      relations: ['room', 'room.studio'],
+    });
+
+    if (!booking) throw new NotFoundException('Reserva no encontrada');
+    if (booking.room.studio.owner.id !== user.id)
+      throw new ForbiddenException('No autorizado');
+
     booking.status = BookingStatus.CONFIRMED;
-    return this.bookingRepository.save(booking);
+    await this.bookingRepository.save(booking);
+    return booking;
   }
 
-  /**
-   * Rechaza una reserva específica, verificando la propiedad.
-   */
-  async rejectBooking(bookingId: string, owner: User): Promise<Booking> {
-    const booking = await this.verifyBookingOwnership(bookingId, owner.id);
+  async rejectBooking(bookingId: string, user: User): Promise<Booking> {
+    const booking = await this.bookingRepository.findOne({
+      where: { id: bookingId },
+      relations: ['room', 'room.studio'],
+    });
+
+    if (!booking) throw new NotFoundException('Reserva no encontrada');
+    if (booking.room.studio.owner.id !== user.id)
+      throw new ForbiddenException('No autorizado');
+
     booking.status = BookingStatus.REJECTED;
-    return this.bookingRepository.save(booking);
+    await this.bookingRepository.save(booking);
+    return booking;
   }
 
   /**
