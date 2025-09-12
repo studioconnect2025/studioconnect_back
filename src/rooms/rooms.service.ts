@@ -117,7 +117,7 @@ export class RoomsService {
   async findRoomsByStudio(studioId: string): Promise<Room[]> {
     const studio = await this.studioRepository.findOne({
       where: { id: studioId },
-      relations: ['rooms'],
+      relations: ['rooms', 'rooms.instruments'],
     });
 
     if (!studio) throw new NotFoundException('Estudio no encontrado');
