@@ -16,7 +16,6 @@ import { UserRole } from './enum/roles.enum';
 import { User } from 'src/users/entities/user.entity';
 import { TokenBlacklistService } from './token-blacklist.service';
 import { EmailService } from './services/email.service';
-import { PerfilMusicalDto } from 'src/Musico/dto/perfil-musical.dto';
 import { PreferenciasDto } from 'src/Musico/dto/preferencias.dto';
 
 @Injectable()
@@ -39,7 +38,6 @@ export class AuthService {
       email: dto.email,
       password: dto.password,
       role: UserRole.MUSICIAN, // Rol específico para músicos
-      profile: dto.profile,
     });
 
     await this.emailService.sendWelcomeEmail(dto.profile.nombre, newUser.email);
@@ -103,7 +101,6 @@ export class AuthService {
           profile: {
             nombre: firstName,
             apellido: lastName,
-            perfilMusical: new PerfilMusicalDto,
             preferencias: new PreferenciasDto
           },
         });
