@@ -11,7 +11,6 @@ import {
   Res,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { StudioOwnerRegisterDto } from 'src/users/dto/StudioOwnerRegisterDto';
 import { LoginDto } from './dto/login.dto';
 import {
   ApiBearerAuth,
@@ -22,12 +21,58 @@ import {
 } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
 import type { Response } from 'express';
+import { MusicianRegisterDto } from '../Musico/dto/MusicianRegister.dto';
+import { StudioOwnerRegisterDto } from '../users/dto/StudioOwnerRegisterDto';
 
 @ApiTags('Auth')
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
+  // --- ENDPOINT PARA REGISTRAR MÚSICOS ---
+  @Post('register/musician')
+  @ApiOperation({ summary: 'Registro de un nuevo músico' })
+  @ApiResponse({
+    status: 201,
+    description: 'Músico registrado correctamente',
+  })
+  @ApiResponse({ status: 400, description: 'Datos inválidos para el registro' })
+  // --- DECORADOR AGREGADO ---
+  @ApiBody({
+    type: MusicianRegisterDto,
+    description: 'Estructura de datos para registrar un nuevo músico con su perfil detallado.',
+    examples: {
+      ejemplo1: {
+        summary: 'Registro de Músico Completo',
+        value: {
+          email: "sofia.guitar@example.com",
+          password: "PasswordMusico2025!",
+          confirmPassword: "PasswordMusico2025!",
+          profile: {
+            nombre: "Sofía",
+            apellido: "Ramírez",
+            perfilMusical: {
+              rolPrincipal: "Guitarrista Solista",
+              generosMusicales: ["Blues Rock", "Hard Rock", "Funk"],
+              instrumentosHabilidades: ["Guitarra Eléctrica", "Guitarra Acústica", "Slide Guitar"],
+              nivelDeExperiencia: "Avanzado" 
+            },
+            preferencias: {
+              ciudad: "Bogotá",
+              provincia: "Bogotá D.C.",
+              pais: "Colombia",
+              distanciaDeEstudioPreferida: 15
+            }
+          }
+        }
+      }
+    }
+  })
+  registerMusician(@Body() registerDto: MusicianRegisterDto) {
+    return this.authService.registerMusician(registerDto);
+  }
+
+  // --- ENDPOINT PARA REGISTRAR DUEÑOS DE ESTUDIO ---
   @ApiOperation({ summary: 'Registro de un nuevo dueño de estudio' })
   @ApiResponse({
     status: 201,
@@ -56,6 +101,7 @@ export class AuthController {
   registerStudioOwner(@Body() registerDto: StudioOwnerRegisterDto) {
     return this.authService.registerStudioOwner(registerDto);
   }
+  
 
   @ApiOperation({ summary: 'Iniciar sesión' })
   @ApiResponse({ status: 200, description: 'Login exitoso, retorna un JWT' })
@@ -70,14 +116,12 @@ export class AuthController {
   @Get('google/login')
   @UseGuards(AuthGuard('google'))
   handleGoogleLogin(@Req() req, @Session() session: Record<string, any>) {
-    // Guardamos la URI de redirección del frontend en la sesión
     const redirectUri = req.query.redirect_uri as string;
     if (redirectUri) {
       session.redirectUri = redirectUri;
     }
   }
 
-  // 2. Modifica handleGoogleCallback para usar la sesión y redirigir
   @Get('google/callback')
   @UseGuards(AuthGuard('google'))
   async handleGoogleCallback(
@@ -87,14 +131,8 @@ export class AuthController {
   ) {
     const tokenData = await this.authService.googleLogin(req);
     const jwtToken = tokenData.access_token;
-
-    // Leemos la URI guardada y la usamos para la redirección final
-    const redirectUri = session.redirectUri || process.env.FRONTEND_URL; // Un fallback por si acaso
-
-    // Limpiamos la sesión
+    const redirectUri = session.redirectUri || process.env.FRONTEND_URL;
     session.redirectUri = null;
-
-    // Redirigimos al frontend con el token en la URL
     res.redirect(`${redirectUri}?token=${jwtToken}`);
   }
 
@@ -106,7 +144,6 @@ export class AuthController {
   @UseGuards(AuthGuard('jwt'))
   @HttpCode(HttpStatus.OK)
   async logout(@Req() req) {
-    // El req.user contiene el payload del token y el token mismo
     const token = req.headers.authorization.split(' ')[1];
     return this.authService.logout(token);
   }
