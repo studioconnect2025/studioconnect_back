@@ -7,6 +7,8 @@ import {
   Query,
   Req,
   UseGuards,
+  Post,
+  Body,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { AuthGuard } from '@nestjs/passport';

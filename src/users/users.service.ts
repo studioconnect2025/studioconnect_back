@@ -3,6 +3,7 @@ import {
   ConflictException,
   NotFoundException,
   BadRequestException,
+  InternalServerErrorException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -14,6 +15,7 @@ import { Booking } from 'src/bookings/dto/bookings.entity';
 import { UserRole } from 'src/auth/enum/roles.enum';
 import { BookingStatus } from 'src/bookings/enum/enums-bookings';
 import { Room } from 'src/rooms/entities/room.entity';
+import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class UsersService {
@@ -28,16 +30,38 @@ export class UsersService {
     private readonly roomRepository: Repository<Room>,
   ) {}
 
-  async create(createUserDto: CreateUserDto): Promise<User> {
-    const existingUser = await this.usersRepository.findOneBy({
-      email: createUserDto.email,
-    });
+   async create(createUserDto: CreateUserDto): Promise<User> {
+    const { email, password, role, profile } = createUserDto;
+
+    // 1. Verificar si el email ya existe
+    const existingUser = await this.usersRepository.findOneBy({ email });
     if (existingUser) {
       throw new ConflictException('El email ya se encuentra registrado.');
     }
 
-    const newUser = this.usersRepository.create(createUserDto);
-    return this.usersRepository.save(newUser);
+    try {
+      // 2. HASHEAR LA CONTRASEÑA (Este es el paso clave que faltaba)
+      const passwordHash = await bcrypt.hash(password, 10);
+
+      // 3. Crear la instancia del usuario con 'passwordHash'
+      const newUser = this.usersRepository.create({
+        email,
+        passwordHash, // Usamos la contraseña ya hasheada
+        role,
+        profile,
+      });
+      
+      // 4. Guardar en la base de datos
+      await this.usersRepository.save(newUser);
+
+      // 5. Devolver el usuario sin la contraseña
+      const { passwordHash: _, ...userResult } = newUser;
+      return userResult as User;
+
+    } catch (error) {
+      console.error(error);
+      throw new InternalServerErrorException('No se pudo crear el usuario.');
+    }
   }
 
   async findOne(user: User): Promise<User> {
