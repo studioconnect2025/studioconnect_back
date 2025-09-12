@@ -32,36 +32,27 @@ export class AuthController {
   // --- ENDPOINT PARA REGISTRAR MÚSICOS ---
   @Post('register/musician')
   @ApiOperation({ summary: 'Registro de un nuevo músico' })
-  @ApiResponse({
-    status: 201,
-    description: 'Músico registrado correctamente',
-  })
+  @ApiResponse({ status: 201, description: 'Músico registrado correctamente' })
   @ApiResponse({ status: 400, description: 'Datos inválidos para el registro' })
-  // --- DECORADOR AGREGADO ---
   @ApiBody({
     type: MusicianRegisterDto,
-    description: 'Estructura de datos para registrar un nuevo músico con su perfil detallado.',
+    description: 'Estructura de datos simplificada para registrar un nuevo músico.',
     examples: {
       ejemplo1: {
-        summary: 'Registro de Músico Completo',
+        summary: 'Registro Básico de Músico',
         value: {
-          email: "sofia.guitar@example.com",
-          password: "PasswordMusico2025!",
-          confirmPassword: "PasswordMusico2025!",
+          email: "nuevo.musico@example.com",
+          password: "PasswordSegura123!",
+          confirmPassword: "PasswordSegura123!",
           profile: {
-            nombre: "Sofía",
-            apellido: "Ramírez",
-            perfilMusical: {
-              rolPrincipal: "Guitarrista Solista",
-              generosMusicales: ["Blues Rock", "Hard Rock", "Funk"],
-              instrumentosHabilidades: ["Guitarra Eléctrica", "Guitarra Acústica", "Slide Guitar"],
-              nivelDeExperiencia: "Avanzado" 
-            },
-            preferencias: {
-              ciudad: "Bogotá",
-              provincia: "Bogotá D.C.",
-              pais: "Colombia",
-              distanciaDeEstudioPreferida: 15
+            nombre: "Carlos",
+            apellido: "Ruiz",
+            numeroDeTelefono: "+5491112345678",
+            ubicacion: {
+              ciudad: "Buenos Aires",
+              provincia: "CABA",
+              calle: "Av. Corrientes 1234",
+              codigoPostal: "C1043AAS"
             }
           }
         }
