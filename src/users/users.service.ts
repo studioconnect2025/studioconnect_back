@@ -16,7 +16,7 @@ import { UserRole } from 'src/auth/enum/roles.enum';
 import { BookingStatus } from 'src/bookings/enum/enums-bookings';
 import { Room } from 'src/rooms/entities/room.entity';
 import * as bcrypt from 'bcrypt';
-import { UpdateMusicianProfileDto } from 'src/Musico/dto/update-musician-profile.dto';
+import { UpdateMusicianProfileDto } from 'src/musico/dto/update-musician-profile.dto';
 
 @Injectable()
 export class UsersService {
@@ -184,34 +184,36 @@ export class UsersService {
     return 'No se pudo eliminar el usuario';
   }
 
-  async updateUserProfile(userId: string, updateDto: UpdateMusicianProfileDto): Promise<Omit<User, 'passwordHash'>> {
-  const user = await this.findOneById(userId);
+  async updateUserProfile(
+    userId: string,
+    updateDto: UpdateMusicianProfileDto,
+  ): Promise<Omit<User, 'passwordHash'>> {
+    const user = await this.findOneById(userId);
 
-  if (updateDto.profile) {
-    user.profile = Object.assign(user.profile || {}, updateDto.profile);
-  }
-  
-  await this.usersRepository.save(user);
-  
-  const { passwordHash, ...result } = user;
-  
-  // Ahora el 'result' coincide perfectamente con el tipo de retorno
-  return result;
+    if (updateDto.profile) {
+      user.profile = Object.assign(user.profile || {}, updateDto.profile);
+    }
+
+    await this.usersRepository.save(user);
+
+    const { passwordHash, ...result } = user;
+
+    // Ahora el 'result' coincide perfectamente con el tipo de retorno
+    return result;
   }
 
   // --- NUEVO MÉTODO PARA BORRADO LÓGICO ---
   async softDeleteAccount(userId: string): Promise<{ message: string }> {
     const user = await this.findOneById(userId);
-    
+
     // Aquí puedes expandir la lógica para manejar reservas activas si es necesario,
     // similar a como lo hiciste en 'softDeleteUser'
-    
+
     user.isActive = false;
     await this.usersRepository.save(user);
-    
+
     return { message: 'Tu cuenta ha sido desactivada exitosamente.' };
   }
-
 
   async toggleOwnStudioStatus(ownerId: string): Promise<string> {
     const user = await this.usersRepository.findOne({

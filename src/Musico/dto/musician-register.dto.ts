@@ -18,10 +18,12 @@ class UbicacionDto {
 
 // DTO para el objeto anidado 'profile'
 class MusicianProfileDto {
-  @IsString() @MinLength(2)
+  @IsString()
+  @MinLength(2)
   nombre: string;
 
-  @IsString() @MinLength(2)
+  @IsString()
+  @MinLength(2)
   apellido: string;
 
   @IsString()
@@ -36,10 +38,12 @@ export class MusicianRegisterDto {
   @IsEmail()
   email: string;
 
-  @IsString() @MinLength(8)
+  @IsString()
+  @MinLength(8)
   password: string;
 
-  @IsString() @MinLength(8)
+  @IsString()
+  @MinLength(8)
   confirmPassword: string;
 
   @ValidateNested()

@@ -11,9 +11,15 @@ import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard } from '../auth/guard/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '../auth/enum/roles.enum';
-import { ApiBearerAuth, ApiBody, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiBody,
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { UsersService } from '../users/users.service';
-import { UpdateMusicianProfileDto } from '../Musico/dto/update-musician-profile.dto'; // Ruta corregida
+import { UpdateMusicianProfileDto } from '../musico/dto/update-musician-profile.dto'; // Ruta corregida
 import { User } from '../users/entities/user.entity';
 
 @ApiTags('Profile')
@@ -34,29 +40,34 @@ export class ProfileController {
     return result;
   }
 
-   @Patch('me')
+  @Patch('me')
   @Roles(UserRole.MUSICIAN, UserRole.STUDIO_OWNER)
   @ApiOperation({ summary: 'Actualizar el perfil del usuario autenticado' })
-  @ApiResponse({ status: 200, description: 'Perfil actualizado exitosamente.', type: User })
+  @ApiResponse({
+    status: 200,
+    description: 'Perfil actualizado exitosamente.',
+    type: User,
+  })
   @ApiBody({
     type: UpdateMusicianProfileDto,
-    description: 'Estructura de datos para actualizar el perfil. Todos los campos son opcionales.',
+    description:
+      'Estructura de datos para actualizar el perfil. Todos los campos son opcionales.',
     examples: {
       ejemplo: {
         summary: 'Actualizar datos personales y de ubicación',
         value: {
-          "profile": {
-            "nombre": "Carlos Alberto",
-            "apellido": "Ruiz",
-            "numeroDeTelefono": "+5491187654321",
-            "ciudad": "La Plata",
-            "provincia": "Buenos Aires",
-            "calle": "Av. Siempreviva 742",
-            "codigoPostal": "B1900"
-          }
-        }
-      }
-    }
+          profile: {
+            nombre: 'Carlos Alberto',
+            apellido: 'Ruiz',
+            numeroDeTelefono: '+5491187654321',
+            ciudad: 'La Plata',
+            provincia: 'Buenos Aires',
+            calle: 'Av. Siempreviva 742',
+            codigoPostal: 'B1900',
+          },
+        },
+      },
+    },
   })
   async updateMyProfile(
     @Req() req,
