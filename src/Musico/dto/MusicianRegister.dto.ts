@@ -1,9 +1,22 @@
-import { IsEmail, IsEnum, IsString, MinLength, ValidateNested } from 'class-validator';
+import { IsEmail, IsString, MinLength, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
-import { PerfilMusicalDto } from './perfil-musical.dto'; // Reutilizamos los DTOs del perfil
-import { PreferenciasDto } from './preferencias.dto';
 
-// Este DTO anidado representa el objeto 'profile' para un músico
+// DTO para el objeto anidado 'ubicacion'
+class UbicacionDto {
+  @IsString()
+  ciudad: string;
+
+  @IsString()
+  provincia: string;
+
+  @IsString()
+  calle: string;
+
+  @IsString()
+  codigoPostal: string;
+}
+
+// DTO para el objeto anidado 'profile'
 class MusicianProfileDto {
   @IsString() @MinLength(2)
   nombre: string;
@@ -11,11 +24,12 @@ class MusicianProfileDto {
   @IsString() @MinLength(2)
   apellido: string;
 
-  @ValidateNested() @Type(() => PerfilMusicalDto)
-  perfilMusical: PerfilMusicalDto;
+  @IsString()
+  numeroDeTelefono: string;
 
-  @ValidateNested() @Type(() => PreferenciasDto)
-  preferencias: PreferenciasDto;
+  @ValidateNested()
+  @Type(() => UbicacionDto)
+  ubicacion: UbicacionDto;
 }
 
 export class MusicianRegisterDto {
@@ -28,6 +42,7 @@ export class MusicianRegisterDto {
   @IsString() @MinLength(8)
   confirmPassword: string;
 
-  @ValidateNested() @Type(() => MusicianProfileDto)
+  @ValidateNested()
+  @Type(() => MusicianProfileDto)
   profile: MusicianProfileDto;
 }

@@ -23,6 +23,7 @@ import { AuthGuard } from '@nestjs/passport';
 import type { Response } from 'express';
 import { MusicianRegisterDto } from '../Musico/dto/MusicianRegister.dto';
 import { StudioOwnerRegisterDto } from '../users/dto/StudioOwnerRegisterDto';
+import { ReactivateAccountDto } from './dto/reactivate-account.dto';
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -32,36 +33,27 @@ export class AuthController {
   // --- ENDPOINT PARA REGISTRAR MÚSICOS ---
   @Post('register/musician')
   @ApiOperation({ summary: 'Registro de un nuevo músico' })
-  @ApiResponse({
-    status: 201,
-    description: 'Músico registrado correctamente',
-  })
+  @ApiResponse({ status: 201, description: 'Músico registrado correctamente' })
   @ApiResponse({ status: 400, description: 'Datos inválidos para el registro' })
-  // --- DECORADOR AGREGADO ---
   @ApiBody({
     type: MusicianRegisterDto,
-    description: 'Estructura de datos para registrar un nuevo músico con su perfil detallado.',
+    description: 'Estructura de datos simplificada para registrar un nuevo músico.',
     examples: {
       ejemplo1: {
-        summary: 'Registro de Músico Completo',
+        summary: 'Registro Básico de Músico',
         value: {
-          email: "sofia.guitar@example.com",
-          password: "PasswordMusico2025!",
-          confirmPassword: "PasswordMusico2025!",
+          email: "nuevo.musico@example.com",
+          password: "PasswordSegura123!",
+          confirmPassword: "PasswordSegura123!",
           profile: {
-            nombre: "Sofía",
-            apellido: "Ramírez",
-            perfilMusical: {
-              rolPrincipal: "Guitarrista Solista",
-              generosMusicales: ["Blues Rock", "Hard Rock", "Funk"],
-              instrumentosHabilidades: ["Guitarra Eléctrica", "Guitarra Acústica", "Slide Guitar"],
-              nivelDeExperiencia: "Avanzado" 
-            },
-            preferencias: {
-              ciudad: "Bogotá",
-              provincia: "Bogotá D.C.",
-              pais: "Colombia",
-              distanciaDeEstudioPreferida: 15
+            nombre: "Carlos",
+            apellido: "Ruiz",
+            numeroDeTelefono: "+5491112345678",
+            ubicacion: {
+              ciudad: "Buenos Aires",
+              provincia: "CABA",
+              calle: "Av. Corrientes 1234",
+              codigoPostal: "C1043AAS"
             }
           }
         }
@@ -111,6 +103,29 @@ export class AuthController {
   login(@Body() loginDto: LoginDto) {
     return this.authService.login(loginDto);
   }
+
+ @Post('reactivate')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Reactivar una cuenta inactiva' })
+  @ApiResponse({ status: 200, description: 'Cuenta reactivada exitosamente.' })
+  @ApiResponse({ status: 404, description: 'Usuario no encontrado.' })
+  // --- DECORADOR AGREGADO CON EJEMPLO ---
+  @ApiBody({
+    type: ReactivateAccountDto,
+    description: 'Estructura para reactivar una cuenta usando el correo electrónico.',
+    examples: {
+      ejemplo1: {
+        summary: 'Correo de la cuenta a reactivar',
+        value: {
+          "email": "cuenta.inactiva@example.com"
+        }
+      }
+    }
+  })
+  reactivateAccount(@Body() reactivateDto: ReactivateAccountDto) {
+    return this.authService.reactivateAccount(reactivateDto);
+  }
+
 
   // --- Rutas para Google OAuth ---
   @Get('google/login')
