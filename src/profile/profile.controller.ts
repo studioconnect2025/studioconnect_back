@@ -13,7 +13,7 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '../auth/enum/roles.enum';
 import { ApiBearerAuth, ApiBody, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { UsersService } from '../users/users.service';
-import { UpdateMusicianProfileDto } from '../musician/dto/update-musician-profile.dto'; // Ruta corregida
+import { UpdateMusicianProfileDto } from '../Musico/dto/update-musician-profile.dto'; // Ruta corregida
 import { User } from '../users/entities/user.entity';
 
 @ApiTags('Profile')

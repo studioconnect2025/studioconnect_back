@@ -3,7 +3,7 @@ import { IsEmail, IsEnum, IsString, MinLength, ValidateNested } from 'class-vali
 import { Type } from 'class-transformer';
 import { UserRole } from '../../auth/enum/roles.enum';
 
-import { PreferenciasDto } from '../../musician/dto/preferencias.dto';
+import { PreferenciasDto } from '../../Musico/dto/preferencias.dto';
 
 // DTO para el objeto anidado 'profile'
 class ProfileDto {
