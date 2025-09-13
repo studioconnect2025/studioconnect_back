@@ -11,9 +11,15 @@ import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard } from '../auth/guard/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '../auth/enum/roles.enum';
-import { ApiBearerAuth, ApiBody, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiBody,
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { UsersService } from '../users/users.service';
-import { UpdateMusicianProfileDto } from '../Musico/dto/update-musician-profile.dto'; // Ruta corregida
+import { UpdateMusicianProfileDto } from 'src/Musico/dto/update-musician-profile.dto';
 import { User } from '../users/entities/user.entity';
 
 @ApiTags('Profile')
