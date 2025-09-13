@@ -19,7 +19,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { UsersService } from '../users/users.service';
-import { UpdateMusicianProfileDto } from '../musico/dto/update-musician-profile.dto'; // Ruta corregida
+import { UpdateMusicianProfileDto } from '../musician/dto/update-musician-profile.dto'; // Ruta corregida
 import { User } from '../users/entities/user.entity';
 
 @ApiTags('Profile')
