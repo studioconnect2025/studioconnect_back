@@ -7,11 +7,9 @@ import { Booking } from 'src/bookings/dto/bookings.entity';
 import { Room } from 'src/rooms/entities/room.entity';
 import { Studio } from 'src/studios/entities/studio.entity';
 import { ProfileController } from '../profile/profile.controller';
-import { FileUploadModule } from '../file-upload/file-upload.module';
-import { Profile } from '../profile/entities/profile.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([User, Studio, Booking, Room, Profile]) , FileUploadModule],
+  imports: [TypeOrmModule.forFeature([User, Studio, Booking, Room])],
   controllers: [UsersController, ProfileController],
   providers: [UsersService], // 1. Declara el servicio como parte de este módulo
   exports: [UsersService, TypeOrmModule], // 2. Exporta el servicio para que otros módulos puedan usarlo
