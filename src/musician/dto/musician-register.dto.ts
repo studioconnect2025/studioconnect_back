@@ -2,6 +2,7 @@ import { IsEmail, IsString, MinLength, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 
 // DTO para el objeto anidado 'ubicacion'
+
 class UbicacionDto {
   @IsString()
   ciudad: string;
