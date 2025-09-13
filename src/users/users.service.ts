@@ -72,7 +72,7 @@ export class UsersService {
   async findOne(user: User): Promise<User> {
     return this.usersRepository.findOneOrFail({
       where: { id: user.id },
-      relations: ['bookings', 'studio', 'studio.bookings', 'studio.rooms'],
+      relations: ['profile', 'bookings', 'studio', 'studio.bookings', 'studio.rooms'],
     });
   }
 
