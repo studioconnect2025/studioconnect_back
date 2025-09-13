@@ -4,12 +4,10 @@ import {
   Column,
   OneToOne,
   OneToMany,
-  JoinColumn,
 } from 'typeorm';
 import { UserRole } from '../../auth/enum/roles.enum';
 import { Studio } from '../../studios/entities/studio.entity';
-import { Booking } from '../../bookings/dto/bookings.entity'; 
-import { Profile } from '../../profile/entities/profile.entity';// Corregido el import
+import { Booking } from '../../bookings/dto/bookings.entity'; // Corregido el import
 
 @Entity({ name: 'users' })
 export class User {
@@ -33,24 +31,17 @@ export class User {
   @Column({ default: true })
   isActive: boolean;
 
-  @Column({ type: 'text', nullable: true })
-  profileImageUrl: string;
-
-  @Column({ type: 'text', nullable: true })
-  profileImagePublicId: string;
-
   // --- Nuevo Campo para Perfil Detallado ---
-  @OneToOne(() => Profile, (profile) => profile.user, {
-    cascade: true, // Permite guardar/actualizar el perfil junto con el usuario
-    eager: true,   // Carga automáticamente el perfil al buscar un usuario
+  @Column({
+    type: 'jsonb', // Tipo de dato para almacenar objetos JSON
+    nullable: true, // Puede ser nulo si el usuario no ha completado su perfil
   })
-  @JoinColumn() // Especifica que esta es la entidad dueña de la relación
-  profile: Profile;
+  profile: Record<string, any>; // Almacenará nombre, apellido, perfil musical, etc.
+
   // --- Relaciones ---
   @OneToOne(() => Studio, (studio) => studio.owner)
   studio: Studio;
 
   @OneToMany(() => Booking, (booking) => booking.musician)
   bookings: Booking[];
-
 }

@@ -7,7 +7,7 @@ import { TokenBlacklistService } from './token-blacklist.service';
 import { Request } from 'express';
 
 interface JwtPayload {
-  id: string;
+  sub: string;
   email: string;
   role: string;
   iat?: number;
@@ -41,7 +41,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       throw new UnauthorizedException('Token inválido o la sesión ha sido cerrada.');
     }
 
-    const user = await this.usersService.findOneById(payload.id);
+    const user = await this.usersService.findOneById(payload.sub);
     if (!user) {
       throw new UnauthorizedException('Token inválido.');
     }
