@@ -91,10 +91,7 @@ export class BookingsService {
       totalPrice,
       status: BookingStatus.PENDING,
     });
-<<<<<<< HEAD
     console.log('TOTAL PRICE CALCULATED:', totalPrice);
-=======
->>>>>>> 183d3051a56747eb6251ecf1c8281f87e434c7d2
 
     return this.bookingRepository.save(newBooking);
   }
