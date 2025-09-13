@@ -9,9 +9,6 @@ import { PreferenciasDto } from '../../musician/dto/preferencias.dto';
 class ProfileDto {
   @IsString() @MinLength(2) nombre: string;
   @IsString() @MinLength(2) apellido: string;
-  
-  @ValidateNested() @Type(() => PreferenciasDto)
-  preferencias: PreferenciasDto;
 }
 
 export class CreateUserDto {

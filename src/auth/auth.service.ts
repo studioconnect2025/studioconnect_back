@@ -39,6 +39,7 @@ export class AuthService {
       email: dto.email,
       password: dto.password,
       role: UserRole.MUSICIAN,
+      profile: dto.profile,
     });
 
     await this.emailService.sendWelcomeEmail(dto.profile.nombre, newUser.email);
