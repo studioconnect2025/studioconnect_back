@@ -31,6 +31,12 @@ export class User {
   @Column({ default: true })
   isActive: boolean;
 
+  @Column({ type: 'text', nullable: true })
+  profileImageUrl: string;
+
+  @Column({ type: 'text', nullable: true })
+  profileImagePublicId: string;
+
   // --- Nuevo Campo para Perfil Detallado ---
   @Column({
     type: 'jsonb', // Tipo de dato para almacenar objetos JSON

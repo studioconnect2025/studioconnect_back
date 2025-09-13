@@ -17,6 +17,7 @@ import { BookingStatus } from 'src/bookings/enum/enums-bookings';
 import { Room } from 'src/rooms/entities/room.entity';
 import * as bcrypt from 'bcrypt';
 import { UpdateMusicianProfileDto } from 'src/musician/dto/update-musician-profile.dto';
+import { FileUploadService } from 'src/file-upload/file-upload.service';
 
 @Injectable()
 export class UsersService {
@@ -32,6 +33,7 @@ export class UsersService {
     private readonly bookingRepository: Repository<Booking>,
     @InjectRepository(Room)
     private readonly roomRepository: Repository<Room>,
+     private fileUploadService: FileUploadService,
   ) {}
 
   async create(createUserDto: CreateUserDto): Promise<User> {
@@ -210,6 +212,32 @@ export class UsersService {
     await this.usersRepository.save(user);
     
     return { message: 'Tu cuenta ha sido desactivada exitosamente.' };
+  }
+
+  async updateProfilePicture(
+    userId: string,
+    file: Express.Multer.File,
+  ): Promise<Omit<User, 'passwordHash'>> { 
+    const user = await this.findOneById(userId);
+
+    // 1. Subir la nueva imagen a Cloudinary
+    const uploadResult = await this.fileUploadService.uploadFile(file, 'profile_pictures');
+
+    // 2. Si el usuario ya tenía una foto, borrar la antigua de Cloudinary
+    if (user.profileImagePublicId) {
+      await this.fileUploadService.deleteFile(user.profileImagePublicId);
+    }
+
+    // 3. Actualizar la base de datos con la URL y el ID público de la nueva imagen
+    user.profileImageUrl = uploadResult.secure_url;
+    user.profileImagePublicId = uploadResult.public_id;
+    await this.usersRepository.save(user);
+
+    // 4. Devolver el usuario actualizado (sin datos sensibles)
+    const { passwordHash, ...userResult } = user;
+    
+    // Ahora 'userResult' coincide con el tipo Omit<User, 'passwordHash'> y el error desaparecerá
+    return userResult;
   }
 
 
