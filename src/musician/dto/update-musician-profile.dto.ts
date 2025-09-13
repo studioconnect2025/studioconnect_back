@@ -3,25 +3,34 @@ import { Type } from 'class-transformer';
 
 // DTO para el objeto anidado 'profile' aplanado
 class UpdateProfileDto {
-  @IsString() @MinLength(2) @IsOptional()
+  @IsString()
+  @MinLength(2)
+  @IsOptional()
   nombre?: string;
 
-  @IsString() @MinLength(2) @IsOptional()
+  @IsString()
+  @MinLength(2)
+  @IsOptional()
   apellido?: string;
 
-  @IsString() @IsOptional()
+  @IsString()
+  @IsOptional()
   numeroDeTelefono?: string;
 
-  @IsString() @IsOptional()
+  @IsString()
+  @IsOptional()
   ciudad?: string;
 
-  @IsString() @IsOptional()
+  @IsString()
+  @IsOptional()
   provincia?: string;
 
-  @IsString() @IsOptional()
+  @IsString()
+  @IsOptional()
   calle?: string;
 
-  @IsString() @IsOptional()
+  @IsString()
+  @IsOptional()
   codigoPostal?: string;
 }
 
