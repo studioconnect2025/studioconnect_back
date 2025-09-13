@@ -12,6 +12,7 @@ import { UpdateRoomDto } from './dto/update-room.dto';
 import { Studio } from 'src/studios/entities/studio.entity';
 import { User } from 'src/users/entities/user.entity';
 import { FileUploadService } from '../file-upload/file-upload.service';
+import { Booking } from 'src/bookings/dto/bookings.entity';
 
 @Injectable()
 export class RoomsService {
@@ -21,6 +22,8 @@ export class RoomsService {
     @InjectRepository(Studio)
     private readonly studioRepository: Repository<Studio>,
     private readonly fileUploadService: FileUploadService,
+    @InjectRepository(Booking)
+    private readonly bookingRepository: Repository<Booking>
   ) {}
 
   /**
@@ -95,24 +98,36 @@ export class RoomsService {
     return this.roomRepository.save(room);
   }
 
-  async remove(roomId: string, user: User): Promise<void> {
-    const room = await this.roomRepository.findOne({
-      where: { id: roomId },
-      relations: ['studio', 'studio.owner'],
-    });
+async remove(roomId: string, user: User): Promise<void> {
+  const room = await this.roomRepository.findOne({
+    where: { id: roomId },
+    relations: ['studio', 'studio.owner'],
+  });
 
-    if (!room) throw new NotFoundException('Sala no encontrada');
-    if (room.studio.owner.id !== user.id) {
-      throw new ForbiddenException('No puedes borrar una sala que no es tuya');
-    }
-
-    // Eliminar imágenes de Cloudinary antes de borrar la sala
-    if (room.imagePublicIds && room.imagePublicIds.length > 0) {
-      await this.deleteImagesFromCloudinary(room.imagePublicIds);
-    }
-
-    await this.roomRepository.remove(room);
+  if (!room) throw new NotFoundException('Sala no encontrada');
+  if (room.studio.owner.id !== user.id) {
+    throw new ForbiddenException('No puedes borrar una sala que no es tuya');
   }
+
+  // Verificar si existen reservas asociadas a esta sala
+  const hasBookings = await this.bookingRepository.findOne({
+    where: { room: { id: roomId } },
+  });
+
+  if (hasBookings) {
+    throw new BadRequestException(
+      'No se puede eliminar la sala porque tiene reservas asociadas',
+    );
+  }
+
+  // Eliminar imágenes de Cloudinary antes de borrar la sala
+  if (room.imagePublicIds && room.imagePublicIds.length > 0) {
+    await this.deleteImagesFromCloudinary(room.imagePublicIds);
+  }
+
+  await this.roomRepository.remove(room);
+}
+
 
   async findRoomsByStudio(studioId: string): Promise<Room[]> {
     const studio = await this.studioRepository.findOne({
