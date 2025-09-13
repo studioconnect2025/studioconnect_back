@@ -19,7 +19,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { UsersService } from '../users/users.service';
-import { UpdateMusicianProfileDto } from 'src/Musico/dto/update-musician-profile.dto';
+import { UpdateMusicianProfileDto } from 'src/musician/dto/update-musician-profile.dto';
 import { User } from '../users/entities/user.entity';
 
 @ApiTags('Profile')
