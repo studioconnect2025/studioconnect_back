@@ -16,7 +16,7 @@ import { UserRole } from 'src/auth/enum/roles.enum';
 import { BookingStatus } from 'src/bookings/enum/enums-bookings';
 import { Room } from 'src/rooms/entities/room.entity';
 import * as bcrypt from 'bcrypt';
-import { UpdateMusicianProfileDto } from 'src/Musico/dto/update-musician-profile.dto';
+import { UpdateMusicianProfileDto } from 'src/musician/dto/update-musician-profile.dto';
 
 @Injectable()
 export class UsersService {
