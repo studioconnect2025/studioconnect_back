@@ -4,10 +4,12 @@ import {
   Column,
   OneToOne,
   OneToMany,
+  JoinColumn,
 } from 'typeorm';
 import { UserRole } from '../../auth/enum/roles.enum';
 import { Studio } from '../../studios/entities/studio.entity';
 import { Booking } from '../../bookings/dto/bookings.entity'; // Corregido el import
+import { Profile } from '../../profile/entities/profile.entity';
 
 @Entity({ name: 'users' })
 export class User {
@@ -31,12 +33,9 @@ export class User {
   @Column({ default: true })
   isActive: boolean;
 
-  // --- Nuevo Campo para Perfil Detallado ---
-  @Column({
-    type: 'jsonb', // Tipo de dato para almacenar objetos JSON
-    nullable: true, // Puede ser nulo si el usuario no ha completado su perfil
-  })
-  profile: Record<string, any>; // Almacenará nombre, apellido, perfil musical, etc.
+  // -- relacion con profile --- NO TOCAR!!!!
+ @OneToOne(() => Profile, (p) => p.user, { eager: true })
+  profile: Profile;
 
   // --- Relaciones ---
   @OneToOne(() => Studio, (studio) => studio.owner)

@@ -20,24 +20,26 @@ import {
 } from '@nestjs/swagger';
 import { UsersService } from '../users/users.service';
 import { UpdateMusicianProfileDto } from 'src/musician/dto/update-musician-profile.dto';
-import { User } from '../users/entities/user.entity';
+import { ProfileService } from './profile.service';
+import { Profile } from './entities/profile.entity';
 
 @ApiTags('Profile')
 @ApiBearerAuth()
 @UseGuards(AuthGuard('jwt'), RolesGuard)
 @Controller('profile')
 export class ProfileController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(
+    private readonly usersService: UsersService,   // lo seguimos usando para DELETE
+    private readonly profileService: ProfileService, // nuevo: get/patch del perfil
+  ) {}
 
   @Get('me')
   @Roles(UserRole.MUSICIAN, UserRole.STUDIO_OWNER)
   @ApiOperation({ summary: 'Obtener el perfil del usuario autenticado' })
-  @ApiResponse({ status: 200, description: 'Perfil del usuario.', type: User })
+  @ApiResponse({ status: 200, description: 'Perfil del usuario.', type: Profile })
   async getMyProfile(@Req() req) {
-    const userId = req.user.id;
-    const user = await this.usersService.findOneById(userId);
-    const { passwordHash, ...result } = user;
-    return result;
+    const userId: string = req.user.id; // viene del JWT que generás
+    return this.profileService.getMyProfile(userId);
   }
 
   @Patch('me')
@@ -46,7 +48,7 @@ export class ProfileController {
   @ApiResponse({
     status: 200,
     description: 'Perfil actualizado exitosamente.',
-    type: User,
+    type: Profile,
   })
   @ApiBody({
     type: UpdateMusicianProfileDto,
@@ -69,12 +71,23 @@ export class ProfileController {
       },
     },
   })
-  async updateMyProfile(
-    @Req() req,
-    @Body() updateDto: UpdateMusicianProfileDto,
-  ) {
-    const userId = req.user.id;
-    return this.usersService.updateUserProfile(userId, updateDto);
+  async updateMyProfile(@Req() req, @Body() updateDto: UpdateMusicianProfileDto) {
+    const userId: string = req.user.id;
+
+    // El DTO actual viene anidado en updateDto.profile.{...}
+    const p = (updateDto as any)?.profile ?? {};
+    // Mapeamos a los campos planos que espera ProfileService.updateMyProfile
+    const safe = {
+      nombre: p.nombre,
+      apellido: p.apellido,
+      numeroDeTelefono: p.numeroDeTelefono,
+      ciudad: p.ciudad,
+      provincia: p.provincia,
+      calle: p.calle,
+      codigoPostal: p.codigoPostal,
+    };
+
+    return this.profileService.updateMyProfile(userId, safe as any);
   }
 
   @Delete('me')
@@ -82,7 +95,7 @@ export class ProfileController {
   @ApiOperation({ summary: 'Desactivar la cuenta del usuario autenticado' })
   @ApiResponse({ status: 200, description: 'Cuenta desactivada.' })
   async deleteMyAccount(@Req() req) {
-    const userId = req.user.id;
+    const userId: string = req.user.id;
     return this.usersService.softDeleteAccount(userId);
   }
 }

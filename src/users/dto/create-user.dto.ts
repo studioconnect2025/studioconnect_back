@@ -1,39 +1,60 @@
-// src/users/dto/create-user.dto.ts
 import {
   IsEmail,
   IsEnum,
+  IsNotEmpty,
+  IsOptional,
+  ValidateNested,
   IsString,
   MinLength,
-  ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import { UserRole } from '../../auth/enum/roles.enum';
+import { UserRole } from 'src/auth/enum/roles.enum';
 
-import { PreferenciasDto } from '../../musician/dto/preferencias.dto';
+export class UbicacionDto {
+  @IsOptional() @IsString() ciudad?: string;
+  @IsOptional() @IsString() provincia?: string;
+  @IsOptional() @IsString() calle?: string;
+  @IsOptional() @IsString() codigoPostal?: string;
+}
 
-// DTO para el objeto anidado 'profile'
-class ProfileDto {
-  @IsString() @MinLength(2) nombre: string;
-  @IsString() @MinLength(2) apellido: string;
+export class CreateProfileDto {
+  @IsOptional() @IsString() @MinLength(2) nombre?: string;
+  @IsOptional() @IsString() @MinLength(2) apellido?: string;
+  @IsOptional() @IsString() numeroDeTelefono?: string;
 
+  // Forma anidada
+  @IsOptional()
   @ValidateNested()
-  @Type(() => PreferenciasDto)
-  preferencias: PreferenciasDto;
+  @Type(() => UbicacionDto)
+  ubicacion?: UbicacionDto;
+
+  // Forma plana (también aceptada)
+  @IsOptional() @IsString() ciudad?: string;
+  @IsOptional() @IsString() provincia?: string;
+  @IsOptional() @IsString() calle?: string;
+  @IsOptional() @IsString() codigoPostal?: string;
 }
 
 export class CreateUserDto {
   @IsEmail()
   email: string;
 
-  @IsString()
+  @IsNotEmpty()
   @MinLength(8)
   password: string;
 
-  @IsEnum(UserRole)
-  role: UserRole; // Para definir si es MUSICIAN o STUDIO_OWNER
+  @IsOptional()
+  @IsNotEmpty()
+  @MinLength(8)
+  confirmPassword?: string;
 
-  // El perfil será opcional (?): puede que un dueño se registre sin él
+ 
+  @IsOptional()
+  @IsEnum(UserRole)
+  role?: UserRole;
+
+  @IsOptional()
   @ValidateNested()
-  @Type(() => ProfileDto)
-  profile?: ProfileDto;
+  @Type(() => CreateProfileDto)
+  profile?: CreateProfileDto;
 }
