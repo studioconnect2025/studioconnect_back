@@ -27,12 +27,12 @@ import { ProfileModule } from './profile/profile.module';
       inject: [ConfigService],
       useFactory: (cfg: ConfigService) => {
         return {
-       type: 'postgres',
-    url: cfg.get<string>('DATABASE_URL'),
-    ssl: { rejectUnauthorized: false },
-    extra: { ssl: { rejectUnauthorized: false } },
-    autoLoadEntities: true,
-    synchronize: false,
+          type: 'postgres',
+          url: cfg.get<string>('DATABASE_URL'),
+          ssl: { rejectUnauthorized: false },
+          extra: { ssl: { rejectUnauthorized: false } },
+          autoLoadEntities: true,
+          synchronize: false,
         };
       },
     }),
@@ -52,4 +52,4 @@ import { ProfileModule } from './profile/profile.module';
   controllers: [AppController, OwnersController],
   providers: [AppService],
 })
-export class AppModule { }
+export class AppModule {}

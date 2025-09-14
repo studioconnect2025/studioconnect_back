@@ -62,7 +62,7 @@ export class Booking {
 
   // NEW: Control de reprogramación (ya tenías hasRescheduled)
   // ===========================
-  @Column({ default: false })
+  @Column({ type: 'boolean', default: false })
   hasRescheduled: boolean; // NEW: indica si ya se reprogramó esta reserva
 
   // ===========================
