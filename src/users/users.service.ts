@@ -122,7 +122,9 @@ export class UsersService {
     if (!email) throw new BadRequestException('El email es obligatorio.');
     const user = await this.usersRepository.findOneBy({ email });
     if (!user) {
-      throw new NotFoundException(`Usuario con email "${email}" no encontrado.`);
+      throw new NotFoundException(
+        `Usuario con email "${email}" no encontrado.`,
+      );
     }
     return user;
   }
@@ -192,7 +194,8 @@ export class UsersService {
         }
 
         if (studio.rooms?.length) {
-          for (const room of studio.rooms) await this.roomRepository.remove(room);
+          for (const room of studio.rooms)
+            await this.roomRepository.remove(room);
         }
         await this.studioRepository.remove(studio);
         await this.usersRepository.remove(user); // borra profile por CASCADE

@@ -14,7 +14,8 @@ import { UpdateProfileDto } from './dto/update-profile.dto';
 @Injectable()
 export class ProfileService {
   constructor(
-    @InjectRepository(Profile) private readonly profileRepo: Repository<Profile>,
+    @InjectRepository(Profile)
+    private readonly profileRepo: Repository<Profile>,
     @InjectRepository(User) private readonly userRepo: Repository<User>,
   ) {}
 
@@ -30,7 +31,9 @@ export class ProfileService {
     if (existing) throw new ConflictException('El usuario ya tiene un perfil');
 
     // Defaults para evitar 23502 (NOT NULL) en DB
-    const safe: Required<Omit<CreateProfileDto, 'userId'>> & { userId: string } = {
+    const safe: Required<Omit<CreateProfileDto, 'userId'>> & {
+      userId: string;
+    } = {
       nombre: dto?.nombre ?? '',
       apellido: dto?.apellido ?? '',
       numeroDeTelefono: dto?.numeroDeTelefono ?? '',
@@ -91,9 +94,13 @@ export class ProfileService {
         ? { numeroDeTelefono: safe.numeroDeTelefono ?? '' }
         : {}),
       ...(safe.ciudad !== undefined ? { ciudad: safe.ciudad ?? '' } : {}),
-      ...(safe.provincia !== undefined ? { provincia: safe.provincia ?? '' } : {}),
+      ...(safe.provincia !== undefined
+        ? { provincia: safe.provincia ?? '' }
+        : {}),
       ...(safe.calle !== undefined ? { calle: safe.calle ?? '' } : {}),
-      ...(safe.codigoPostal !== undefined ? { codigoPostal: safe.codigoPostal ?? '' } : {}),
+      ...(safe.codigoPostal !== undefined
+        ? { codigoPostal: safe.codigoPostal ?? '' }
+        : {}),
     };
 
     Object.assign(profile, patch);
