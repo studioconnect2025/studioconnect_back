@@ -1,5 +1,4 @@
 // src/auth/auth.service.ts
-
 import {
   Injectable,
   UnauthorizedException,
@@ -11,8 +10,8 @@ import { UsersService } from '../users/users.service';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { LoginDto } from './dto/login.dto';
-import { StudioOwnerRegisterDto } from 'src/users/dto/StudioOwnerRegisterDto';
-import { MusicianRegisterDto } from 'src/musician/dto/musician-register.dto';
+import { StudioOwnerRegisterDto } from 'src/users/dto/owner-register.dto';
+import { MusicianRegisterDto } from 'src/users/dto/musician-register.dto';
 import { ReactivateAccountDto } from 'src/auth/dto/reactivate-account.dto';
 import { UserRole } from './enum/roles.enum';
 import { User } from '../users/entities/user.entity';
@@ -28,8 +27,7 @@ export class AuthService {
     private readonly emailService: EmailService,
   ) {}
 
-  
-
+  // -------- Registro de Músico --------
   async registerMusician(dto: MusicianRegisterDto) {
     if (dto.password !== dto.confirmPassword) {
       throw new BadRequestException('Las contraseñas no coinciden.');
@@ -38,28 +36,42 @@ export class AuthService {
     const newUser = await this.usersService.create({
       email: dto.email,
       password: dto.password,
-      role: UserRole.MUSICIAN,
+      confirmPassword: dto.confirmPassword,
+      role: UserRole.MUSICIAN,            // "Músico"
+      profile: dto.profile,               // <-- PASAMOS EL PERFIL
     });
 
-    await this.emailService.sendWelcomeEmail(dto.profile.nombre, newUser.email);
+    await this.emailService.sendWelcomeEmail(
+      dto.profile?.nombre ?? 'Bienvenido/a',
+      newUser.email,
+    );
+
     return this.generateJwtToken(newUser);
   }
 
+  // -------- Registro de Dueño de Estudio --------
   async registerStudioOwner(dto: StudioOwnerRegisterDto) {
     if (dto.password !== dto.confirmPassword) {
       throw new BadRequestException('Las contraseñas no coinciden.');
     }
-    
+
     const newUser = await this.usersService.create({
       email: dto.email,
       password: dto.password,
-      role: UserRole.STUDIO_OWNER,
+      confirmPassword: dto.confirmPassword,
+      role: UserRole.STUDIO_OWNER,        // "Dueño de Estudio"
+      profile: dto.profile,               // <-- PASAMOS EL PERFIL
     });
- 
-    await this.emailService.sendWelcomeEmail(dto.name, newUser.email);
+
+    await this.emailService.sendWelcomeEmail(
+      dto.profile?.nombre ?? 'Bienvenido/a',
+      newUser.email,
+    );
+
     return this.generateJwtToken(newUser);
   }
 
+  // -------- Login --------
   async login(loginDto: LoginDto) {
     const { email, password } = loginDto;
     const user = await this.usersService.findOneByEmail(email);
@@ -68,7 +80,6 @@ export class AuthService {
       throw new UnauthorizedException('Credenciales incorrectas.');
     }
 
-    // Corregido: Se añade la verificación de cuenta inactiva
     if (!user.isActive) {
       throw new ForbiddenException({
         message: 'Tu cuenta está inactiva. Por favor, reactívala para continuar.',
@@ -79,6 +90,7 @@ export class AuthService {
     return this.generateJwtToken(user);
   }
 
+  // -------- Google OAuth --------
   async googleLogin(req: any, roleFromSession?: UserRole) {
     if (!req.user) {
       throw new BadRequestException('No se encontró información de usuario de Google.');
@@ -94,9 +106,9 @@ export class AuthService {
         user = await this.usersService.create({
           email,
           password: Math.random().toString(36).slice(-10),
-          role: roleFromSession || UserRole.MUSICIAN, // Usa el rol de la sesión o uno por defecto
+          role: roleFromSession || UserRole.MUSICIAN,
         });
-        await this.emailService.sendWelcomeEmail(firstName, user.email);
+        await this.emailService.sendWelcomeEmail(firstName ?? 'Bienvenido/a', user.email);
       } else {
         throw error;
       }
@@ -105,23 +117,21 @@ export class AuthService {
     return this.generateJwtToken(user);
   }
 
+  // -------- Reactivar Cuenta --------
   async reactivateAccount(reactivateDto: ReactivateAccountDto): Promise<{ message: string }> {
     const user = await this.usersService.findOneByEmail(reactivateDto.email);
-
     if (!user) {
       throw new NotFoundException('No se encontró un usuario con ese correo electrónico.');
     }
-
     if (user.isActive) {
       return { message: 'Tu cuenta ya se encuentra activa. Puedes iniciar sesión.' };
     }
-
     user.isActive = true;
     await this.usersService.updateUser(user);
-
     return { message: 'Tu cuenta ha sido reactivada exitosamente. Ahora puedes iniciar sesión.' };
   }
-  
+
+  // -------- Logout --------
   async logout(token: string) {
     const decoded = this.jwtService.decode(token) as { exp: number };
     if (decoded && decoded.exp) {
@@ -130,10 +140,11 @@ export class AuthService {
     return { message: 'Cierre de sesión exitoso.' };
   }
 
+  // -------- JWT --------
   private async generateJwtToken(user: User) {
-    const { profile, passwordHash, ...userCoreInfo } = user;
+    const { passwordHash, ...userCoreInfo } = user;
     const payload = {
-      id: user.id, // Corregido: se usa 'id' para consistencia con el resto de la app
+      id: user.id,
       email: user.email,
       role: user.role,
     };

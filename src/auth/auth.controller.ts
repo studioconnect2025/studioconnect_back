@@ -21,8 +21,11 @@ import {
 } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
 import type { Response } from 'express';
-import { MusicianRegisterDto } from 'src/musician/dto/musician-register.dto'; // Ruta corregida
-import { StudioOwnerRegisterDto } from 'src/users/dto/StudioOwnerRegisterDto'; // Ruta corregida
+
+// ✅ Usamos los DTOs unificados en users/dto
+import { MusicianRegisterDto } from 'src/users/dto/musician-register.dto';
+import { StudioOwnerRegisterDto } from 'src/users/dto/owner-register.dto';
+
 import { ReactivateAccountDto } from './dto/reactivate-account.dto';
 
 @ApiTags('Auth')
@@ -30,64 +33,66 @@ import { ReactivateAccountDto } from './dto/reactivate-account.dto';
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
-  // --- ENDPOINT PARA REGISTRAR MÚSICOS ---
+  // --- REGISTRO MÚSICO ---
   @Post('register/musician')
   @ApiOperation({ summary: 'Registro de un nuevo músico' })
   @ApiResponse({ status: 201, description: 'Músico registrado correctamente' })
   @ApiResponse({ status: 400, description: 'Datos inválidos para el registro' })
   @ApiBody({
     type: MusicianRegisterDto,
-    // Conservamos la versión simplificada de la rama 'develop'
-    description: 'Estructura de datos simplificada para registrar un nuevo músico.',
+    description: 'Payload para registrar un músico.',
     examples: {
       ejemplo1: {
         summary: 'Registro Básico de Músico',
         value: {
-          "email": "nuevo.musico@example.com",
-          "password": "PasswordSegura123!",
-          "confirmPassword": "PasswordSegura123!",
-          "profile": {
-            "nombre": "Carlos",
-            "apellido": "Ruiz",
-            "numeroDeTelefono": "+5491112345678",
-            "ubicacion": {
-              "ciudad": "Buenos Aires",
-              "provincia": "CABA",
-              "calle": "Av. Corrientes 1234",
-              "codigoPostal": "C1043AAS"
-            }
-          }
-        }
-      }
-    }
+          email: 'nuevo.musico@example.com',
+          password: 'PasswordSegura123!',
+          confirmPassword: 'PasswordSegura123!',
+          profile: {
+            nombre: 'Carlos',
+            apellido: 'Ruiz',
+            numeroDeTelefono: '+5491112345678',
+            ubicacion: {
+              ciudad: 'Buenos Aires',
+              provincia: 'CABA',
+              calle: 'Av. Corrientes 1234',
+              codigoPostal: 'C1043AAS',
+            },
+          },
+        },
+      },
+    },
   })
   registerMusician(@Body() registerDto: MusicianRegisterDto) {
     return this.authService.registerMusician(registerDto);
   }
 
-  // --- ENDPOINT PARA REGISTRAR DUEÑOS DE ESTUDIO ---
+  // --- REGISTRO DUEÑO DE ESTUDIO ---
   @Post('register/studio-owner')
   @ApiOperation({ summary: 'Registro de un nuevo dueño de estudio' })
-  @ApiResponse({
-    status: 201,
-    description: 'Dueño de estudio registrado correctamente',
-  })
+  @ApiResponse({ status: 201, description: 'Dueño de estudio registrado correctamente' })
   @ApiResponse({ status: 400, description: 'Datos inválidos para el registro' })
   @ApiBody({
     type: StudioOwnerRegisterDto,
-    description:
-      'Estructura de datos para registrar un nuevo dueño de estudio.',
+    description: 'Payload para registrar un dueño de estudio.',
     examples: {
-      a: {
-        summary: 'Ejemplo de Registro',
+      ejemplo: {
+        summary: 'Registro Básico de Dueño',
         value: {
+          email: 'juan.perez@example.com',
+          password: 'PasswordSegura123!',
+          confirmPassword: 'PasswordSegura123!',
           profile: {
             nombre: 'Juan',
-            apellido: 'Perez',
+            apellido: 'Pérez',
+            numeroDeTelefono: '+549111111111',
+            ubicacion: {
+              ciudad: 'Córdoba',
+              provincia: 'Córdoba',
+              calle: 'San Martín 1500',
+              codigoPostal: '5000',
+            },
           },
-          email: 'juan.perez@example.com',
-          password: 'password123',
-          confirmPassword: 'password123',
         },
       },
     },
@@ -96,6 +101,7 @@ export class AuthController {
     return this.authService.registerStudioOwner(registerDto);
   }
 
+  // --- LOGIN ---
   @Post('login')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Iniciar sesión' })
@@ -105,6 +111,7 @@ export class AuthController {
     return this.authService.login(loginDto);
   }
 
+  // --- REACTIVAR CUENTA ---
   @Post('reactivate')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Reactivar una cuenta inactiva' })
@@ -112,29 +119,24 @@ export class AuthController {
   @ApiResponse({ status: 404, description: 'Usuario no encontrado.' })
   @ApiBody({
     type: ReactivateAccountDto,
-    description: 'Estructura para reactivar una cuenta usando el correo electrónico.',
+    description: 'Usa el correo electrónico para reactivar la cuenta.',
     examples: {
       ejemplo1: {
-        summary: 'Correo de la cuenta a reactivar',
-        value: {
-          "email": "cuenta.inactiva@example.com"
-        }
-      }
-    }
+        summary: 'Correo a reactivar',
+        value: { email: 'cuenta.inactiva@example.com' },
+      },
+    },
   })
   reactivateAccount(@Body() reactivateDto: ReactivateAccountDto) {
     return this.authService.reactivateAccount(reactivateDto);
   }
 
-
-  // --- Rutas para Google OAuth ---
+  // --- Google OAuth ---
   @Get('google/login')
   @UseGuards(AuthGuard('google'))
   handleGoogleLogin(@Req() req, @Session() session: Record<string, any>) {
     const redirectUri = req.query.redirect_uri as string;
-    if (redirectUri) {
-      session.redirectUri = redirectUri;
-    }
+    if (redirectUri) session.redirectUri = redirectUri;
   }
 
   @Get('google/callback')
