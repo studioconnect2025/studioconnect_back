@@ -5,11 +5,13 @@ import { ProfileService } from './profile.service';
 import { ProfileController } from './profile.controller';
 import { UsersModule } from 'src/users/users.module';
 import { User } from 'src/users/entities/user.entity';
+import { FileUploadModule } from 'src/file-upload/file-upload.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Profile, User]), 
     forwardRef(() => UsersModule),
+    FileUploadModule,
   ],
   controllers: [ProfileController],
   providers: [ProfileService],
