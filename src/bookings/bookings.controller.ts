@@ -21,6 +21,7 @@ import {
   ApiBearerAuth,
 } from '@nestjs/swagger';
 import { User } from 'src/users/entities/user.entity';
+import { ReprogramBookingDto } from './dto/reprogram-booking.dto';
 
 @ApiTags('Bookings')
 @ApiBearerAuth() // CAMBIO AQUÍ: Se aplica la seguridad a todo el controlador
@@ -103,5 +104,59 @@ export class BookingsController {
     @Request() req: { user: User },
   ) {
     return this.bookingsService.rejectBooking(bookingId, req.user);
+  }
+
+  @ApiOperation({ summary: 'Cancelar una reserva (solo músico)' }) // ⭐ NEW
+  @ApiResponse({ status: 200, description: 'Reserva cancelada correctamente.' }) // ⭐ NEW
+  @ApiResponse({
+    status: 400,
+    description:
+      'Datos inválidos o fuera de plazo. Solo se puede cancelar hasta 2 días antes de la reserva o ya alcanzaste el límite de cancelaciones diarias.',
+  }) // ⭐ NEW
+  @ApiResponse({ status: 401, description: 'No autenticado.' }) // ⭐ NEW
+  @ApiResponse({
+    status: 403,
+    description: 'No autorizado: esta reserva no te pertenece.',
+  }) // ⭐ NEW
+  @ApiResponse({ status: 404, description: 'Reserva no encontrada.' }) // ⭐ NEW
+  @Patch('musician/:bookingId/cancel')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles(UserRole.MUSICIAN)
+  async cancelBooking(
+    @Param('bookingId') bookingId: string,
+    @Request() req: { user: User },
+  ) {
+    return this.bookingsService.cancelBooking(bookingId, req.user);
+  }
+
+  // ----------------------------
+  // ⭐ NEW: Reprogramar reserva (músico)
+  // ----------------------------
+  @ApiOperation({ summary: 'Reprogramar una reserva (solo músico)' }) // ⭐ NEW
+  @ApiResponse({
+    status: 200,
+    description:
+      'Reserva reprogramada correctamente. La reserva vuelve a estado PENDIENTE para que el dueño confirme disponibilidad.',
+  }) // ⭐ NEW
+  @ApiResponse({
+    status: 400,
+    description:
+      'Datos inválidos, fuera de plazo (solo hasta 2 días antes) o la reserva ya fue reprogramada anteriormente.',
+  }) // ⭐ NEW
+  @ApiResponse({ status: 401, description: 'No autenticado.' }) // ⭐ NEW
+  @ApiResponse({
+    status: 403,
+    description: 'No autorizado: esta reserva no te pertenece.',
+  }) // ⭐ NEW
+  @ApiResponse({ status: 404, description: 'Reserva no encontrada.' }) // ⭐ NEW
+  @Patch('musician/:bookingId/reprogram')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles(UserRole.MUSICIAN)
+  async reprogramBooking(
+    @Param('bookingId') bookingId: string,
+    @Body() dto: ReprogramBookingDto,
+    @Request() req: { user: User },
+  ) {
+    return this.bookingsService.reprogramBooking(bookingId, req.user, dto);
   }
 }
