@@ -31,14 +31,18 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
   async validate(req: Request, payload: JwtPayload): Promise<any> {
     const token = req.headers.authorization?.split(' ')[1];
-    
+
     if (!token) {
-      throw new UnauthorizedException('No se encontró el token en la cabecera.');
+      throw new UnauthorizedException(
+        'No se encontró el token en la cabecera.',
+      );
     }
 
     const isBlacklisted = await this.tokenBlacklistService.isBlacklisted(token);
     if (isBlacklisted) {
-      throw new UnauthorizedException('Token inválido o la sesión ha sido cerrada.');
+      throw new UnauthorizedException(
+        'Token inválido o la sesión ha sido cerrada.',
+      );
     }
 
     const user = await this.usersService.findOneById(payload.id);
