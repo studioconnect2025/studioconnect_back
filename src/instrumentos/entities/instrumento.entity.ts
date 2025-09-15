@@ -1,10 +1,17 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  Unique,
+} from 'typeorm';
 import { Category } from 'src/categories/entities/category.entity';
 import { Room } from 'src/rooms/entities/room.entity';
 
 @Entity({
   name: 'INSTRUMENTOS',
 })
+@Unique(['name', 'room'])
 export class Instruments {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -35,7 +42,7 @@ export class Instruments {
   available: boolean;
 
   @ManyToOne(() => Category, (category) => category.instruments, {
-    eager: true,
+    eager: false,
   })
   category: Category;
 
