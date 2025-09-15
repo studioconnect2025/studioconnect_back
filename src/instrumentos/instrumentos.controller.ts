@@ -46,13 +46,16 @@ export class InstrumentsController {
     return this.instrumentsService.findAllForRoom(req.user.id);
   }
 
-  @Get(':name')
+  @Get(':roomId/:name')
   @Roles(UserRole.STUDIO_OWNER, UserRole.MUSICIAN)
   @ApiOperation({ summary: 'Obtener un instrumento por su nombre' })
   @ApiResponse({ status: 200, description: 'Instrumento encontrado.' })
   @ApiResponse({ status: 404, description: 'Instrumento no encontrado.' })
-  async findOne(@Param('name') name: string): Promise<Instruments> {
-    return this.instrumentsService.findInstrumentById(name);
+  async findOne(
+    @Param('roomId', ParseUUIDPipe) roomId: string,
+    @Param('name') name: string,
+  ): Promise<Instruments> {
+    return this.instrumentsService.findInstrumentById(name, roomId);
   }
 
   @Post('/create')

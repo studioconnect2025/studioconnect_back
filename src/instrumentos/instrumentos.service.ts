@@ -47,7 +47,9 @@ export class InstrumentosService {
     });
 
     if (newInstrumentExisting) {
-      throw new BadRequestException('Ya existe un instrumento con ese nombre');
+      throw new BadRequestException(
+        `El instrumento "${instrumentData.name}" ya existe en la sala "${room.name}"`,
+      );
     }
 
     let category = await this.categoryRepository.findOneBy({
@@ -99,13 +101,16 @@ export class InstrumentosService {
     });
   }
 
-  async findInstrumentById(name: string): Promise<Instruments> {
+  async findInstrumentById(name: string, roomId: string): Promise<Instruments> {
     const instrumentName = await this.instrumentsRepository.findOne({
-      where: { name },
+      where: { name, room: { id: roomId } },
+      relations: ['room', 'category'],
     });
 
     if (!instrumentName) {
-      throw new NotFoundException(`Instrumento de ${name} no encontrado`);
+      throw new NotFoundException(
+        `Instrumento "${name}" no encontrado en la sala con id ${roomId}`,
+      );
     }
 
     return instrumentName;
