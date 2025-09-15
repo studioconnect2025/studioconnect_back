@@ -15,6 +15,7 @@ import { RoomsModule } from './rooms/rooms.module';
 import { OwnersModule } from './owner/owner.module';
 import { OwnersController } from './owner/owner.controller';
 import { PaymentsModule } from './payment/payment.module';
+import { ProfileModule } from './profile/profile.module';
 
 @Module({
   imports: [
@@ -26,12 +27,12 @@ import { PaymentsModule } from './payment/payment.module';
       inject: [ConfigService],
       useFactory: (cfg: ConfigService) => {
         return {
-       type: 'postgres',
-    url: cfg.get<string>('DATABASE_URL'),
-    ssl: { rejectUnauthorized: false },
-    extra: { ssl: { rejectUnauthorized: false } },
-    autoLoadEntities: true,
-    synchronize: false,
+          type: 'postgres',
+          url: cfg.get<string>('DATABASE_URL'),
+          ssl: { rejectUnauthorized: false },
+          extra: { ssl: { rejectUnauthorized: false } },
+          autoLoadEntities: true,
+          synchronize: false,
         };
       },
     }),
@@ -46,8 +47,9 @@ import { PaymentsModule } from './payment/payment.module';
     RoomsModule,
     OwnersModule,
     PaymentsModule,
+    ProfileModule,
   ],
   controllers: [AppController, OwnersController],
   providers: [AppService],
 })
-export class AppModule { }
+export class AppModule {}

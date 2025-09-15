@@ -6,13 +6,15 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { LessThan, MoreThan, Repository } from 'typeorm';
+import { Between, LessThan, MoreThan, Repository } from 'typeorm';
 import { Booking } from './dto/bookings.entity';
 import { CreateBookingDto } from './dto/create-booking';
 import { User } from 'src/users/entities/user.entity';
 import { BookingStatus } from './enum/enums-bookings';
 import { Room } from 'src/rooms/entities/room.entity';
 import { PricingService } from 'src/pricingTotal/pricing.service';
+import { BookingAction } from './enum/booking-action.enum';
+import { ReprogramBookingDto } from './dto/reprogram-booking.dto';
 
 @Injectable()
 export class BookingsService {
@@ -80,6 +82,7 @@ export class BookingsService {
       roomId,
       startTime,
       endTime,
+      createBookingDto.instrumentIds,
     );
 
     const newBooking = this.bookingRepository.create({
@@ -197,6 +200,144 @@ export class BookingsService {
         'No tienes permiso para gestionar esta reserva.',
       );
     }
+
+    return booking;
+  }
+
+  async cancelBooking(bookingId: string, musician: User): Promise<Booking> {
+    const booking = await this.bookingRepository.findOne({
+      where: { id: bookingId, musician: { id: musician.id } },
+      relations: ['room', 'room.studio', 'room.studio.owner'],
+    });
+
+    if (!booking) throw new NotFoundException('Reserva no encontrada');
+
+    // Si ya fue cancelada por el músico
+    if (booking.action === BookingAction.CANCELED) {
+      throw new BadRequestException(
+        'La reserva ya fue cancelada anteriormente.',
+      );
+    }
+
+    // Validar límite de tiempo: mínimo 2 días antes de la reserva
+    const now = new Date();
+    const limitDate = new Date(booking.startTime);
+    limitDate.setDate(limitDate.getDate() - 2);
+
+    if (now > limitDate) {
+      throw new BadRequestException(
+        'Solo puedes cancelar la reserva hasta 2 días antes de la fecha de inicio.',
+      );
+    }
+
+    // Validar máximo 2 cancelaciones por día para este músico
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(today.getDate() + 1);
+
+    const cancellationsToday = await this.bookingRepository.count({
+      where: {
+        musician: { id: musician.id },
+        action: BookingAction.CANCELED, // contamos sólo acciones canceladas
+        canceledAtDate: Between(today, tomorrow),
+      },
+    });
+
+    if (cancellationsToday >= 2) {
+      throw new BadRequestException(
+        'Ya realizaste el máximo de 2 cancelaciones para hoy.',
+      );
+    }
+
+    // MARCA la acción de cancelación (no tocamos BookingStatus que usa el dueño)
+    booking.status = BookingStatus.CANCELED;
+    booking.action = BookingAction.CANCELED; // NEW
+    booking.canceledAtDate = new Date(); // NEW: guardamos la fecha de cancelación
+
+    await this.bookingRepository.save(booking);
+
+    // ALERTA para el dueño (console.log como acordamos)
+    console.log(
+      `🔔 ALERTA: Owner ${booking.room.studio.owner?.email} - La reserva ${booking.id} fue CANCELADA por el músico.`,
+    );
+
+    return booking;
+  }
+
+  // reprogramar (músico) — una vez y mínimo 2 días antes
+
+  async reprogramBooking(
+    bookingId: string,
+    musician: User,
+    dto: ReprogramBookingDto,
+  ): Promise<Booking> {
+    const booking = await this.bookingRepository.findOne({
+      where: { id: bookingId, musician: { id: musician.id } },
+      relations: ['room', 'room.studio', 'room.studio.owner'],
+    });
+
+    if (!booking) throw new NotFoundException('Reserva no encontrada');
+
+    // Validar si ya reprogramó antes
+    if (booking.hasRescheduled) {
+      throw new BadRequestException(
+        'Solo puedes reprogramar una vez esta reserva.',
+      );
+    }
+
+    // Validar límite de tiempo: mínimo 2 días antes (respecto a la reserva original)
+    const now = new Date();
+    const limitDate = new Date(booking.startTime);
+    limitDate.setDate(limitDate.getDate() - 2);
+
+    if (now > limitDate) {
+      throw new BadRequestException(
+        'Solo puedes reprogramar la reserva hasta 2 días antes de la fecha de inicio.',
+      );
+    }
+
+    // Validar nuevas fechas
+    const newStart = new Date(dto.newStartTime);
+    const newEnd = new Date(dto.newEndTime);
+    if (isNaN(newStart.getTime()) || isNaN(newEnd.getTime())) {
+      throw new BadRequestException('Fechas inválidas para la reprogramación.');
+    }
+    if (newStart >= newEnd) {
+      throw new BadRequestException(
+        'La nueva fecha de fin debe ser posterior a la nueva fecha de inicio.',
+      );
+    }
+
+    // Validar room existe (si cambias de sala)
+    // const newRoom = await this.roomRepository.findOne({
+    //   where: { id: dto.roomId },
+    //   relations: ['studio'],
+    // });
+    // if (!newRoom) {
+    //   throw new NotFoundException(`Sala con ID #${dto.roomId} no encontrada.`);
+    // }
+
+    const room = booking.room;
+    if (!room.isActive) {
+      throw new BadRequestException('La sala seleccionada no está activa.');
+    }
+
+    // Aplicamos la reprogramación: actualizamos times y room, marcamos hasRescheduled y dejamos status PENDING
+    booking.startTime = newStart;
+    booking.endTime = newEnd;
+    // booking.room = newRoom;
+    booking.hasRescheduled = true; // ya reprogramada una vez
+    booking.reprogramDate = new Date(); // registro de cuando se reprogramó
+    booking.action = BookingAction.REPROGRAMMED; // NEW: marca acción de reprogramación
+    booking.status = BookingStatus.PENDING; // vuelve a pendiente para que el dueño confirme disponibilidad
+
+    await this.bookingRepository.save(booking);
+
+    // ALERTA para el dueño (console.log)
+    console.log(
+      `🔔 ALERTA: Owner ${booking.room.studio.owner?.email} - La reserva ${booking.id} fue REPROGRAMADA por el músico. Debe confirmar disponibilidad.`,
+    );
 
     return booking;
   }

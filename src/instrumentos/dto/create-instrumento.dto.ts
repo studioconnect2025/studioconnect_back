@@ -8,29 +8,32 @@ import {
   Min,
 } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
 
 export class CreateInstrumentDto {
   @ApiProperty({
     description: 'Nombre del instrumento',
     example: 'Guitarra eléctrica',
   })
-  @IsString()
-  @IsNotEmpty()
-  @MaxLength(50)
+  @IsString({ message: 'El nombre debe ser un texto' })
+  @IsNotEmpty({ message: 'El nombre es obligatorio' })
+  @MaxLength(50, { message: 'El nombre no puede superar los 50 caracteres' })
   name: string;
 
+  @MaxLength(255)
   @ApiProperty({
     description: 'Descripción del instrumento',
     example: 'Guitarra marca Fender con pastillas dobles',
   })
   @IsString()
   @IsNotEmpty()
-  description?: string;
+  description: string;
 
   @ApiProperty({
     description: 'Precio de alquiler del instrumento',
     example: 350.0,
   })
+  @Type(() => Number)
   @IsNumber()
   @Min(0)
   price: number;

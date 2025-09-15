@@ -4,69 +4,113 @@ import {
   NotFoundException,
   BadRequestException,
   InternalServerErrorException,
+  Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import * as bcrypt from 'bcrypt';
+
 import { User } from './entities/user.entity';
 import { CreateUserDto } from './dto/create-user.dto';
+import { Profile } from 'src/profile/entities/profile.entity';
 
 import { Studio } from 'src/studios/entities/studio.entity';
 import { Booking } from 'src/bookings/dto/bookings.entity';
+import { Room } from 'src/rooms/entities/room.entity';
 import { UserRole } from 'src/auth/enum/roles.enum';
 import { BookingStatus } from 'src/bookings/enum/enums-bookings';
-import { Room } from 'src/rooms/entities/room.entity';
-import * as bcrypt from 'bcrypt';
-import { UpdateMusicianProfileDto } from 'src/musician/dto/update-musician-profile.dto';
 
 @Injectable()
 export class UsersService {
-  async updateUser(user: User): Promise<User> {
-    return this.usersRepository.save(user);
-  }
+  private readonly logger = new Logger(UsersService.name);
+
   constructor(
     @InjectRepository(User)
-    private usersRepository: Repository<User>,
+    private readonly usersRepository: Repository<User>,
+
+    @InjectRepository(Profile)
+    private readonly profileRepository: Repository<Profile>,
+
     @InjectRepository(Studio)
     private readonly studioRepository: Repository<Studio>,
+
     @InjectRepository(Booking)
     private readonly bookingRepository: Repository<Booking>,
+
     @InjectRepository(Room)
     private readonly roomRepository: Repository<Room>,
   ) {}
 
-  async create(createUserDto: CreateUserDto): Promise<User> {
-    const { email, password, role, profile } = createUserDto;
+  // -------- helper: soporta profile.ubicacion o campos planos --------
+  private normalizeProfile(p?: CreateUserDto['profile']) {
+    if (!p) return undefined;
+    const u: any = (p as any).ubicacion || {};
+    const flat = {
+      nombre: (p as any).nombre,
+      apellido: (p as any).apellido,
+      numeroDeTelefono: (p as any).numeroDeTelefono,
+      ciudad: (p as any).ciudad ?? u.ciudad,
+      provincia: (p as any).provincia ?? u.provincia,
+      calle: (p as any).calle ?? u.calle,
+      codigoPostal: (p as any).codigoPostal ?? u.codigoPostal,
+    };
+    const hasAny = Object.values(flat).some(
+      (v) => v != null && String(v).trim() !== '',
+    );
+    return hasAny ? flat : undefined;
+  }
 
-    // 1. Verificar si el email ya existe
-    const existingUser = await this.usersRepository.findOneBy({ email });
-    if (existingUser) {
-      throw new ConflictException('El email ya se encuentra registrado.');
+  // -------- create: usuario + perfil en una transacción --------
+  async create(dto: CreateUserDto): Promise<User> {
+    const { email, password, confirmPassword } = dto;
+    const role = dto.role ?? UserRole.MUSICIAN;
+    const profile = this.normalizeProfile(dto.profile);
+
+    if (!email) throw new BadRequestException('Email requerido');
+    if (!password) throw new BadRequestException('Password requerida');
+    if (confirmPassword != null && confirmPassword !== password) {
+      throw new BadRequestException('Las contraseñas no coinciden');
     }
 
+    const exists = await this.usersRepository.findOne({ where: { email } });
+    if (exists) throw new ConflictException('El email ya está registrado.');
+
+    const passwordHash = await bcrypt.hash(password, 10);
+
     try {
-      // 2. HASHEAR LA CONTRASEÑA (Este es el paso clave que faltaba)
-      const passwordHash = await bcrypt.hash(password, 10);
+      return await this.usersRepository.manager.transaction(async (trx) => {
+        const userRepo = trx.getRepository(User);
+        const profileRepo = trx.getRepository(Profile);
 
-      // 3. Crear la instancia del usuario con 'passwordHash'
-      const newUser = this.usersRepository.create({
-        email,
-        passwordHash, // Usamos la contraseña ya hasheada
-        role,
-        profile,
+        // 1) crear usuario
+        const user = userRepo.create({ email, passwordHash, role });
+        const savedUser = await userRepo.save(user);
+
+        // 2) si hay datos de perfil, asociar y guardar (FK vive en profile.userId)
+        if (profile) {
+          const prof = profileRepo.create({
+            ...profile,
+            user: savedUser,
+            userId: savedUser.id,
+          });
+          const savedProfile = await profileRepo.save(prof);
+          savedUser.profile = savedProfile;
+        }
+
+        const { passwordHash: _omit, ...rest } = savedUser;
+        return rest as User;
       });
-
-      // 4. Guardar en la base de datos
-      await this.usersRepository.save(newUser);
-
-      // 5. Devolver el usuario sin la contraseña
-      const { passwordHash: _, ...userResult } = newUser;
-      return userResult as User;
-    } catch (error) {
-      console.error(error);
+    } catch (err) {
+      this.logger.error('Error creando usuario', err?.stack || err);
       throw new InternalServerErrorException('No se pudo crear el usuario.');
     }
   }
 
+  async updateUser(user: User): Promise<User> {
+    return this.usersRepository.save(user);
+  }
+
+  // ====== Resto de métodos que ya tenías (sin cambios relevantes) ======
   async findOne(user: User): Promise<User> {
     return this.usersRepository.findOneOrFail({
       where: { id: user.id },
@@ -74,23 +118,19 @@ export class UsersService {
     });
   }
 
-  // Buscar usuario por email (obligatorio)
   async findOneByEmail(email: string): Promise<User> {
     if (!email) throw new BadRequestException('El email es obligatorio.');
-
     const user = await this.usersRepository.findOneBy({ email });
     if (!user) {
       throw new NotFoundException(
         `Usuario con email "${email}" no encontrado.`,
       );
     }
-
     return user;
   }
 
   async findOneById(id: string): Promise<User> {
     if (!id) throw new BadRequestException('El ID es obligatorio.');
-    // 👇 Cambia esto de vuelta a la versión simple
     const user = await this.usersRepository.findOne({
       where: { id },
       relations: ['bookings', 'studio', 'studio.bookings', 'studio.rooms'],
@@ -109,74 +149,59 @@ export class UsersService {
 
     if (!user) throw new NotFoundException('Usuario no encontrado');
 
-    // ----------------- MÚSICO -----------------
     if (user.role === UserRole.MUSICIAN) {
-      const hasActiveBookings = user.bookings.some(
+      const hasActiveBookings = user.bookings?.some(
         (b) =>
           b.status === BookingStatus.PENDING ||
           b.status === BookingStatus.CONFIRMED,
       );
-
       if (hasActiveBookings) {
-        user.isActive = false; // soft delete
+        user.isActive = false;
         await this.usersRepository.save(user);
         return 'Músico desactivado (soft delete)';
       } else {
-        await this.usersRepository.remove(user); // hard delete
+        await this.usersRepository.remove(user); // ON DELETE CASCADE borrará profile
         return 'Músico eliminado permanentemente';
       }
     }
 
-    // ----------------- DUEÑO DE ESTUDIO -----------------
     if (user.role === UserRole.STUDIO_OWNER) {
       const studio = user.studio;
-
       if (studio) {
-        const hasActiveBookings = studio.bookings.some(
+        const hasActiveBookings = studio.bookings?.some(
           (b) =>
             b.status === BookingStatus.PENDING ||
             b.status === BookingStatus.CONFIRMED,
         );
-
         if (hasActiveBookings) {
           throw new ConflictException(
             'No se puede eliminar: el estudio tiene reservas activas',
           );
         }
 
-        const hasCompletedBookings = studio.bookings.some(
+        const hasCompletedBookings = studio.bookings?.some(
           (b) => b.status === BookingStatus.COMPLETED,
         );
-
         if (hasCompletedBookings) {
-          // Soft delete: usuario + estudio
           user.isActive = false;
           studio.isActive = false;
-
-          // Desactivar salas
-          if (studio.rooms && studio.rooms.length > 0) {
-            for (const room of studio.rooms) {
-              room.isActive = false;
-            }
+          if (studio.rooms?.length) {
+            for (const room of studio.rooms) room.isActive = false;
           }
-
           await this.studioRepository.save(studio);
           await this.usersRepository.save(user);
           return 'Dueño y estudio desactivados (soft delete)';
         }
 
-        // No hay reservas → eliminar todo permanentemente
-        if (studio.rooms && studio.rooms.length > 0) {
-          for (const room of studio.rooms) {
+        if (studio.rooms?.length) {
+          for (const room of studio.rooms)
             await this.roomRepository.remove(room);
-          }
         }
         await this.studioRepository.remove(studio);
-        await this.usersRepository.remove(user);
+        await this.usersRepository.remove(user); // borra profile por CASCADE
         return 'Dueño y estudio eliminados permanentemente';
       } else {
-        // Dueño sin estudio → eliminar usuario
-        await this.usersRepository.remove(user);
+        await this.usersRepository.remove(user); // borra profile por CASCADE
         return 'Dueño eliminado (no tenía estudios)';
       }
     }
@@ -184,34 +209,10 @@ export class UsersService {
     return 'No se pudo eliminar el usuario';
   }
 
-  async updateUserProfile(
-    userId: string,
-    updateDto: UpdateMusicianProfileDto,
-  ): Promise<Omit<User, 'passwordHash'>> {
-    const user = await this.findOneById(userId);
-
-    if (updateDto.profile) {
-      user.profile = Object.assign(user.profile || {}, updateDto.profile);
-    }
-
-    await this.usersRepository.save(user);
-
-    const { passwordHash, ...result } = user;
-
-    // Ahora el 'result' coincide perfectamente con el tipo de retorno
-    return result;
-  }
-
-  // --- NUEVO MÉTODO PARA BORRADO LÓGICO ---
   async softDeleteAccount(userId: string): Promise<{ message: string }> {
     const user = await this.findOneById(userId);
-
-    // Aquí puedes expandir la lógica para manejar reservas activas si es necesario,
-    // similar a como lo hiciste en 'softDeleteUser'
-
     user.isActive = false;
     await this.usersRepository.save(user);
-
     return { message: 'Tu cuenta ha sido desactivada exitosamente.' };
   }
 
@@ -220,22 +221,16 @@ export class UsersService {
       where: { id: ownerId },
       relations: ['studio'],
     });
-
-    if (!user || !user.studio) {
+    if (!user || !user.studio)
       throw new NotFoundException('Estudio no encontrado para este dueño');
-    }
-
-    // Cambiar estado de isActive del estudio
     user.studio.isActive = !user.studio.isActive;
     await this.studioRepository.save(user.studio);
-
     return `Estudio ${user.studio.isActive ? 'activado' : 'desactivado'}`;
   }
 
   async updatePassword(id: string, passwordHash: string): Promise<void> {
     const result = await this.usersRepository.update(id, { passwordHash });
-    if (result.affected === 0) {
+    if (result.affected === 0)
       throw new NotFoundException(`Usuario con ID "${id}" no encontrado.`);
-    }
   }
 }
