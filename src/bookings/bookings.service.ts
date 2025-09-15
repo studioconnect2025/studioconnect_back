@@ -82,6 +82,7 @@ export class BookingsService {
       roomId,
       startTime,
       endTime,
+      createBookingDto.instrumentIds,
     );
 
     const newBooking = this.bookingRepository.create({
@@ -309,21 +310,23 @@ export class BookingsService {
     }
 
     // Validar room existe (si cambias de sala)
-    const newRoom = await this.roomRepository.findOne({
-      where: { id: dto.roomId },
-      relations: ['studio'],
-    });
-    if (!newRoom) {
-      throw new NotFoundException(`Sala con ID #${dto.roomId} no encontrada.`);
-    }
-    if (!newRoom.isActive) {
+    // const newRoom = await this.roomRepository.findOne({
+    //   where: { id: dto.roomId },
+    //   relations: ['studio'],
+    // });
+    // if (!newRoom) {
+    //   throw new NotFoundException(`Sala con ID #${dto.roomId} no encontrada.`);
+    // }
+
+    const room = booking.room;
+    if (!room.isActive) {
       throw new BadRequestException('La sala seleccionada no está activa.');
     }
 
     // Aplicamos la reprogramación: actualizamos times y room, marcamos hasRescheduled y dejamos status PENDING
     booking.startTime = newStart;
     booking.endTime = newEnd;
-    booking.room = newRoom;
+    // booking.room = newRoom;
     booking.hasRescheduled = true; // ya reprogramada una vez
     booking.reprogramDate = new Date(); // registro de cuando se reprogramó
     booking.action = BookingAction.REPROGRAMMED; // NEW: marca acción de reprogramación
