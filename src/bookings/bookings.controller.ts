@@ -19,6 +19,7 @@ import {
   ApiOperation,
   ApiResponse,
   ApiBearerAuth,
+  ApiParam,
 } from '@nestjs/swagger';
 import { User } from 'src/users/entities/user.entity';
 import { ReprogramBookingDto } from './dto/reprogram-booking.dto';
@@ -149,6 +150,11 @@ export class BookingsController {
     description: 'No autorizado: esta reserva no te pertenece.',
   }) // ⭐ NEW
   @ApiResponse({ status: 404, description: 'Reserva no encontrada.' }) // ⭐ NEW
+  @ApiParam({
+    name: 'bookingId',
+    type: String,
+    description: 'ID de la reserva que quieres reprogramar',
+  })
   @Patch('musician/:bookingId/reprogram')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles(UserRole.MUSICIAN)

@@ -119,7 +119,7 @@ export class PaymentsService {
       );
     }
 
-    const amount = dto.plan === MembershipPlan.MONTHLY ? 79.9 : 799;
+    const amount = dto.plan === MembershipPlan.MONTHLY ? 25 : 100;
 
     const paymentIntent = await this.stripe.paymentIntents.create({
       amount: Math.round(amount * 100),

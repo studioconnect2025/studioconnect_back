@@ -12,7 +12,6 @@ export class Instruments {
   @Column({
     type: 'varchar',
     length: 50,
-    unique: true,
   })
   name: string;
 
@@ -22,11 +21,13 @@ export class Instruments {
   })
   description: string;
 
-  @Column({
-    type: 'decimal',
+  @Column('decimal', {
     precision: 10,
     scale: 2,
-    nullable: false,
+    transformer: {
+      to: (value: number) => value,
+      from: (value: string): number => parseFloat(value),
+    },
   })
   price: number;
 

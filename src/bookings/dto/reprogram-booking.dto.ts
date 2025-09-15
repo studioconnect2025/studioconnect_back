@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsDateString, IsNotEmpty, IsUUID } from 'class-validator';
+import { IsDateString, IsNotEmpty, IsOptional, IsUUID } from 'class-validator';
 
 export class ReprogramBookingDto {
   @ApiProperty({
@@ -22,7 +22,8 @@ export class ReprogramBookingDto {
     description: 'ID de la sala a reprogramar',
     example: '550e8400-e29b-41d4-a716-446655440000',
   })
+  @IsOptional()
   @IsNotEmpty()
   @IsUUID('4')
-  roomId: string;
+  roomId?: string;
 }
