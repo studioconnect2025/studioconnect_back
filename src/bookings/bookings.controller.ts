@@ -25,7 +25,7 @@ import { User } from 'src/users/entities/user.entity';
 import { ReprogramBookingDto } from './dto/reprogram-booking.dto';
 
 @ApiTags('Bookings')
-@ApiBearerAuth() // CAMBIO AQUÍ: Se aplica la seguridad a todo el controlador
+@ApiBearerAuth('JWT-auth')
 @Controller('bookings')
 export class BookingsController {
   constructor(private readonly bookingsService: BookingsService) {}
