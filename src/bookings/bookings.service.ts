@@ -309,15 +309,6 @@ export class BookingsService {
       );
     }
 
-    // Validar room existe (si cambias de sala)
-    // const newRoom = await this.roomRepository.findOne({
-    //   where: { id: dto.roomId },
-    //   relations: ['studio'],
-    // });
-    // if (!newRoom) {
-    //   throw new NotFoundException(`Sala con ID #${dto.roomId} no encontrada.`);
-    // }
-
     const room = booking.room;
     if (!room.isActive) {
       throw new BadRequestException('La sala seleccionada no está activa.');
