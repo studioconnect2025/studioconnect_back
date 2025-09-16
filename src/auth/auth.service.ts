@@ -15,8 +15,28 @@ import { MusicianRegisterDto } from 'src/users/dto/musician-register.dto';
 import { ReactivateAccountDto } from 'src/auth/dto/reactivate-account.dto';
 import { UserRole } from './enum/roles.enum';
 import { User } from '../users/entities/user.entity';
-import { TokenBlacklistService } from './token-blacklist.service';
+import { TokenBlacklistService } from './services/token-blacklist.service';
 import { EmailService } from './services/email.service';
+import { ConfigService } from '@nestjs/config';
+
+interface LoginSuccessResponse {
+  status: 'LOGIN_SUCCESS';
+  data: {
+    access_token: string;
+    user: Omit<User, 'passwordHash'>;
+  };
+}
+
+// Esta es la forma del objeto cuando el usuario es nuevo.
+interface RegistrationRequiredResponse {
+  status: 'REGISTRATION_REQUIRED';
+  data: {
+    token: string;
+  };
+}
+
+// Un tipo "unión" que puede ser una de las dos respuestas anteriores.
+type GoogleAuthResponse = LoginSuccessResponse | RegistrationRequiredResponse;
 
 @Injectable()
 export class AuthService {
@@ -25,6 +45,7 @@ export class AuthService {
     private jwtService: JwtService,
     private tokenBlacklistService: TokenBlacklistService,
     private readonly emailService: EmailService,
+    private readonly configService: ConfigService,
   ) {}
 
   // -------- Registro de Músico --------
@@ -117,6 +138,64 @@ export class AuthService {
     return this.generateJwtToken(user);
   }
 
+   async handleGoogleAuth(profile: any): Promise<GoogleAuthResponse> { 
+    if (!profile) {
+      throw new BadRequestException('No se encontró información de usuario de Google.');
+    }
+    const { email, firstName } = profile;
+
+    try {
+      const user = await this.usersService.findOneByEmail(email);
+
+      if (!user.isActive) {
+        throw new ForbiddenException({
+          message: 'Tu cuenta está inactiva. Por favor, reactívala.',
+          error: 'ACCOUNT_INACTIVE',
+        });
+      }
+      
+      const loginData = await this.generateJwtToken(user);
+      // TypeScript ahora sabe que este objeto coincide con LoginSuccessResponse
+      return { status: 'LOGIN_SUCCESS', data: loginData };
+
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        const registrationToken = await this.generateRegistrationToken(profile);
+        // Y este otro coincide con RegistrationRequiredResponse
+        return { status: 'REGISTRATION_REQUIRED', data: { token: registrationToken } };
+      }
+      throw error;
+    }
+  }
+
+  async completeGoogleRegistration(googleProfile: any, role: UserRole) {
+    const { email, firstName, lastName } = googleProfile;
+
+    const existingUser = await this.usersService.findOneByEmail(email).catch(() => null);
+    if (existingUser) {
+      throw new BadRequestException('El usuario ya ha sido registrado.');
+    }
+
+    // ✅ CORRECCIÓN: Genera la contraseña aleatoria UNA SOLA VEZ
+    const randomPassword = Math.random().toString(36).slice(-10);
+
+    const newUser = await this.usersService.create({
+      email,
+      // ✅ Usa la MISMA variable para ambos campos
+      password: randomPassword,
+      confirmPassword: randomPassword,
+      role, 
+      profile: {
+        nombre: firstName,
+        apellido: lastName,
+      },
+    });
+
+    await this.emailService.sendWelcomeEmail(firstName ?? 'Bienvenido/a', newUser.email);
+
+    return this.generateJwtToken(newUser);
+  }
+
   // -------- Reactivar Cuenta --------
   async reactivateAccount(reactivateDto: ReactivateAccountDto): Promise<{ message: string }> {
     const user = await this.usersService.findOneByEmail(reactivateDto.email);
@@ -152,5 +231,19 @@ export class AuthService {
       access_token: await this.jwtService.signAsync(payload),
       user: userCoreInfo,
     };
+  }
+
+  private async generateRegistrationToken(profile: any) {
+    const payload = {
+      email: profile.email,
+      firstName: profile.firstName,
+      lastName: profile.lastName,
+      picture: profile.picture,
+      type: 'GOOGLE_REGISTRATION', // Un 'claim' para identificar el propósito del token
+    };
+    return this.jwtService.signAsync(payload, {
+      secret: this.configService.get<string>('JWT_REGISTRATION_SECRET'),
+      expiresIn: '15m', // Haz que expire pronto
+    });
   }
 }
