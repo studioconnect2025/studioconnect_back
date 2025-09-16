@@ -9,6 +9,32 @@ import session from 'express-session';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
+
+    // ✅ CORS con credenciales
+  app.enableCors({
+  origin(origin, cb) {
+    const allowed = [
+      'http://localhost:3001',                 // dev
+      'https://studioconnect-front.vercel.app' // prod vercel
+    ];
+    const ok =
+      !origin ||
+      allowed.includes(origin) ||
+      origin.endsWith('.vercel.app'); // previews
+    cb(null, ok); // importante: devolver booleano
+  },
+  methods: ['GET','POST','PUT','PATCH','DELETE','OPTIONS'],
+  allowedHeaders: [
+    'Accept',
+    'Origin',
+    'X-Requested-With',
+    'Content-Type',
+    'Authorization'
+  ],
+  credentials: true,   // si usás cookies, dejalo
+  maxAge: 86400,
+  optionsSuccessStatus: 204,
+});
   // ✅ Express: trust proxy (necesario en Render detrás de proxy)
   const expressApp = app.getHttpAdapter().getInstance();
   expressApp.set('trust proxy', 1);
@@ -30,18 +56,7 @@ async function bootstrap() {
     }),
   );
 
-  // ✅ CORS con credenciales
-  app.enableCors({
-    origin: [
-      'https://studioconnect-front.vercel.app',
-      'http://localhost:3001',
-      // opcional: previews de Vercel
-      // /\.vercel\.app$/,
-    ],
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-    credentials: true,
-  });
+
 
   app.useGlobalPipes(
     new ValidationPipe({

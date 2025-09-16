@@ -34,7 +34,7 @@ export class User {
   isActive: boolean;
 
   // -- relacion con profile --- NO TOCAR!!!!
- @OneToOne(() => Profile, (p) => p.user, { eager: true })
+  @OneToOne(() => Profile, (p) => p.user, { eager: true })
   profile: Profile;
 
   // --- Relaciones ---

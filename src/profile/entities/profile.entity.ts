@@ -20,4 +20,11 @@ export class Profile {
   @Column({ nullable: true }) provincia?: string;
   @Column({ nullable: true }) calle?: string;
   @Column({ nullable: true }) codigoPostal?: string;
+
+  // 👇 Campos nuevos para la foto de perfil
+  @Column({ nullable: true })
+  profileImageUrl?: string;
+
+  @Column({ nullable: true })
+  profileImagePublicId?: string;
 }

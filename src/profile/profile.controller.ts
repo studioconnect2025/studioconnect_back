@@ -6,6 +6,8 @@ import {
   Body,
   UseGuards,
   Req,
+  UploadedFile,
+  UseInterceptors,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard } from '../auth/guard/roles.guard';
@@ -14,6 +16,7 @@ import { UserRole } from '../auth/enum/roles.enum';
 import {
   ApiBearerAuth,
   ApiBody,
+  ApiConsumes,
   ApiOperation,
   ApiResponse,
   ApiTags,
@@ -22,6 +25,8 @@ import { UsersService } from '../users/users.service';
 import { UpdateMusicianProfileDto } from 'src/musician/dto/update-musician-profile.dto';
 import { ProfileService } from './profile.service';
 import { Profile } from './entities/profile.entity';
+import { UpdateProfileDto } from './dto/update-profile.dto';
+import { FileInterceptor } from '@nestjs/platform-express';
 
 @ApiTags('Profile')
 @ApiBearerAuth()
@@ -44,50 +49,39 @@ export class ProfileController {
 
   @Patch('me')
   @Roles(UserRole.MUSICIAN, UserRole.STUDIO_OWNER)
-  @ApiOperation({ summary: 'Actualizar el perfil del usuario autenticado' })
+  @ApiOperation({ summary: 'Actualizar el perfil del usuario autenticado (datos + foto)' })
+  @ApiConsumes('multipart/form-data')
+  @UseInterceptors(FileInterceptor('file'))
+  @ApiBody({
+    description: 'Datos opcionales del perfil y archivo opcional de foto',
+    schema: {
+      type: 'object',
+      properties: {
+        file: { type: 'string', format: 'binary' },
+        nombre: { type: 'string' },
+        apellido: { type: 'string' },
+        numeroDeTelefono: { type: 'string' },
+        ciudad: { type: 'string' },
+        provincia: { type: 'string' },
+        calle: { type: 'string' },
+        codigoPostal: { type: 'string' },
+      },
+    },
+  })
   @ApiResponse({
     status: 200,
     description: 'Perfil actualizado exitosamente.',
     type: Profile,
   })
-  @ApiBody({
-    type: UpdateMusicianProfileDto,
-    description:
-      'Estructura de datos para actualizar el perfil. Todos los campos son opcionales.',
-    examples: {
-      ejemplo: {
-        summary: 'Actualizar datos personales y de ubicación',
-        value: {
-          profile: {
-            nombre: 'Carlos Alberto',
-            apellido: 'Ruiz',
-            numeroDeTelefono: '+5491187654321',
-            ciudad: 'La Plata',
-            provincia: 'Buenos Aires',
-            calle: 'Av. Siempreviva 742',
-            codigoPostal: 'B1900',
-          },
-        },
-      },
-    },
-  })
-  async updateMyProfile(@Req() req, @Body() updateDto: UpdateMusicianProfileDto) {
+  @ApiResponse({ status: 400, description: 'Datos inválidos o archivo faltante.' })
+  async updateMyProfile(
+    @Req() req,
+    @UploadedFile() file: Express.Multer.File,
+    @Body() updateDto: UpdateProfileDto,
+  ) {
     const userId: string = req.user.id;
 
-    // El DTO actual viene anidado en updateDto.profile.{...}
-    const p = (updateDto as any)?.profile ?? {};
-    // Mapeamos a los campos planos que espera ProfileService.updateMyProfile
-    const safe = {
-      nombre: p.nombre,
-      apellido: p.apellido,
-      numeroDeTelefono: p.numeroDeTelefono,
-      ciudad: p.ciudad,
-      provincia: p.provincia,
-      calle: p.calle,
-      codigoPostal: p.codigoPostal,
-    };
-
-    return this.profileService.updateMyProfile(userId, safe as any);
+    return this.profileService.updateMyProfile(userId, updateDto, file);
   }
 
   @Delete('me')

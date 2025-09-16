@@ -42,10 +42,7 @@ export class PricingService {
       instrumentsList = await this.instrumentRepo.find({
         where: { id: In(instrumentIds) },
       });
-      instrumentsPrice = instrumentsList.reduce(
-        (sum, i) => sum + Number(i.price),
-        0,
-      );
+      instrumentsPrice = instrumentsList.reduce((sum, i) => sum + i.price, 0);
     }
 
     // 🔹 Comisiones y totales
@@ -53,6 +50,17 @@ export class PricingService {
     const roomOwnerAmount = roomPrice * 0.85;
     const instrumentsAmount = instrumentsPrice;
     const totalPrice = roomPrice + instrumentsPrice;
+
+    console.log({
+      totalPrice,
+      roomPrice,
+      instrumentsPrice,
+      roomCommission,
+      roomOwnerAmount,
+      instrumentsAmount,
+      instrumentsList,
+      room,
+    });
 
     return {
       totalPrice,
