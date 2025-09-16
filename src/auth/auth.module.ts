@@ -5,13 +5,14 @@ import { UsersModule } from 'src/users/users.module';
 import { StudiosModule } from 'src/studios/studios.module';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { JwtStrategy } from './jwt-strategy';
-import { TokenBlacklistService } from './token-blacklist.service';
+import { JwtStrategy } from './strategys/jwt-strategy';
+import { TokenBlacklistService } from './services/token-blacklist.service';
 import { CacheModule } from '@nestjs/cache-manager';
 import { redisStore } from 'cache-manager-redis-store';
 import { PasswordResetModule } from './modules/password-reset.module';
-import { GoogleStrategy } from './google.strategy';
+import { GoogleStrategy } from './strategys/google.strategy';
 import { EmailService } from './services/email.service';
+import { JwtRegistrationStrategy } from './strategys/jwt-registration.strategy';
 
 @Module({
   imports: [
@@ -40,6 +41,6 @@ import { EmailService } from './services/email.service';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy, TokenBlacklistService, GoogleStrategy, EmailService],
+  providers: [AuthService, JwtStrategy, TokenBlacklistService, GoogleStrategy, EmailService, JwtRegistrationStrategy],
 })
 export class AuthModule {}
