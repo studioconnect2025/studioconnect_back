@@ -59,6 +59,7 @@ export class StudiosController {
 
   // --- RUTAS PROTEGIDAS PARA DUEÑOS DE ESTUDIO ---
   @Get('me/my-studios')
+  @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Obtener estudios del dueño autenticado' })
   @ApiResponse({ status: 200, description: 'Lista de estudios del usuario.' })
   @UseGuards(AuthGuard('jwt'), RolesGuard)
@@ -69,6 +70,7 @@ export class StudiosController {
 
   // --- CREAR ESTUDIO CON ARCHIVOS ---
   @Post('me')
+  @ApiBearerAuth('JWT-auth')
   @ApiOperation({
     summary: 'Crear un estudio propio con fotos y registro comercial',
   })
@@ -121,6 +123,7 @@ export class StudiosController {
 
   // --- ACTUALIZAR ESTUDIO CON ARCHIVOS ---
   @Patch('me/:id')
+  @ApiBearerAuth('JWT-auth')
   @ApiOperation({
     summary: 'Actualizar un estudio propio con fotos y registro comercial',
   })
@@ -178,6 +181,7 @@ export class StudiosController {
 
   // --- SUBIR FOTO INDIVIDUAL ---
   @Post('me/:id/photos')
+  @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Subir foto de un estudio propio' })
   @ApiConsumes('multipart/form-data')
   @ApiBody({

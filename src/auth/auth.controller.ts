@@ -185,7 +185,7 @@ async handleGoogleCallback(@Req() req, @Res() res: Response) {
   }
 
   @Post('logout')
-  @ApiBearerAuth()
+  @ApiBearerAuth('JWT-auth')
   @UseGuards(AuthGuard('jwt'))
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Cerrar sesión' })

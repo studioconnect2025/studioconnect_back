@@ -26,7 +26,7 @@ import {
 } from '@nestjs/swagger';
 
 @ApiTags('instruments')
-@ApiBearerAuth()
+@ApiBearerAuth('JWT-auth')
 @UseGuards(AuthGuard('jwt'), RolesGuard)
 @Controller('instruments')
 export class InstrumentsController {

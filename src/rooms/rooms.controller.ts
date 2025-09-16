@@ -40,6 +40,7 @@ export class RoomsController {
 
   // NUEVA RUTA SIN NECESIDAD DE studioId en la URL
   @Post()
+  @ApiBearerAuth('JWT-auth')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles(UserRole.STUDIO_OWNER)
   @ApiOperation({
@@ -57,6 +58,7 @@ export class RoomsController {
 
   // MANTENER LA RUTA ORIGINAL PARA BACKWARD COMPATIBILITY (opcional)
   @Post(':studioId')
+  @ApiBearerAuth('JWT-auth')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles(UserRole.STUDIO_OWNER)
   @ApiOperation({ summary: 'Crear una sala en un estudio específico' })
@@ -75,6 +77,7 @@ export class RoomsController {
   }
 
   @Patch(':roomId')
+  @ApiBearerAuth('JWT-auth')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles(UserRole.STUDIO_OWNER)
   @ApiOperation({ summary: 'Actualizar una sala existente' })
@@ -93,6 +96,7 @@ export class RoomsController {
   }
 
   @Delete(':roomId')
+  @ApiBearerAuth('JWT-auth')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles(UserRole.STUDIO_OWNER)
   @ApiOperation({ summary: 'Eliminar una sala' })
@@ -112,6 +116,7 @@ export class RoomsController {
 
   // NUEVO ENDPOINT PARA OBTENER SALAS DEL USUARIO AUTENTICADO
   @Get('my-rooms')
+  @ApiBearerAuth('JWT-auth')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles(UserRole.STUDIO_OWNER)
   @ApiOperation({ summary: 'Obtener todas las salas del usuario autenticado' })
@@ -127,6 +132,7 @@ export class RoomsController {
   // ===================== ENDPOINTS DE IMÁGENES =====================
 
   @Post(':roomId/images')
+  @ApiBearerAuth('JWT-auth')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles(UserRole.STUDIO_OWNER)
   @UseInterceptors(
@@ -177,6 +183,7 @@ export class RoomsController {
   }
 
   @Delete(':roomId/images/:imageIndex')
+  @ApiBearerAuth('JWT-auth')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles(UserRole.STUDIO_OWNER)
   @ApiOperation({ summary: 'Eliminar una imagen específica de la sala' })
@@ -203,6 +210,7 @@ export class RoomsController {
   }
 
   @Patch(':roomId/images/order')
+  @ApiBearerAuth('JWT-auth')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles(UserRole.STUDIO_OWNER)
   @ApiOperation({ summary: 'Reordenar las imágenes de la sala' })
