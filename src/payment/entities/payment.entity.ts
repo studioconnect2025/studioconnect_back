@@ -13,9 +13,9 @@ export class Payment {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @ManyToOne(() => Booking, { nullable: false, eager: true })
+  @ManyToOne(() => Booking, { nullable: true, eager: true })
   @JoinColumn({ name: 'bookingId' })
-  booking: Booking;
+  booking: Booking | null;
 
   @Column()
   stripePaymentIntentId: string;

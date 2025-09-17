@@ -4,9 +4,11 @@ import {
   Column,
   ManyToOne,
   Unique,
+  ManyToMany,
 } from 'typeorm';
 import { Category } from 'src/categories/entities/category.entity';
 import { Room } from 'src/rooms/entities/room.entity';
+import { Booking } from 'src/bookings/dto/bookings.entity';
 
 @Entity({
   name: 'INSTRUMENTOS',
@@ -50,4 +52,7 @@ export class Instruments {
     onDelete: 'CASCADE',
   })
   room: Room;
+
+  @ManyToMany(() => Booking, (booking) => booking.instruments)
+  bookings: Booking[];
 }

@@ -24,6 +24,7 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
+import type { AuthRequest } from 'src/auth/auth-types/auth-request.interface';
 
 @ApiTags('instruments')
 @ApiBearerAuth('JWT-auth')
@@ -42,7 +43,7 @@ export class InstrumentsController {
     status: 200,
     description: 'Lista de instrumentos obtenida con éxito.',
   })
-  async findAllInstruments(@Req() req) {
+  async findAllInstruments(@Req() req: AuthRequest) {
     return this.instrumentsService.findAllForRoom(req.user.id);
   }
 
@@ -62,7 +63,10 @@ export class InstrumentsController {
   @Roles(UserRole.STUDIO_OWNER)
   @ApiOperation({ summary: 'Crear un nuevo instrumento para una sala' })
   @ApiResponse({ status: 201, description: 'Instrumento creado con éxito.' })
-  async createInstrument(@Body() dto: CreateInstrumentDto, @Req() req: any) {
+  async createInstrument(
+    @Body() dto: CreateInstrumentDto,
+    @Req() req: AuthRequest,
+  ) {
     return await this.instrumentsService.createForRoom(req.user.id, dto);
   }
 
@@ -76,12 +80,13 @@ export class InstrumentsController {
   async updateInstrument(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() updateInstrumentDto: UpdateInstrumentoDto,
-    @Req() req: any,
+    @Req() req: AuthRequest,
   ) {
-    // Es necesario implementar el método `updateProduct` en el servicio
-    // y asegurarse de que el usuario (req.user) tiene permiso para editar este instrumento.
-    // Por ahora, he corregido el nombre del servicio.
-    // return await this.instrumentosService.updateInstrument(id, updateInstrumentDto, req.user);
+    return await this.instrumentsService.updateInstrument(
+      id,
+      updateInstrumentDto,
+      req.user.id,
+    );
   }
 
   @Delete(':id')
@@ -90,10 +95,8 @@ export class InstrumentsController {
   @ApiResponse({ status: 200, description: 'Instrumento eliminado con éxito.' })
   async deleteInstrument(
     @Param('id', ParseUUIDPipe) id: string,
-    @Req() req: any,
+    @Req() req: AuthRequest,
   ) {
-    // Es necesario implementar el método `deleteInstrument` en el servicio
-    // y asegurarse de que el usuario (req.user) tiene permiso para eliminar este instrumento.
-    // return await this.instrumentosService.deleteInstrument(id, req.user);
+    return await this.instrumentsService.deleteInstrument(id, req.user.id);
   }
 }

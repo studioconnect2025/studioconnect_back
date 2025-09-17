@@ -64,6 +64,7 @@ async function bootstrap() {
   );
 
   // --- SECCIÓN MODIFICADA DE SWAGGER ---
+
   const config = new DocumentBuilder()
     .setTitle('API de Reservas de Estudio')
     .setDescription('Documentación de los endpoints de la API')

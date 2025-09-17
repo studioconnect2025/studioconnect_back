@@ -6,7 +6,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Between, LessThan, MoreThan, Repository } from 'typeorm';
+import { Between, In, LessThan, MoreThan, Repository } from 'typeorm';
 import { Booking } from './dto/bookings.entity';
 import { CreateBookingDto } from './dto/create-booking';
 import { User } from 'src/users/entities/user.entity';
@@ -15,6 +15,7 @@ import { Room } from 'src/rooms/entities/room.entity';
 import { PricingService } from 'src/pricingTotal/pricing.service';
 import { BookingAction } from './enum/booking-action.enum';
 import { ReprogramBookingDto } from './dto/reprogram-booking.dto';
+import { Instruments } from 'src/instrumentos/entities/instrumento.entity';
 
 @Injectable()
 export class BookingsService {
@@ -23,6 +24,9 @@ export class BookingsService {
     private readonly bookingRepository: Repository<Booking>,
     @InjectRepository(Room)
     private readonly roomRepository: Repository<Room>,
+    @InjectRepository(Instruments)
+    private readonly instrumentRepository: Repository<Instruments>,
+
     private readonly pricingService: PricingService,
   ) {}
 
@@ -85,6 +89,26 @@ export class BookingsService {
       createBookingDto.instrumentIds,
     );
 
+    let instruments: Instruments[] = [];
+
+    if (
+      createBookingDto.instrumentIds &&
+      createBookingDto.instrumentIds.length > 0
+    ) {
+      instruments = await this.instrumentRepository.find({
+        where: {
+          id: In(createBookingDto.instrumentIds),
+          room: { id: roomId },
+        },
+      });
+
+      if (instruments.length !== createBookingDto.instrumentIds.length) {
+        throw new BadRequestException(
+          'Algunos instrumentos seleccionados no pertenecen a la sala',
+        );
+      }
+    }
+
     const newBooking = this.bookingRepository.create({
       room,
       studio: room.studio,
@@ -93,6 +117,7 @@ export class BookingsService {
       endTime,
       totalPrice,
       status: BookingStatus.PENDING,
+      instruments,
     });
     console.log('TOTAL PRICE CALCULATED:', totalPrice);
 
@@ -141,6 +166,11 @@ export class BookingsService {
       totalPrice: b.totalPrice,
       status: b.status, // PENDIENTE, CONFIRMADA, RECHAZADA, COMPLETADA
       isPaid: b.isPaid,
+      instruments: b.instruments.map((i) => ({
+        id: i.id,
+        name: i.name,
+        price: i.price,
+      })),
     }));
   }
 
