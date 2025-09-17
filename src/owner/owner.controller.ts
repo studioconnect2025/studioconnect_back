@@ -90,6 +90,8 @@ export class OwnersController {
       properties: {
         name: { type: 'string' },
         studioType: { type: 'string' },
+        pais: {type: 'string'},
+        codigoPostal: {type: 'string'},
         city: { type: 'string' },
         province: { type: 'string' },
         address: { type: 'string' },
@@ -223,6 +225,8 @@ export class OwnersController {
       properties: {
         name: { type: 'string' },
         studioType: { type: 'string' },
+        pais: {type: 'string'},
+        codigoPostal: {type: 'string'},
         city: { type: 'string' },
         province: { type: 'string' },
         address: { type: 'string' },

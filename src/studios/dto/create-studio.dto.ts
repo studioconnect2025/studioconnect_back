@@ -32,6 +32,16 @@ export class CreateStudioDto {
   @IsEnum(StudioTypeEnum)
   studioType: StudioTypeEnum;
 
+  @ApiProperty({ description: 'Pais', example: "Mexico"})
+  @IsString()
+  @IsNotEmpty()
+  pais: string
+
+  @ApiProperty({ description: 'Codigo postal', example: "54476"})
+  @IsString()
+  @IsNotEmpty()
+  codigoPostal: string
+
   @ApiProperty({ description: 'Ciudad', example: 'Monterrey' })
   @IsString()
   @IsNotEmpty()
