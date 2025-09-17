@@ -9,6 +9,7 @@ import { Category } from 'src/categories/entities/category.entity';
 import { Repository } from 'typeorm';
 import { Instruments } from './entities/instrumento.entity';
 import { Room } from 'src/rooms/entities/room.entity';
+import { UpdateInstrumentoDto } from './dto/update-instrumento.dto';
 
 @Injectable()
 export class InstrumentosService {
@@ -114,5 +115,72 @@ export class InstrumentosService {
     }
 
     return instrumentName;
+  }
+
+  async updateInstrument(
+    id: string,
+    updateDto: UpdateInstrumentoDto,
+    ownerId: string,
+  ): Promise<{ message: string; instrument: Instruments }> {
+    const instrument = await this.instrumentsRepository.findOne({
+      where: { id },
+      relations: ['room', 'room.studio', 'room.studio.owner', 'category'],
+    });
+
+    if (!instrument) {
+      throw new NotFoundException(`Instrumento con id ${id} no existe`);
+    }
+
+    // validar que el instrumento pertenece al dueño autenticado
+    if (instrument.room.studio.owner.id !== ownerId) {
+      throw new BadRequestException(
+        'No tienes permiso para actualizar este instrumento',
+      );
+    }
+
+    if (updateDto.categoryName) {
+      let category = await this.categoryRepository.findOneBy({
+        name: updateDto.categoryName,
+      });
+      if (!category) {
+        category = this.categoryRepository.create({
+          name: updateDto.categoryName,
+        });
+        category = await this.categoryRepository.save(category);
+      }
+      instrument.category = category;
+      delete updateDto.categoryName;
+    }
+
+    Object.assign(instrument, updateDto);
+    const updated = await this.instrumentsRepository.save(instrument);
+
+    return {
+      message: `Instrumento actualizado con éxito`,
+      instrument: updated,
+    };
+  }
+
+  async deleteInstrument(
+    id: string,
+    ownerId: string,
+  ): Promise<{ message: string }> {
+    const instrument = await this.instrumentsRepository.findOne({
+      where: { id },
+      relations: ['room', 'room.studio', 'room.studio.owner'],
+    });
+
+    if (!instrument) {
+      throw new NotFoundException(`Instrumento con id ${id} no existe`);
+    }
+
+    if (instrument.room.studio.owner.id !== ownerId) {
+      throw new BadRequestException(
+        'No tienes permiso para eliminar este instrumento',
+      );
+    }
+
+    await this.instrumentsRepository.remove(instrument);
+    return { message: `Instrumento eliminado con éxito` };
   }
 }

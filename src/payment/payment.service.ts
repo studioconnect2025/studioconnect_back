@@ -19,6 +19,7 @@ import {
   MembershipPlan,
 } from './dto/Create-Membership-Paymentdto';
 import { PricingService } from 'src/pricingTotal/pricing.service';
+import { Payment } from './entities/payment.entity';
 
 @Injectable()
 export class PaymentsService {
@@ -32,12 +33,14 @@ export class PaymentsService {
     private readonly instrumentRepo: Repository<Instruments>,
     @InjectRepository(User) private readonly userRepo: Repository<User>,
     @InjectRepository(Studio) private readonly studioRepo: Repository<Studio>,
+    @InjectRepository(Payment)
+    private readonly paymentRepo: Repository<Payment>,
     private readonly pricingService: PricingService,
   ) {
     const stripeKey = process.env.STRIPE_SECRET_KEY;
     if (!stripeKey) throw new Error('STRIPE_SECRET_KEY no definido');
 
-    this.stripe = new Stripe(stripeKey, { apiVersion: '2025-08-27.basil' });
+    this.stripe = new Stripe(stripeKey, {});
   }
 
   // 🔹 Pago de reserva por músicos
@@ -173,5 +176,125 @@ export class PaymentsService {
     }
 
     return paymentIntent;
+  }
+
+  async handleStripeWebhook(rawBody: Buffer, signature: string) {
+    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+    if (!webhookSecret) throw new Error('STRIPE_WEBHOOK_SECRET no definido');
+
+    let event: Stripe.Event;
+    try {
+      event = this.stripe.webhooks.constructEvent(
+        rawBody,
+        signature,
+        webhookSecret,
+      );
+    } catch (err) {
+      // relanza para que el controller devuelva 400
+      throw new BadRequestException(
+        `Stripe webhook signature verification failed: ${(err as Error).message}`,
+      );
+    }
+
+    // Maneja los eventos que te interesan
+    switch (event.type) {
+      case 'payment_intent.succeeded': {
+        const intent = event.data.object;
+        // Actualiza booking o estudio según metadata
+        await this.confirmPayment(intent.id);
+
+        // Guarda registro en payments (historial)
+        await this.savePaymentRecordFromIntent(intent, 'succeeded');
+        break;
+      }
+
+      case 'payment_intent.payment_failed': {
+        const intent = event.data.object;
+        await this.confirmPayment(intent.id); // tu lógica ya marca como FAILED
+        await this.savePaymentRecordFromIntent(intent, 'failed');
+        break;
+      }
+
+      // Puedes añadir otros eventos que quieras procesar (ex: charge.refunded)
+      default:
+        // no hacemos nada por defecto, pero podrías loguear
+        break;
+    }
+
+    return { received: true };
+  }
+
+  /**
+   * Crea un registro en la tabla payments a partir del PaymentIntent
+   */
+  private async savePaymentRecordFromIntent(
+    intent: Stripe.PaymentIntent,
+    status: string,
+  ) {
+    try {
+      // Si el Payment entity está pensado para vincular Booking, intenta encontrar la bookingId en metadata
+      const bookingId = intent.metadata?.bookingId;
+      let bookingEntity: Booking | null = null;
+      if (bookingId) {
+        bookingEntity = await this.bookingRepo.findOne({
+          where: { id: bookingId },
+        });
+      }
+
+      const amount = (intent.amount_received ?? intent.amount) / 100; // en tu entity guardas decimal en unidades
+
+      const payment = this.paymentRepo.create({
+        booking: bookingEntity, // si tu columna no acepta null, ajusta
+        stripePaymentIntentId: intent.id,
+        amount: amount,
+        status: status,
+        currency: intent.currency ?? process.env.STRIPE_CURRENCY ?? 'usd',
+      });
+
+      await this.paymentRepo.save(payment);
+    } catch (err) {
+      console.error('Error guardando payment record', err);
+      // No debe bloquear el webhook; solo loguear (o enviar a tu logger)
+      // console.error('Error guardando payment record', err);
+    }
+  }
+
+  /**
+   * Endpoint utilitario para desarrollo: simula un pago de reserva
+   * Respeta la lógica de marcar isPaid/paymentStatus y guarda Payment record.
+   */
+  async simulateBookingPayment(bookingId: string) {
+    if (process.env.NODE_ENV === 'production') {
+      throw new ForbiddenException(
+        'Simulación de pagos solo disponible en entornos de desarrollo',
+      );
+    }
+
+    const booking = await this.bookingRepo.findOne({
+      where: { id: bookingId },
+      relations: ['room', 'studio', 'musician'],
+    });
+
+    if (!booking) throw new NotFoundException('Reserva no encontrada');
+
+    if (booking.isPaid) throw new BadRequestException('Reserva ya pagada');
+
+    // Marca como pagado
+    booking.isPaid = true;
+    booking.paymentStatus = 'SUCCEEDED';
+    booking.paymentIntentId = `dev-simulated-${Date.now()}`;
+    await this.bookingRepo.save(booking);
+
+    // Guarda un registro en payments
+    const payment = this.paymentRepo.create({
+      booking: booking,
+      stripePaymentIntentId: booking.paymentIntentId,
+      amount: booking.totalPrice ?? 0,
+      status: 'succeeded',
+      currency: process.env.STRIPE_CURRENCY ?? 'usd',
+    });
+    await this.paymentRepo.save(payment);
+
+    return { booking, paymentId: payment.id };
   }
 }
