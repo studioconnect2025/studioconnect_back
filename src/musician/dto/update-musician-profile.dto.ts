@@ -32,6 +32,10 @@ class UpdateProfileDto {
   @IsString()
   @IsOptional()
   codigoPostal?: string;
+
+  @IsString()
+  @IsOptional()
+  pais: string;
 }
 
 export class UpdateMusicianProfileDto {

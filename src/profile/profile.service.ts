@@ -43,6 +43,7 @@ export class ProfileService {
       provincia: dto?.provincia ?? '',
       calle: dto?.calle ?? '',
       codigoPostal: dto?.codigoPostal ?? '',
+      pais: dto?.pais ?? '',
       userId,
     };
 

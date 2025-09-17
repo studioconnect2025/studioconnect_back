@@ -31,6 +31,12 @@ export class Studio {
   studioType: StudioTypeEnum;
 
   @Column()
+  pais: string;
+
+  @Column()
+  codigoPostal: string; 
+
+  @Column()
   city: string;
 
   @Column()

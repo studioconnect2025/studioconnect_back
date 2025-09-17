@@ -16,6 +16,7 @@ export class Profile {
   @Column({ nullable: true }) nombre?: string;
   @Column({ nullable: true }) apellido?: string;
   @Column({ nullable: true }) numeroDeTelefono?: string;
+  @Column({ nullable: true }) pais?: string;
   @Column({ nullable: true }) ciudad?: string;
   @Column({ nullable: true }) provincia?: string;
   @Column({ nullable: true }) calle?: string;

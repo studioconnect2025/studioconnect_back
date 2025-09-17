@@ -49,6 +49,7 @@ export class UsersService {
       nombre: (p as any).nombre,
       apellido: (p as any).apellido,
       numeroDeTelefono: (p as any).numeroDeTelefono,
+      pais: (p as any).pais ?? u.pais,
       ciudad: (p as any).ciudad ?? u.ciudad,
       provincia: (p as any).provincia ?? u.provincia,
       calle: (p as any).calle ?? u.calle,
@@ -114,7 +115,7 @@ export class UsersService {
   async findOne(user: User): Promise<User> {
     return this.usersRepository.findOneOrFail({
       where: { id: user.id },
-      relations: ['bookings', 'studio', 'studio.bookings', 'studio.rooms'],
+      relations: ['bookings', 'studio', 'studio.bookings', 'studio.rooms', 'profile'],
     });
   }
 
@@ -133,7 +134,7 @@ export class UsersService {
     if (!id) throw new BadRequestException('El ID es obligatorio.');
     const user = await this.usersRepository.findOne({
       where: { id },
-      relations: ['bookings', 'studio', 'studio.bookings', 'studio.rooms'],
+      relations: ['bookings', 'studio', 'studio.bookings', 'studio.rooms', 'profile'],
     });
     if (!user) {
       throw new NotFoundException(`Usuario con ID "${id}" no encontrado.`);
