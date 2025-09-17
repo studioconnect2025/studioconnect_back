@@ -27,7 +27,7 @@ import {
 import type { AuthRequest } from 'src/auth/auth-types/auth-request.interface';
 
 @ApiTags('instruments')
-@ApiBearerAuth()
+@ApiBearerAuth('JWT-auth')
 @UseGuards(AuthGuard('jwt'), RolesGuard)
 @Controller('instruments')
 export class InstrumentsController {

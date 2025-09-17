@@ -37,7 +37,7 @@ import {
 } from '@nestjs/platform-express';
 
 @ApiTags('Owners')
-@ApiBearerAuth()
+@ApiBearerAuth('JWT-auth') 
 @Controller('owners/me/studio')
 @UseGuards(AuthGuard('jwt'), RolesGuard)
 export class OwnersController {

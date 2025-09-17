@@ -33,7 +33,7 @@ import { Request as ExpressRequest } from 'express';
 type RawBodyRequest = ExpressRequest & { body: Buffer };
 
 @ApiTags('Payments')
-@ApiBearerAuth()
+@ApiBearerAuth('JWT-auth')
 @Controller('payments')
 export class PaymentsController {
   constructor(private readonly paymentsService: PaymentsService) {}
