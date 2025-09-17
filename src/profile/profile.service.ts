@@ -77,7 +77,8 @@ export class ProfileService {
    * Actualiza el perfil del usuario logueado.
    * Ignora id/userId del DTO para no permitir cambiarlos.
    */
- async updateMyProfile(
+// profile.service.ts
+async updateMyProfile(
   userId: string,
   dto: UpdateProfileDto,
   file?: Express.Multer.File,
@@ -87,8 +88,19 @@ export class ProfileService {
   const userExists = await this.userRepo.exist({ where: { id: userId } });
   if (!userExists) throw new NotFoundException('Usuario no encontrado');
 
-  const profile = await this.profileRepo.findOne({ where: { userId } });
-  if (!profile) throw new NotFoundException('Perfil no encontrado');
+  // ⬇️ Si no hay perfil, lo creamos en el acto con defaults + lo que venga en dto
+  let profile = await this.profileRepo.findOne({ where: { userId } });
+  if (!profile) {
+    profile = await this.createForUser(userId, {
+      nombre: dto?.nombre ?? '',
+      apellido: dto?.apellido ?? '',
+      numeroDeTelefono: dto?.numeroDeTelefono ?? '',
+      ciudad: dto?.ciudad ?? '',
+      provincia: dto?.provincia ?? '',
+      calle: dto?.calle ?? '',
+      codigoPostal: dto?.codigoPostal ?? '',
+    } as any);
+  }
 
   const { id: _ignoreId, userId: _ignoreUserId, ...safe } = dto as any;
 
@@ -109,20 +121,18 @@ export class ProfileService {
 
   // --- Foto de perfil ---
   if (file) {
-    // 1. Subir nueva
     const uploadResult = await this.fileUploadService.uploadFile(file, 'profile_pictures');
 
-    // 2. Eliminar anterior si existía
     if (profile.profileImagePublicId) {
       await this.fileUploadService.deleteFile(profile.profileImagePublicId);
     }
 
-    // 3. Setear datos nuevos
     profile.profileImageUrl = uploadResult.secure_url;
     profile.profileImagePublicId = uploadResult.public_id;
   }
 
   return this.profileRepo.save(profile);
 }
+
 
 }
