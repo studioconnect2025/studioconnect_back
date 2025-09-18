@@ -77,29 +77,44 @@ export class AuthService {
 
   // -------- Registro de Dueño de Estudio --------
   async registerStudioOwner(dto: StudioOwnerRegisterDto) {
-    if (dto.password !== dto.confirmPassword) {
-      throw new BadRequestException('Las contraseñas no coinciden.');
-    }
-    
-    const existingUser = await this.usersService.findOneByEmail(dto.email).catch(() => null);
-
-    if (existingUser) {
-        // ✅ Si el usuario existe, actualiza su perfil
-      const updatedUser = await this.usersService.updateProfile(existingUser.id, dto.profile);
-      return this.generateJwtToken(updatedUser);
-    } else {
-        // Si el usuario no existe, lo crea
-      const newUser = await this.usersService.create({
-        email: dto.email,
-        password: dto.password,
-        confirmPassword: dto.confirmPassword,
-        role: UserRole.STUDIO_OWNER,
-        profile: dto.profile,
-      });
-      await this.emailService.sendWelcomeEmail(dto.profile?.nombre ?? 'Bienvenido/a', newUser.email);
-      return this.generateJwtToken(newUser);
-    }
+  // 1. Valida que las contraseñas coincidan
+  if (dto.password !== dto.confirmPassword) {
+    throw new BadRequestException('Las contraseñas no coinciden.');
   }
+
+  // 2. Busca si el usuario ya existe, sin lanzar un error si no lo encuentra
+  const existingUser = await this.usersService
+    .findOneByEmail(dto.email)
+    .catch(() => null);
+
+  if (existingUser) {
+    // 3a. Si el usuario existe, actualiza su perfil con los nuevos datos
+    const updatedUser = await this.usersService.updateProfile(
+      existingUser.id,
+      dto.profile,
+    );
+    // Devuelve un token para el usuario actualizado
+    return this.generateJwtToken(updatedUser);
+  } else {
+    // 3b. Si el usuario no existe, lo crea con los datos proporcionados
+    const newUser = await this.usersService.create({
+      email: dto.email,
+      password: dto.password,
+      confirmPassword: dto.confirmPassword,
+      role: UserRole.STUDIO_OWNER,
+      profile: dto.profile,
+    });
+
+    // Envía un correo de bienvenida al nuevo usuario
+    await this.emailService.sendWelcomeEmail(
+      dto.profile?.nombre ?? 'Bienvenido/a',
+      newUser.email,
+    );
+
+    // Devuelve un token para el nuevo usuario
+    return this.generateJwtToken(newUser);
+  }
+}
 
   // -------- Login --------
   async login(loginDto: LoginDto) {
