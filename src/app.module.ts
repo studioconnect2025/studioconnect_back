@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { ScheduleModule } from '@nestjs/schedule'; // Importación correcta
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { InstrumentosModule } from './instrumentos/instrumentos.module';
@@ -23,10 +24,13 @@ import { GeocodingModule } from './geocoding/geocoding.module';
     ConfigModule.forRoot({
       isGlobal: true,
     }),
+    // ---- MODULO DE SCHEDULE PUESTO EN EL LUGAR CORRECTO ----
+    ScheduleModule.forRoot(),
+    
     TypeOrmModule.forRootAsync({
-      imports: [ConfigModule],
+      imports: [ConfigModule], // Se quita ScheduleModule de aquí
       inject: [ConfigService],
-     useFactory: (cfg: ConfigService) => {
+      useFactory: (cfg: ConfigService) => {
         return {
           type: 'postgres',
           url: cfg.get<string>('DATABASE_URL'),
@@ -36,7 +40,7 @@ import { GeocodingModule } from './geocoding/geocoding.module';
           synchronize: false,
         };
       },
-        }),
+    }),
     InstrumentosModule,
     UsersModule,
     AuthModule,

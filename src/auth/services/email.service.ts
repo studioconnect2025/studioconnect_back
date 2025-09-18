@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as nodemailer from 'nodemailer';
+import { Booking } from 'src/bookings/dto/bookings.entity';
 
 // Interfaz para estandarizar los detalles de la reserva en las plantillas
 interface BookingDetails {
@@ -391,5 +392,27 @@ export class EmailService {
     await this.sendEmail(mailOptions, `actualización de perfil para ${ownerEmail}`);
   }
 
+  async sendBookingReminder(musicianEmail: string, booking: Booking, timeRemaining: string) {
+    const subject = `🔔 Recordatorio: Tu reserva es ${timeRemaining}`;
+    const html = `
+      <h1>¡Hola!</h1>
+      <p>Este es un recordatorio amistoso sobre tu próxima reserva.</p>
+      <p><strong>Estudio:</strong> ${booking.room.studio.name}</p>
+      <p><strong>Sala:</strong> ${booking.room.name}</p>
+      <p><strong>Fecha de inicio:</strong> ${booking.startTime.toLocaleString()}</p>
+      <p><strong>Fecha de fin:</strong> ${booking.endTime.toLocaleString()}</p>
+      <p>¡Te esperamos!</p>
+    `;
 
+    // AHORA CONSTRUIMOS EL OBJETO mailOptions ANTES DE LLAMAR a sendEmail
+    const mailOptions = {
+        from: `StudioConnect <${this.configService.get<string>('FROM_EMAIL')}>`,
+        to: musicianEmail,
+        subject: subject,
+        html: html,
+    };
+    
+    // Y LLAMAMOS a sendEmail CON LOS DOS ARGUMENTOS CORRECTOS
+    await this.sendEmail(mailOptions, `recordatorio de reserva (${timeRemaining})`); 
+  }
 }

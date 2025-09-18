@@ -4,6 +4,7 @@ import {
   ConflictException,
   BadRequestException,
   ForbiddenException,
+  Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Between, In, LessThan, MoreThan, Repository } from 'typeorm';
@@ -17,9 +18,12 @@ import { BookingAction } from './enum/booking-action.enum';
 import { ReprogramBookingDto } from './dto/reprogram-booking.dto';
 import { Instruments } from 'src/instrumentos/entities/instrumento.entity';
 import { EmailService } from 'src/auth/services/email.service';
+import { Cron } from '@nestjs/schedule'; // Importa el decorador Cron
+
 
 @Injectable()
 export class BookingsService {
+  private readonly logger = new Logger(BookingsService.name);
   constructor(
     @InjectRepository(Booking)
     private readonly bookingRepository: Repository<Booking>,
@@ -30,6 +34,7 @@ export class BookingsService {
 
     private readonly pricingService: PricingService,
     private readonly emailService: EmailService,
+    
   ) {}
 
   /**
@@ -461,4 +466,59 @@ export class BookingsService {
 
     return booking;
   }
+
+   @Cron('0 * * * *') // Se ejecuta cada hora, en el minuto 0.
+  async handleBookingReminders() {
+    this.logger.log('Ejecutando CRON job para buscar recordatorios de reservas...');
+
+    const now = new Date();
+
+    // --- Lógica para recordatorio de 48 horas ---
+    const fortyEightHoursLater = new Date(now.getTime() + 48 * 60 * 60 * 1000);
+    // Creamos una ventana de una hora para buscar reservas
+    const fortySevenHoursLater = new Date(now.getTime() + 47 * 60 * 60 * 1000);
+
+    const bookingsFor48hReminder = await this.bookingRepository.find({
+      where: {
+        status: BookingStatus.CONFIRMED,
+        reminder48hSent: false, // Solo las que no han recibido este recordatorio
+        startTime: Between(fortySevenHoursLater, fortyEightHoursLater),
+      },
+      relations: ['musician', 'room', 'room.studio'],
+    });
+
+    for (const booking of bookingsFor48hReminder) {
+      this.logger.log(`Enviando recordatorio de 48h para la reserva ID: ${booking.id}`);
+      // Asumo que tienes un método en EmailService para esto
+      this.emailService.sendBookingReminder(booking.musician.email, booking, '48 horas');
+      
+      booking.reminder48hSent = true;
+      await this.bookingRepository.save(booking);
+    }
+
+    // --- Lógica para recordatorio de 24 horas ---
+    const twentyFourHoursLater = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+    // Creamos una ventana de una hora para buscar reservas
+    const twentyThreeHoursLater = new Date(now.getTime() + 23 * 60 * 60 * 1000);
+
+    const bookingsFor24hReminder = await this.bookingRepository.find({
+      where: {
+        status: BookingStatus.CONFIRMED,
+        reminder24hSent: false, // Solo las que no han recibido este recordatorio
+        startTime: Between(twentyThreeHoursLater, twentyFourHoursLater),
+      },
+      relations: ['musician', 'room', 'room.studio'],
+    });
+
+    for (const booking of bookingsFor24hReminder) {
+      this.logger.log(`Enviando recordatorio de 24h para la reserva ID: ${booking.id}`);
+       // Reutilizamos el método de EmailService
+      this.emailService.sendBookingReminder(booking.musician.email, booking, '24 horas');
+      
+      booking.reminder24hSent = true;
+      await this.bookingRepository.save(booking);
+    }
+  }
+
+
 }
