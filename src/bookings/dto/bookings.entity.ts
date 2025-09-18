@@ -83,6 +83,13 @@ export class Booking {
   // ===========================
   // NEW: Guardar acción específica del músico (separado de BookingStatus)
   // ===========================
+
+   @Column({ default: false })
+  reminder48hSent: boolean;
+
+  @Column({ default: false })
+  reminder24hSent: boolean;
+
   @Column({
     type: 'enum',
     enum: BookingAction,
