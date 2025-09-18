@@ -12,6 +12,7 @@ import { UpdateRoomDto } from './dto/update-room.dto';
 import { Studio } from 'src/studios/entities/studio.entity';
 import { User } from 'src/users/entities/user.entity';
 import { FileUploadService } from '../file-upload/file-upload.service';
+import { EmailService } from 'src/auth/services/email.service';
 
 @Injectable()
 export class RoomsService {
@@ -21,6 +22,7 @@ export class RoomsService {
     @InjectRepository(Studio)
     private readonly studioRepository: Repository<Studio>,
     private readonly fileUploadService: FileUploadService,
+    private readonly emailService: EmailService,
   ) {}
 
   /**
@@ -47,7 +49,17 @@ export class RoomsService {
       imagePublicIds: [],
     });
 
-    return this.roomRepository.save(room);
+    const savedRoom = await this.roomRepository.save(room);
+
+    // --- NOTIFICACIÓN DE NUEVA SALA AÑADIDA ---
+    this.emailService.sendNewRoomAddedEmail(
+      user.email,
+      studio.name,
+      savedRoom.name,
+      savedRoom.id
+    );
+
+    return savedRoom;
   }
 
   /**
@@ -92,7 +104,17 @@ export class RoomsService {
     }
 
     Object.assign(room, dto);
-    return this.roomRepository.save(room);
+    const updatedRoom = await this.roomRepository.save(room);
+
+    // --- NOTIFICACIÓN DE ACTUALIZACIÓN DE SALA ---
+    this.emailService.sendProfileUpdateEmail(
+      user.email,
+      'Sala',
+      updatedRoom.name,
+      'Detalles de la sala'
+    );
+
+    return updatedRoom;
   }
 
   async remove(roomId: string, user: User): Promise<void> {

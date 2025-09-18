@@ -145,24 +145,26 @@ handleGoogleLogin() {
   // y redirige al usuario a Google antes de que se ejecute este código.
 }
 
-  @Get('google/callback')
+ @Get('google/callback')
 @UseGuards(AuthGuard('google'))
 @ApiOperation({ summary: 'Callback de Google' })
 async handleGoogleCallback(@Req() req, @Res() res: Response) {
+ 
+  
   const result = await this.authService.handleGoogleAuth(req.user);
-  const frontendUrl = process.env.FRONTEND_URL;
+  const frontendUrl = process.env.FRONTEND_URL; // Debe ser http://localhost:3000
 
-  // ✅ Con este 'if', TypeScript entiende que dentro de este bloque,
-  // result.data SÍ contiene 'access_token'.
+  
+
   if (result.status === 'LOGIN_SUCCESS') {
     const accessToken = result.data.access_token;
-    res.redirect(`${frontendUrl}/auth/callback?token=${accessToken}`);
+    const redirectUrl = `${frontendUrl}/auth/callback?token=${accessToken}`;
+    res.redirect(redirectUrl);
   } 
-  
-  // ✅ Y aquí, entiende que result.data contiene 'token'.
   else if (result.status === 'REGISTRATION_REQUIRED') {
     const registrationToken = result.data.token;
-    res.redirect(`${frontendUrl}/register-google?reg_token=${registrationToken}`);
+    const redirectUrl = `${frontendUrl}/register-google?reg_token=${registrationToken}`;
+    res.redirect(redirectUrl);
   }
 }
 
@@ -172,7 +174,6 @@ async handleGoogleCallback(@Req() req, @Res() res: Response) {
   @ApiOperation({ summary: 'Completar registro con Google' })
   @ApiBearerAuth('JWT-Registration') // Documentación para Swagger
   async completeGoogleRegistration(@Req() req, @Body() dto: GoogleRegistrationDto) {
-    // El perfil de Google viene en `req.user` gracias al guard y la estrategia
     const googleProfile = req.user;
     const { role } = dto;
     
