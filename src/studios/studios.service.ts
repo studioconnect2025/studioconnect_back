@@ -144,18 +144,27 @@ export class StudiosService {
     owner: user,
   });
 
-  // 🔹 Geocodificar antes de guardar
+  // 🔹 Geocodificar antes de guardar (usando geocodeProfile)
   try {
-    const fullAddress = `${studio.address}, ${studio.city}, ${studio.province}, ${studio.pais}, ${studio.codigoPostal}`;
-    const coords = await this.geocodingService.geocode(fullAddress);
+    const coords = await this.geocodingService.geocodeProfile({
+      calle: studio.address,
+      ciudad: studio.city,
+      provincia: studio.province,
+      pais: studio.pais,
+      codigoPostal: studio.codigoPostal,
+    });
 
     if (coords) {
       studio.lat = coords.lat;
       studio.lng = coords.lng;
+    } else {
+      this.logger.warn(
+        `No se pudieron obtener coordenadas para el estudio ${studio.name}`,
+      );
     }
   } catch (error) {
     console.warn(
-      `No se pudieron obtener coordenadas para el estudio ${studio.name}: ${error.message}`,
+      `Error al geocodificar estudio ${studio.name}: ${error.message}`,
     );
   }
 
@@ -175,9 +184,9 @@ export class StudiosService {
     );
     studio.comercialRegister = result.secure_url;
 
-     const savedStudio = await this.studioRepository.save(studio);
+    const savedStudio = await this.studioRepository.save(studio);
 
-  // --- NOTIFICACIÓN DE BIENVENIDA AL ESTUDIO ---
+    // --- NOTIFICACIÓN DE BIENVENIDA AL ESTUDIO ---
     this.emailService.sendWelcomeStudioEmail(user.email, savedStudio.name);
 
     return savedStudio;
@@ -188,8 +197,9 @@ export class StudiosService {
 
 
 
+
   // --- ACTUALIZAR ESTUDIO CON ARCHIVOS ---
-  async updateMyStudioWithFiles(
+ async updateMyStudioWithFiles(
   user: User,
   studioId: string,
   dto: UpdateStudioDto,
@@ -217,27 +227,27 @@ export class StudiosService {
   Object.assign(studio, dto);
 
   // --- Recalcular coordenadas si cambió la dirección
-  const addressParts = [
-    studio.address,
-    studio.city,
-    studio.province,
-    studio.pais,
-    studio.codigoPostal,
-  ].filter(Boolean);
+  try {
+    const coords = await this.geocodingService.geocodeProfile({
+      calle: studio.address,
+      ciudad: studio.city,
+      provincia: studio.province,
+      pais: studio.pais,
+      codigoPostal: studio.codigoPostal,
+    });
 
-  if (addressParts.length > 0) {
-    const fullAddress = addressParts.join(', ');
-    try {
-      const coords = await this.geocodingService.geocode(fullAddress);
-      if (coords) {
-        studio.lat = coords.lat;
-        studio.lng = coords.lng;
-      }
-    } catch (error) {
+    if (coords) {
+      studio.lat = coords.lat;
+      studio.lng = coords.lng;
+    } else {
       this.logger.warn(
-        `No se pudieron obtener coordenadas para el estudio ${studio.name}: ${error.message}`,
+        `No se pudieron obtener coordenadas para el estudio ${studio.name}`,
       );
     }
+  } catch (error) {
+    this.logger.warn(
+      `Error al geocodificar estudio ${studio.name}: ${error.message}`,
+    );
   }
 
   // --- Manejo de fotos (máx. 5)
@@ -255,7 +265,6 @@ export class StudiosService {
     studio.photos = currentPhotos;
   }
 
-
   // --- Manejo del registro comercial
   if (files.comercialRegister && files.comercialRegister[0]) {
     const result = await this.fileUploadService.uploadFile(
@@ -263,17 +272,17 @@ export class StudiosService {
     );
     studio.comercialRegister = result.secure_url;
 
-     const updatedStudio = await this.studioRepository.save(studio);
+    const updatedStudio = await this.studioRepository.save(studio);
 
-      // --- NOTIFICACIÓN DE ACTUALIZACIÓN DE ESTUDIO ---
-      this.emailService.sendProfileUpdateEmail(
-        user.email,
-        'Estudio',
-        updatedStudio.name,
-        'Datos generales y/o archivos'
-      );
+    // --- NOTIFICACIÓN DE ACTUALIZACIÓN DE ESTUDIO ---
+    this.emailService.sendProfileUpdateEmail(
+      user.email,
+      'Estudio',
+      updatedStudio.name,
+      'Datos generales y/o archivos',
+    );
 
-      return updatedStudio;
+    return updatedStudio;
   }
 
   return this.studioRepository.save(studio);
