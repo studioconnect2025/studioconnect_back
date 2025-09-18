@@ -12,8 +12,8 @@ import { User } from '../../users/entities/user.entity';
 import { StudioStatus } from '../enum/studio-status.enum';
 import { Booking } from 'src/bookings/dto/bookings.entity';
 import { Room } from 'src/rooms/entities/room.entity';
-import { StudioTypeEnum } from '../enum/studio-type.enum'; // tu enum existente
-import { ServicesType } from '../enum/ServicesType.enum'; // nuevo enum que crearás
+import { StudioTypeEnum } from '../enum/studio-type.enum';
+import { ServicesType } from '../enum/ServicesType.enum';
 
 @Entity('studios')
 export class Studio {
@@ -30,11 +30,12 @@ export class Studio {
   })
   studioType: StudioTypeEnum;
 
+  // 🔹 Dirección normalizada
   @Column()
   pais: string;
 
   @Column()
-  codigoPostal: string; 
+  codigoPostal: string;
 
   @Column()
   city: string;
@@ -44,6 +45,13 @@ export class Studio {
 
   @Column()
   address: string;
+
+  // 🔹 Coordenadas para el mapa (geocodificadas)
+  @Column('decimal', { precision: 10, scale: 7, nullable: true })
+  lat?: number;
+
+  @Column('decimal', { precision: 10, scale: 7, nullable: true })
+  lng?: number;
 
   @Column({ type: 'text' })
   description: string;

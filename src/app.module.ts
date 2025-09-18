@@ -16,6 +16,7 @@ import { OwnersModule } from './owner/owner.module';
 import { OwnersController } from './owner/owner.controller';
 import { PaymentsModule } from './payment/payment.module';
 import { ProfileModule } from './profile/profile.module';
+import { GeocodingModule } from './geocoding/geocoding.module';
 
 @Module({
   imports: [
@@ -25,7 +26,7 @@ import { ProfileModule } from './profile/profile.module';
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: (cfg: ConfigService) => {
+     useFactory: (cfg: ConfigService) => {
         return {
           type: 'postgres',
           url: cfg.get<string>('DATABASE_URL'),
@@ -35,7 +36,7 @@ import { ProfileModule } from './profile/profile.module';
           synchronize: false,
         };
       },
-    }),
+        }),
     InstrumentosModule,
     UsersModule,
     AuthModule,
@@ -48,8 +49,10 @@ import { ProfileModule } from './profile/profile.module';
     OwnersModule,
     PaymentsModule,
     ProfileModule,
+    GeocodingModule,
   ],
   controllers: [AppController, OwnersController],
   providers: [AppService],
 })
 export class AppModule {}
+
