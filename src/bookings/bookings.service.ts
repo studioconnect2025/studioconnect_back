@@ -16,6 +16,7 @@ import { PricingService } from 'src/pricingTotal/pricing.service';
 import { BookingAction } from './enum/booking-action.enum';
 import { ReprogramBookingDto } from './dto/reprogram-booking.dto';
 import { Instruments } from 'src/instrumentos/entities/instrumento.entity';
+import { EmailService } from 'src/auth/services/email.service';
 
 @Injectable()
 export class BookingsService {
@@ -28,6 +29,7 @@ export class BookingsService {
     private readonly instrumentRepository: Repository<Instruments>,
 
     private readonly pricingService: PricingService,
+    private readonly emailService: EmailService,
   ) {}
 
   /**
@@ -37,7 +39,7 @@ export class BookingsService {
     createBookingDto: CreateBookingDto,
     musician: User,
   ): Promise<Booking> {
-    const { roomId, startTime, endTime } = createBookingDto;
+    const { roomId, startTime, endTime, instrumentIds } = createBookingDto;
 
     const start = new Date(startTime);
     const today = new Date();
@@ -59,10 +61,11 @@ export class BookingsService {
 
     const room = await this.roomRepository.findOne({
       where: { id: roomId },
-      relations: ['studio'],
+      relations: ['studio', 'studio.owner'], // Importante: Cargar 'owner' para obtener su email
     });
+
     if (!room)
-      throw new NotFoundException(`sala con ID #${roomId} no encontrado.`);
+      throw new NotFoundException(`Sala con ID #${roomId} no encontrado.`);
     if (!room.isActive)
       throw new ForbiddenException('El estudio no esta activo');
 
@@ -70,7 +73,7 @@ export class BookingsService {
     const conflictingBooking = await this.bookingRepository.findOne({
       where: {
         room: { id: roomId },
-        status: BookingStatus.CONFIRMED, // Solo chocar con reservas confirmadas
+        status: BookingStatus.CONFIRMED,
         startTime: LessThan(endTime),
         endTime: MoreThan(startTime),
       },
@@ -86,23 +89,19 @@ export class BookingsService {
       roomId,
       startTime,
       endTime,
-      createBookingDto.instrumentIds,
+      instrumentIds,
     );
 
     let instruments: Instruments[] = [];
-
-    if (
-      createBookingDto.instrumentIds &&
-      createBookingDto.instrumentIds.length > 0
-    ) {
+    if (instrumentIds && instrumentIds.length > 0) {
       instruments = await this.instrumentRepository.find({
         where: {
-          id: In(createBookingDto.instrumentIds),
+          id: In(instrumentIds),
           room: { id: roomId },
         },
       });
 
-      if (instruments.length !== createBookingDto.instrumentIds.length) {
+      if (instruments.length !== instrumentIds.length) {
         throw new BadRequestException(
           'Algunos instrumentos seleccionados no pertenecen a la sala',
         );
@@ -119,9 +118,38 @@ export class BookingsService {
       status: BookingStatus.PENDING,
       instruments,
     });
-    console.log('TOTAL PRICE CALCULATED:', totalPrice);
 
-    return this.bookingRepository.save(newBooking);
+    const savedBooking = await this.bookingRepository.save(newBooking);
+
+    // --- INICIO DE LA LÓGICA DE NOTIFICACIÓN POR EMAIL ---
+
+    const bookingDetails = {
+      roomName: room.name,
+      studioName: room.studio.name,
+      startTime: savedBooking.startTime,
+      endTime: savedBooking.endTime,
+      totalPrice: savedBooking.totalPrice,
+      musicianEmail: musician.email,
+    };
+
+    // 1. Enviar email de confirmación de solicitud al músico
+    this.emailService.sendBookingRequestMusician(musician.email, bookingDetails);
+
+    // 2. Enviar email de notificación de nueva reserva al dueño del estudio
+    if (room.studio.owner && room.studio.owner.email) {
+      this.emailService.sendBookingRequestOwner(
+        room.studio.owner.email,
+        bookingDetails,
+      );
+    } else {
+      console.error(
+        `ALERTA: No se pudo encontrar el email del dueño para el estudio con ID: ${room.studio.id}. No se envió la notificación.`,
+      );
+    }
+
+    // --- FIN DE LA LÓGICA DE NOTIFICACIÓN ---
+
+    return savedBooking;
   }
 
   /**
@@ -180,7 +208,7 @@ export class BookingsService {
   async confirmBooking(bookingId: string, user: User) {
     const booking = await this.bookingRepository.findOne({
       where: { id: bookingId },
-      relations: ['room', 'room.studio'],
+      relations: ['room', 'room.studio', 'musician'],
     });
 
     if (!booking) throw new NotFoundException('Reserva no encontrada');
@@ -189,13 +217,34 @@ export class BookingsService {
 
     booking.status = BookingStatus.CONFIRMED;
     await this.bookingRepository.save(booking);
+
+    this.emailService.sendBookingConfirmedEmail(booking.musician.email, {
+    musicianName: booking.musician.email, // o el campo que uses
+    studioName: booking.room.studio.name,
+    studioAddress: booking.room.studio.address, // asumiendo que tienes esta propiedad
+    roomName: booking.room.name,
+    startTime: booking.startTime,
+    endTime: booking.endTime,
+    totalPrice: booking.totalPrice,
+    contactInfo: booking.room.studio.owner.email, // o email
+  });
+
+  this.emailService.sendOwnerBookingConfirmedNotice(user.email, {
+    musicianName: booking.musician.email, // o email
+    roomName: booking.room.name,
+    startTime: booking.startTime,
+    endTime: booking.endTime,
+    totalPrice: booking.totalPrice,
+    studioName: booking.room.studio.name,
+  });
+  // --- Fin Notificación ---
     return booking;
   }
 
   async rejectBooking(bookingId: string, user: User): Promise<Booking> {
     const booking = await this.bookingRepository.findOne({
       where: { id: bookingId },
-      relations: ['room', 'room.studio'],
+      relations: ['room', 'room.studio', 'musician'],
     });
 
     if (!booking) throw new NotFoundException('Reserva no encontrada');
@@ -204,6 +253,15 @@ export class BookingsService {
 
     booking.status = BookingStatus.REJECTED;
     await this.bookingRepository.save(booking);
+     // --- Notificación ---
+    this.emailService.sendBookingRejectedEmail(booking.musician.email, {
+    studioName: booking.room.studio.name,
+    roomName: booking.room.name,
+    startTime: booking.startTime,
+    endTime: booking.endTime,
+    totalPrice: booking.totalPrice,
+  });
+  // --- Fin Notificación ---
     return booking;
   }
 
@@ -279,7 +337,6 @@ export class BookingsService {
         'Ya realizaste el máximo de 2 cancelaciones para hoy.',
       );
     }
-
     // MARCA la acción de cancelación (no tocamos BookingStatus que usa el dueño)
     booking.status = BookingStatus.CANCELED;
     booking.action = BookingAction.CANCELED; // NEW
@@ -287,11 +344,30 @@ export class BookingsService {
 
     await this.bookingRepository.save(booking);
 
-    // ALERTA para el dueño (console.log como acordamos)
-    console.log(
-      `🔔 ALERTA: Owner ${booking.room.studio.owner?.email} - La reserva ${booking.id} fue CANCELADA por el músico.`,
-    );
+     this.emailService.sendBookingCancellationEmail(musician.email, {
+    studioName: booking.room.studio.name,
+    roomName: booking.room.name,
+    startTime: booking.startTime,
+    endTime: booking.endTime,
+    totalPrice: booking.totalPrice,
+  });
 
+     if (booking.room.studio.owner?.email) {
+    this.emailService.sendOwnerBookingUpdateAlert(
+      booking.room.studio.owner.email,
+      {
+        musicianName: musician.email, // o email
+        roomName: booking.room.name,
+        startTime: booking.startTime,
+        endTime: booking.endTime,
+        studioName: booking.room.studio.name,
+        totalPrice: booking.totalPrice,
+      },
+      `Se ha cancelado una reserva en ${booking.room.studio.name}`,
+      `El músico ha cancelado su reserva. El siguiente horario ha quedado libre:`
+    );
+  }
+    // --- Fin Notificación ---
     return booking;
   }
 
@@ -363,6 +439,20 @@ export class BookingsService {
     booking.status = BookingStatus.PENDING; // vuelve a pendiente para que el dueño confirme disponibilidad
 
     await this.bookingRepository.save(booking);
+
+     if (booking.room.studio.owner?.email) {
+      this.emailService.sendBookingRequestOwner(
+        booking.room.studio.owner.email,
+        {
+          musicianEmail: musician.email,
+          roomName: booking.room.name,
+          studioName: booking.room.studio.name,
+          startTime: booking.startTime,
+          endTime: booking.endTime,
+          totalPrice: booking.totalPrice
+        }
+      );
+  }
 
     // ALERTA para el dueño (console.log)
     console.log(

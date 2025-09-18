@@ -13,6 +13,7 @@ import { UpdateStudioDto } from './dto/update-studio.dto';
 import { User } from 'src/users/entities/user.entity';
 import { UserRole } from 'src/auth/enum/roles.enum';
 import { FileUploadService } from '../file-upload/file-upload.service';
+import { EmailService } from 'src/auth/services/email.service';
 
 @Injectable()
 export class StudiosService {
@@ -20,6 +21,7 @@ export class StudiosService {
     @InjectRepository(Studio)
     private readonly studioRepository: Repository<Studio>,
     private readonly fileUploadService: FileUploadService,
+    private readonly emailService: EmailService,
   ) {}
 
   // --- MÉTODOS PÚBLICOS ---
@@ -58,7 +60,17 @@ export class StudiosService {
     }
 
     Object.assign(studio, dto);
-    return this.studioRepository.save(studio);
+  const updatedStudio = await this.studioRepository.save(studio);
+
+  // --- NOTIFICACIÓN DE ACTUALIZACIÓN DE ESTUDIO ---
+  this.emailService.sendProfileUpdateEmail(
+    user.email,
+    'Estudio',
+    updatedStudio.name,
+    'Datos del perfil'
+  );
+
+  return updatedStudio;
   }
 
   // --- SUBIR FOTOS INDIVIDUALES ---
@@ -142,7 +154,12 @@ export class StudiosService {
       studio.comercialRegister = result.secure_url;
     }
 
-    return this.studioRepository.save(studio);
+     const savedStudio = await this.studioRepository.save(studio);
+
+  // --- NOTIFICACIÓN DE BIENVENIDA AL ESTUDIO ---
+    this.emailService.sendWelcomeStudioEmail(user.email, savedStudio.name);
+
+    return savedStudio;
   }
 
   // --- ACTUALIZAR ESTUDIO CON ARCHIVOS ---
@@ -199,6 +216,16 @@ export class StudiosService {
       studio.comercialRegister = result.secure_url;
     }
 
-    return this.studioRepository.save(studio);
+     const updatedStudio = await this.studioRepository.save(studio);
+
+      // --- NOTIFICACIÓN DE ACTUALIZACIÓN DE ESTUDIO ---
+      this.emailService.sendProfileUpdateEmail(
+        user.email,
+        'Estudio',
+        updatedStudio.name,
+        'Datos generales y/o archivos'
+      );
+
+      return updatedStudio;
   }
 }

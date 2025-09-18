@@ -8,11 +8,12 @@ import { User } from 'src/users/entities/user.entity';
 import { Room } from 'src/rooms/entities/room.entity';
 import { PricingModule } from 'src/pricingTotal/pricing.module';
 import { Instruments } from 'src/instrumentos/entities/instrumento.entity';
+import { EmailModule } from 'src/auth/modules/email.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Booking, Studio, User, Room, Instruments]),
-    PricingModule,
+    PricingModule, EmailModule 
   ],
   controllers: [BookingsController],
   providers: [BookingsService],

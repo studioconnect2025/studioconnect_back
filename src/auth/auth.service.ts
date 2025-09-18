@@ -1,24 +1,26 @@
-// src/auth/auth.service.ts
 import {
-  Injectable,
-  UnauthorizedException,
   BadRequestException,
-  NotFoundException,
   ForbiddenException,
+  Inject,
+  Injectable,
+  NotFoundException,
+  UnauthorizedException,
 } from '@nestjs/common';
-import { UsersService } from '../users/users.service';
+import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
-import { LoginDto } from './dto/login.dto';
-import { StudioOwnerRegisterDto } from 'src/users/dto/owner-register.dto';
 import { MusicianRegisterDto } from 'src/users/dto/musician-register.dto';
-import { ReactivateAccountDto } from 'src/auth/dto/reactivate-account.dto';
-import { UserRole } from './enum/roles.enum';
+import { StudioOwnerRegisterDto } from 'src/users/dto/owner-register.dto';
 import { User } from '../users/entities/user.entity';
-import { TokenBlacklistService } from './services/token-blacklist.service';
+import { UsersService } from '../users/users.service';
+import { JWT_REGISTRATION_SERVICE } from './constants';
+import { LoginDto } from './dto/login.dto';
+import { ReactivateAccountDto } from './dto/reactivate-account.dto';
+import { UserRole } from './enum/roles.enum';
 import { EmailService } from './services/email.service';
-import { ConfigService } from '@nestjs/config';
+import { TokenBlacklistService } from './services/token-blacklist.service';
 
+// Interfaces para tipado fuerte
 interface LoginSuccessResponse {
   status: 'LOGIN_SUCCESS';
   data: {
@@ -26,26 +28,27 @@ interface LoginSuccessResponse {
     user: Omit<User, 'passwordHash'>;
   };
 }
-
-// Esta es la forma del objeto cuando el usuario es nuevo.
 interface RegistrationRequiredResponse {
   status: 'REGISTRATION_REQUIRED';
   data: {
     token: string;
   };
 }
-
-// Un tipo "unión" que puede ser una de las dos respuestas anteriores.
 type GoogleAuthResponse = LoginSuccessResponse | RegistrationRequiredResponse;
 
 @Injectable()
 export class AuthService {
   constructor(
+    // Dependencias originales en orden
     private usersService: UsersService,
     private jwtService: JwtService,
     private tokenBlacklistService: TokenBlacklistService,
     private readonly emailService: EmailService,
     private readonly configService: ConfigService,
+
+    // Nuevo servicio especializado para el token de registro, inyectado al final
+    @Inject(JWT_REGISTRATION_SERVICE)
+    private readonly jwtRegistrationService: JwtService,
   ) {}
 
   // -------- Registro de Músico --------
@@ -58,8 +61,8 @@ export class AuthService {
       email: dto.email,
       password: dto.password,
       confirmPassword: dto.confirmPassword,
-      role: UserRole.MUSICIAN,            // "Músico"
-      profile: dto.profile,               // <-- PASAMOS EL PERFIL
+      role: UserRole.MUSICIAN,
+      profile: dto.profile,
     });
 
     await this.emailService.sendWelcomeEmail(
@@ -80,8 +83,8 @@ export class AuthService {
       email: dto.email,
       password: dto.password,
       confirmPassword: dto.confirmPassword,
-      role: UserRole.STUDIO_OWNER,        // "Dueño de Estudio"
-      profile: dto.profile,               // <-- PASAMOS EL PERFIL
+      role: UserRole.STUDIO_OWNER,
+      profile: dto.profile,
     });
 
     await this.emailService.sendWelcomeEmail(
@@ -103,7 +106,8 @@ export class AuthService {
 
     if (!user.isActive) {
       throw new ForbiddenException({
-        message: 'Tu cuenta está inactiva. Por favor, reactívala para continuar.',
+        message:
+          'Tu cuenta está inactiva. Por favor, reactívala para continuar.',
         error: 'ACCOUNT_INACTIVE',
       });
     }
@@ -112,37 +116,13 @@ export class AuthService {
   }
 
   // -------- Google OAuth --------
-  async googleLogin(req: any, roleFromSession?: UserRole) {
-    if (!req.user) {
-      throw new BadRequestException('No se encontró información de usuario de Google.');
-    }
-
-    const { email, firstName } = req.user;
-    let user: User;
-
-    try {
-      user = await this.usersService.findOneByEmail(email);
-    } catch (error) {
-      if (error instanceof NotFoundException) {
-        user = await this.usersService.create({
-          email,
-          password: Math.random().toString(36).slice(-10),
-          role: roleFromSession || UserRole.MUSICIAN,
-        });
-        await this.emailService.sendWelcomeEmail(firstName ?? 'Bienvenido/a', user.email);
-      } else {
-        throw error;
-      }
-    }
-
-    return this.generateJwtToken(user);
-  }
-
-   async handleGoogleAuth(profile: any): Promise<GoogleAuthResponse> { 
+  async handleGoogleAuth(profile: any): Promise<GoogleAuthResponse> {
     if (!profile) {
-      throw new BadRequestException('No se encontró información de usuario de Google.');
+      throw new BadRequestException(
+        'No se encontró información de usuario de Google.',
+      );
     }
-    const { email, firstName } = profile;
+    const { email } = profile;
 
     try {
       const user = await this.usersService.findOneByEmail(email);
@@ -153,16 +133,16 @@ export class AuthService {
           error: 'ACCOUNT_INACTIVE',
         });
       }
-      
-      const loginData = await this.generateJwtToken(user);
-      // TypeScript ahora sabe que este objeto coincide con LoginSuccessResponse
-      return { status: 'LOGIN_SUCCESS', data: loginData };
 
+      const loginData = await this.generateJwtToken(user);
+      return { status: 'LOGIN_SUCCESS', data: loginData };
     } catch (error) {
       if (error instanceof NotFoundException) {
         const registrationToken = await this.generateRegistrationToken(profile);
-        // Y este otro coincide con RegistrationRequiredResponse
-        return { status: 'REGISTRATION_REQUIRED', data: { token: registrationToken } };
+        return {
+          status: 'REGISTRATION_REQUIRED',
+          data: { token: registrationToken },
+        };
       }
       throw error;
     }
@@ -171,43 +151,55 @@ export class AuthService {
   async completeGoogleRegistration(googleProfile: any, role: UserRole) {
     const { email, firstName, lastName } = googleProfile;
 
-    const existingUser = await this.usersService.findOneByEmail(email).catch(() => null);
+    const existingUser = await this.usersService
+      .findOneByEmail(email)
+      .catch(() => null);
     if (existingUser) {
       throw new BadRequestException('El usuario ya ha sido registrado.');
     }
 
-    // ✅ CORRECCIÓN: Genera la contraseña aleatoria UNA SOLA VEZ
     const randomPassword = Math.random().toString(36).slice(-10);
 
     const newUser = await this.usersService.create({
       email,
-      // ✅ Usa la MISMA variable para ambos campos
       password: randomPassword,
       confirmPassword: randomPassword,
-      role, 
+      role,
       profile: {
         nombre: firstName,
         apellido: lastName,
       },
     });
 
-    await this.emailService.sendWelcomeEmail(firstName ?? 'Bienvenido/a', newUser.email);
+    await this.emailService.sendWelcomeEmail(
+      firstName ?? 'Bienvenido/a',
+      newUser.email,
+    );
 
     return this.generateJwtToken(newUser);
   }
 
   // -------- Reactivar Cuenta --------
-  async reactivateAccount(reactivateDto: ReactivateAccountDto): Promise<{ message: string }> {
+  async reactivateAccount(
+    reactivateDto: ReactivateAccountDto,
+  ): Promise<{ message: string }> {
     const user = await this.usersService.findOneByEmail(reactivateDto.email);
     if (!user) {
-      throw new NotFoundException('No se encontró un usuario con ese correo electrónico.');
+      throw new NotFoundException(
+        'No se encontró un usuario con ese correo electrónico.',
+      );
     }
     if (user.isActive) {
-      return { message: 'Tu cuenta ya se encuentra activa. Puedes iniciar sesión.' };
+      return {
+        message: 'Tu cuenta ya se encuentra activa. Puedes iniciar sesión.',
+      };
     }
     user.isActive = true;
     await this.usersService.updateUser(user);
-    return { message: 'Tu cuenta ha sido reactivada exitosamente. Ahora puedes iniciar sesión.' };
+    return {
+      message:
+        'Tu cuenta ha sido reactivada exitosamente. Ahora puedes iniciar sesión.',
+    };
   }
 
   // -------- Logout --------
@@ -219,7 +211,7 @@ export class AuthService {
     return { message: 'Cierre de sesión exitoso.' };
   }
 
-  // -------- JWT --------
+  // -------- Métodos Privados para JWT --------
   private async generateJwtToken(user: User) {
     const { passwordHash, ...userCoreInfo } = user;
     const payload = {
@@ -239,11 +231,10 @@ export class AuthService {
       firstName: profile.firstName,
       lastName: profile.lastName,
       picture: profile.picture,
-      type: 'GOOGLE_REGISTRATION', // Un 'claim' para identificar el propósito del token
+      type: 'GOOGLE_REGISTRATION',
     };
-    return this.jwtService.signAsync(payload, {
-      secret: this.configService.get<string>('JWT_REGISTRATION_SECRET'),
-      expiresIn: '15m', // Haz que expire pronto
-    });
+
+    // Usamos el servicio de registro dedicado. Ya no necesita el 'secret' explícito.
+    return this.jwtRegistrationService.signAsync(payload);
   }
 }
