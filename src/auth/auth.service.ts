@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   Inject,
   Injectable,
@@ -39,14 +40,11 @@ type GoogleAuthResponse = LoginSuccessResponse | RegistrationRequiredResponse;
 @Injectable()
 export class AuthService {
   constructor(
-    // Dependencias originales en orden
     private usersService: UsersService,
     private jwtService: JwtService,
     private tokenBlacklistService: TokenBlacklistService,
     private readonly emailService: EmailService,
     private readonly configService: ConfigService,
-
-    // Nuevo servicio especializado para el token de registro, inyectado al final
     @Inject(JWT_REGISTRATION_SERVICE)
     private readonly jwtRegistrationService: JwtService,
   ) {}
@@ -57,20 +55,24 @@ export class AuthService {
       throw new BadRequestException('Las contraseñas no coinciden.');
     }
 
-    const newUser = await this.usersService.create({
-      email: dto.email,
-      password: dto.password,
-      confirmPassword: dto.confirmPassword,
-      role: UserRole.MUSICIAN,
-      profile: dto.profile,
-    });
+    const existingUser = await this.usersService.findOneByEmail(dto.email).catch(() => null);
 
-    await this.emailService.sendWelcomeEmail(
-      dto.profile?.nombre ?? 'Bienvenido/a',
-      newUser.email,
-    );
-
-    return this.generateJwtToken(newUser);
+    if (existingUser) {
+      // ✅ Si el usuario existe, actualiza su perfil
+      const updatedUser = await this.usersService.updateProfile(existingUser.id, dto.profile);
+      return this.generateJwtToken(updatedUser);
+    } else {
+      // Si el usuario no existe, lo crea
+      const newUser = await this.usersService.create({
+        email: dto.email,
+        password: dto.password,
+        confirmPassword: dto.confirmPassword,
+        role: UserRole.MUSICIAN,
+        profile: dto.profile,
+      });
+      await this.emailService.sendWelcomeEmail(dto.profile?.nombre ?? 'Bienvenido/a', newUser.email);
+      return this.generateJwtToken(newUser);
+    }
   }
 
   // -------- Registro de Dueño de Estudio --------
@@ -78,21 +80,25 @@ export class AuthService {
     if (dto.password !== dto.confirmPassword) {
       throw new BadRequestException('Las contraseñas no coinciden.');
     }
+    
+    const existingUser = await this.usersService.findOneByEmail(dto.email).catch(() => null);
 
-    const newUser = await this.usersService.create({
-      email: dto.email,
-      password: dto.password,
-      confirmPassword: dto.confirmPassword,
-      role: UserRole.STUDIO_OWNER,
-      profile: dto.profile,
-    });
-
-    await this.emailService.sendWelcomeEmail(
-      dto.profile?.nombre ?? 'Bienvenido/a',
-      newUser.email,
-    );
-
-    return this.generateJwtToken(newUser);
+    if (existingUser) {
+        // ✅ Si el usuario existe, actualiza su perfil
+      const updatedUser = await this.usersService.updateProfile(existingUser.id, dto.profile);
+      return this.generateJwtToken(updatedUser);
+    } else {
+        // Si el usuario no existe, lo crea
+      const newUser = await this.usersService.create({
+        email: dto.email,
+        password: dto.password,
+        confirmPassword: dto.confirmPassword,
+        role: UserRole.STUDIO_OWNER,
+        profile: dto.profile,
+      });
+      await this.emailService.sendWelcomeEmail(dto.profile?.nombre ?? 'Bienvenido/a', newUser.email);
+      return this.generateJwtToken(newUser);
+    }
   }
 
   // -------- Login --------
@@ -106,8 +112,7 @@ export class AuthService {
 
     if (!user.isActive) {
       throw new ForbiddenException({
-        message:
-          'Tu cuenta está inactiva. Por favor, reactívala para continuar.',
+        message: 'Tu cuenta está inactiva. Por favor, reactívala para continuar.',
         error: 'ACCOUNT_INACTIVE',
       });
     }
@@ -117,23 +122,19 @@ export class AuthService {
 
   // -------- Google OAuth --------
   async handleGoogleAuth(profile: any): Promise<GoogleAuthResponse> {
-    if (!profile) {
-      throw new BadRequestException(
-        'No se encontró información de usuario de Google.',
-      );
+    if (!profile || !profile.email) {
+      throw new BadRequestException('No se encontró información de usuario de Google.');
     }
     const { email } = profile;
 
     try {
       const user = await this.usersService.findOneByEmail(email);
-
       if (!user.isActive) {
         throw new ForbiddenException({
           message: 'Tu cuenta está inactiva. Por favor, reactívala.',
           error: 'ACCOUNT_INACTIVE',
         });
       }
-
       const loginData = await this.generateJwtToken(user);
       return { status: 'LOGIN_SUCCESS', data: loginData };
     } catch (error) {
@@ -147,19 +148,18 @@ export class AuthService {
       throw error;
     }
   }
-
+  
   async completeGoogleRegistration(googleProfile: any, role: UserRole) {
     const { email, firstName, lastName } = googleProfile;
+    const existingUser = await this.usersService.findOneByEmail(email).catch(() => null);
 
-    const existingUser = await this.usersService
-      .findOneByEmail(email)
-      .catch(() => null);
     if (existingUser) {
-      throw new BadRequestException('El usuario ya ha sido registrado.');
+      // ✅ Si el usuario ya existe, simplemente se loguea
+      return this.generateJwtToken(existingUser);
     }
 
+    // Si no existe, se crea un nuevo usuario
     const randomPassword = Math.random().toString(36).slice(-10);
-
     const newUser = await this.usersService.create({
       email,
       password: randomPassword,
@@ -170,24 +170,15 @@ export class AuthService {
         apellido: lastName,
       },
     });
-
-    await this.emailService.sendWelcomeEmail(
-      firstName ?? 'Bienvenido/a',
-      newUser.email,
-    );
-
+    await this.emailService.sendWelcomeEmail(firstName ?? 'Bienvenido/a', newUser.email);
     return this.generateJwtToken(newUser);
   }
 
   // -------- Reactivar Cuenta --------
-  async reactivateAccount(
-    reactivateDto: ReactivateAccountDto,
-  ): Promise<{ message: string }> {
+  async reactivateAccount(reactivateDto: ReactivateAccountDto): Promise<{ message: string }> {
     const user = await this.usersService.findOneByEmail(reactivateDto.email);
     if (!user) {
-      throw new NotFoundException(
-        'No se encontró un usuario con ese correo electrónico.',
-      );
+      throw new NotFoundException('No se encontró un usuario con ese correo electrónico.');
     }
     if (user.isActive) {
       return {
@@ -197,8 +188,7 @@ export class AuthService {
     user.isActive = true;
     await this.usersService.updateUser(user);
     return {
-      message:
-        'Tu cuenta ha sido reactivada exitosamente. Ahora puedes iniciar sesión.',
+      message: 'Tu cuenta ha sido reactivada exitosamente. Ahora puedes iniciar sesión.',
     };
   }
 
@@ -233,8 +223,6 @@ export class AuthService {
       picture: profile.picture,
       type: 'GOOGLE_REGISTRATION',
     };
-
-    // Usamos el servicio de registro dedicado. Ya no necesita el 'secret' explícito.
     return this.jwtRegistrationService.signAsync(payload);
   }
 }
