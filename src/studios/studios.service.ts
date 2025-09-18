@@ -15,6 +15,9 @@ import { User } from 'src/users/entities/user.entity';
 import { UserRole } from 'src/auth/enum/roles.enum';
 import { FileUploadService } from '../file-upload/file-upload.service';
 import { GeocodingService } from 'src/geocoding/geocoding.service';
+import { EmailService } from 'src/auth/services/email.service';
+
+
 
 @Injectable()
 export class StudiosService {
@@ -23,6 +26,7 @@ export class StudiosService {
     private readonly studioRepository: Repository<Studio>,
     private readonly fileUploadService: FileUploadService,
     private readonly geocodingService: GeocodingService,
+    private readonly emailService: EmailService,
   ) {}
 
   private readonly logger = new Logger(StudiosService.name);
@@ -64,7 +68,17 @@ export class StudiosService {
     }
 
     Object.assign(studio, dto);
-    return this.studioRepository.save(studio);
+  const updatedStudio = await this.studioRepository.save(studio);
+
+  // --- NOTIFICACIÓN DE ACTUALIZACIÓN DE ESTUDIO ---
+  this.emailService.sendProfileUpdateEmail(
+    user.email,
+    'Estudio',
+    updatedStudio.name,
+    'Datos del perfil'
+  );
+
+  return updatedStudio;
   }
 
   // --- SUBIR FOTOS INDIVIDUALES ---
@@ -160,6 +174,13 @@ export class StudiosService {
       files.comercialRegister[0],
     );
     studio.comercialRegister = result.secure_url;
+
+     const savedStudio = await this.studioRepository.save(studio);
+
+  // --- NOTIFICACIÓN DE BIENVENIDA AL ESTUDIO ---
+    this.emailService.sendWelcomeStudioEmail(user.email, savedStudio.name);
+
+    return savedStudio;
   }
 
   return this.studioRepository.save(studio);
@@ -234,12 +255,25 @@ export class StudiosService {
     studio.photos = currentPhotos;
   }
 
+
   // --- Manejo del registro comercial
   if (files.comercialRegister && files.comercialRegister[0]) {
     const result = await this.fileUploadService.uploadFile(
       files.comercialRegister[0],
     );
     studio.comercialRegister = result.secure_url;
+
+     const updatedStudio = await this.studioRepository.save(studio);
+
+      // --- NOTIFICACIÓN DE ACTUALIZACIÓN DE ESTUDIO ---
+      this.emailService.sendProfileUpdateEmail(
+        user.email,
+        'Estudio',
+        updatedStudio.name,
+        'Datos generales y/o archivos'
+      );
+
+      return updatedStudio;
   }
 
   return this.studioRepository.save(studio);
