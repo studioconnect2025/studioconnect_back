@@ -111,6 +111,48 @@ export class UsersService {
     return this.usersRepository.save(user);
   }
 
+ async updateProfile(userId: string, profileDto: any): Promise<User> {
+  const user = await this.usersRepository.findOne({
+    where: { id: userId },
+    relations: ['profile'],
+  });
+
+  if (!user) {
+    throw new NotFoundException(`Usuario con ID "${userId}" no encontrado.`);
+  }
+
+  const profileData = this.normalizeProfile(profileDto);
+
+  if (!profileData) {
+    return user;
+  }
+
+  try {
+    if (user.profile) {
+      const updatedProfile = this.profileRepository.merge(user.profile, profileData);
+      await this.profileRepository.save(updatedProfile);
+    } else {
+      const newProfile = this.profileRepository.create({
+        ...profileData,
+        user: user,
+      });
+      const savedProfile = await this.profileRepository.save(newProfile);
+      user.profile = savedProfile;
+    }
+
+    // ✅ --- CAMBIO REALIZADO AQUÍ --- ✅
+    // Usamos findOneOrFail para garantizar que siempre se devuelva un User
+    return await this.usersRepository.findOneOrFail({
+      where: { id: userId },
+      relations: ['profile'],
+    });
+
+  } catch (err) {
+    this.logger.error(`Error actualizando el perfil para el usuario ${userId}`, err?.stack || err);
+    throw new InternalServerErrorException('No se pudo actualizar el perfil del usuario.');
+  }
+}
+
   // ====== Resto de métodos que ya tenías (sin cambios relevantes) ======
   async findOne(user: User): Promise<User> {
     return this.usersRepository.findOneOrFail({
