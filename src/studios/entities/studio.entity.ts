@@ -92,4 +92,7 @@ export class Studio {
 
   @Column({ type: 'enum', enum: StudioStatus, default: StudioStatus.PENDING })
   status: StudioStatus;
+
+  @Column({ nullable: true })
+  stripeAccountId: string;
 }
