@@ -19,10 +19,23 @@ export class RolesGuard implements CanActivate {
     );
 
     if (!requiredRoles) {
-      return true; // Si no hay un decorador @Roles, se permite el acceso.
+      return true; // Si no se especifican roles, se permite el acceso.
     }
 
-    const { user } = context.switchToHttp().getRequest();
+    // --- INICIO DE LA CORRECCIÓN ---
+    let user;
+
+    // Verificamos el tipo de contexto (HTTP o WebSocket)
+    if (context.getType() === 'http') {
+      // Si es HTTP, obtenemos el usuario del request.
+      user = context.switchToHttp().getRequest().user;
+    } else if (context.getType() === 'ws') {
+      // Si es WebSocket, obtenemos el usuario del cliente del socket.
+      // (Esto asume que tu WsAuthGuard ya lo ha añadido a 'client.data')
+      user = context.switchToWs().getClient().data.user;
+    }
+    // --- FIN DE LA CORRECCIÓN ---
+
     if (!user) {
       throw new ForbiddenException(
         'No hay información de usuario para validar roles.',

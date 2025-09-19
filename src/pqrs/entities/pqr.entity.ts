@@ -4,8 +4,10 @@ import {
   Column,
   CreateDateColumn,
   ManyToOne,
+  OneToMany,
 } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
+import { PqrResponse } from './pqr-response.entity';
 
 export enum PqrStatus {
   OPEN = 'ABIERTO',
@@ -55,4 +57,7 @@ export class Pqr {
   // A quién se reporta (opcional)
   @ManyToOne(() => User, { nullable: true })
   reportedUser?: User;
+
+   @OneToMany(() => PqrResponse, (response) => response.pqr, { eager: true })
+    responses: PqrResponse[];
 }

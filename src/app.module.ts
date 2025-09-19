@@ -20,6 +20,7 @@ import { ProfileModule } from './profile/profile.module';
 import { GeocodingModule } from './geocoding/geocoding.module';
 import { AdminModule } from './admin/admin.module';
 import { ChatModule } from './chat/chat.module';
+import { PqrsModule } from './pqrs/pqrs.module';
 
 @Module({
   imports: [
@@ -58,6 +59,7 @@ import { ChatModule } from './chat/chat.module';
     GeocodingModule,
     AdminModule,
     ChatModule,
+    PqrsModule, 
   ],
   controllers: [AppController, OwnersController],
   providers: [AppService],

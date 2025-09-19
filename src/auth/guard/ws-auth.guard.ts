@@ -29,6 +29,7 @@ export class WsAuthGuard implements CanActivate {
         client.disconnect();
         return false;
       }
+      
       // ¡Muy importante! Adjuntamos el usuario al objeto del socket
       client.data.user = user;
       return true;
