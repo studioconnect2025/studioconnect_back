@@ -73,4 +73,16 @@ export class PricingService {
       room,
     };
   }
+
+  calculateCommission(amount: number): number {
+    if (typeof amount !== 'number' || isNaN(amount)) {
+      throw new Error('calculateCommission: amount debe ser number válido');
+    }
+    return parseFloat((amount * 0.15).toFixed(2));
+  }
+
+  // ✅ NEW: devuelve comisión en centavos (para Stripe)
+  calculateCommissionInCents(amount: number): number {
+    return Math.round(this.calculateCommission(amount) * 100);
+  }
 }
