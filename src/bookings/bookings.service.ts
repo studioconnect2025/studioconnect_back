@@ -520,5 +520,17 @@ export class BookingsService {
     }
   }
 
+  async findOneForChat(bookingId: string): Promise<Booking> {
+    const booking = await this.bookingRepository.findOne({
+      where: { id: bookingId },
+      // Cargamos el músico y el dueño del estudio a través de las relaciones
+      relations: ['musician', 'studio', 'studio.owner'],
+    });
+
+    if (!booking) {
+      throw new NotFoundException(`Reserva con ID ${bookingId} no encontrada.`);
+    }
+    return booking;
+  }
 
 }

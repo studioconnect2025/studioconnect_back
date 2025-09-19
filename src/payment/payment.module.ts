@@ -9,7 +9,7 @@ import { User } from 'src/users/entities/user.entity';
 import { Studio } from 'src/studios/entities/studio.entity';
 import { PricingModule } from 'src/pricingTotal/pricing.module';
 import { Payment } from './entities/payment.entity';
-import { EmailModule } from 'src/auth/modules/email.module';
+import { AuthModule } from 'src/auth/auth.module';
 
 @Module({
   imports: [
@@ -20,9 +20,9 @@ import { EmailModule } from 'src/auth/modules/email.module';
       User,
       Studio,
       Payment,
-      EmailModule,
     ]),
     PricingModule,
+     AuthModule,
   ],
   controllers: [PaymentsController],
   providers: [PaymentsService],
