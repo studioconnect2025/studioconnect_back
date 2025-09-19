@@ -17,5 +17,6 @@ import { EmailModule } from 'src/auth/modules/email.module';
   ],
   controllers: [BookingsController],
   providers: [BookingsService],
+  exports: [BookingsService],
 })
 export class BookingsModule {}

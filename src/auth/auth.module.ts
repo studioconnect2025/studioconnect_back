@@ -58,5 +58,6 @@ import { redisStore } from 'cache-manager-redis-store';
       },
     },
   ],
+   exports: [AuthService, EmailService],
 })
 export class AuthModule {}

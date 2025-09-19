@@ -240,4 +240,13 @@ export class AuthService {
     };
     return this.jwtRegistrationService.signAsync(payload);
   }
+
+  public verifyTokenAndGetUser(token: string): User {
+    const payload = this.jwtService.verify(token); // Esto arrojará un error si el token no es válido
+    // Aquí podrías buscar el usuario en la BD para asegurarte de que existe y está activo
+    // const user = await this.usersService.findOne(payload.id);
+    // Por ahora, devolvemos el payload que contiene la info del usuario.
+    // Asegúrate de que el payload del JWT contenga el id y el rol.
+    return payload as User; 
+}
 }

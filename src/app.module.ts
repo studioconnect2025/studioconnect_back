@@ -19,6 +19,7 @@ import { PaymentsModule } from './payment/payment.module';
 import { ProfileModule } from './profile/profile.module';
 import { GeocodingModule } from './geocoding/geocoding.module';
 import { AdminModule } from './admin/admin.module';
+import { ChatModule } from './chat/chat.module';
 
 @Module({
   imports: [
@@ -56,6 +57,7 @@ import { AdminModule } from './admin/admin.module';
     ProfileModule,
     GeocodingModule,
     AdminModule,
+    ChatModule,
   ],
   controllers: [AppController, OwnersController],
   providers: [AppService],
