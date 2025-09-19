@@ -85,10 +85,12 @@ export class UpdateStudioDto {
 
   @ApiPropertyOptional({ description: 'Hora de apertura, formato HH:MM', example: '09:30' })
   @Matches(/^([0-1]\d|2[0-3]):([0-5]\d)$/, { message: 'Hora debe tener formato HH:MM' })
+  @IsOptional()
   openingTime?: string;
 
   @ApiPropertyOptional({ description: 'Hora de cierre, formato HH:MM', example: '21:00' })
   @Matches(/^([0-1]\d|2[0-3]):([0-5]\d)$/, { message: 'Hora debe tener formato HH:MM' })
+  @IsOptional()
   closingTime?: string;
 
   @ApiPropertyOptional({ description: 'Estado del estudio', example: 'approved', enum: StudioStatus })
@@ -96,5 +98,3 @@ export class UpdateStudioDto {
   @IsOptional()
   status?: StudioStatus;
 }
-
-
