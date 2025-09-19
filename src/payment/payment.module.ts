@@ -9,6 +9,7 @@ import { User } from 'src/users/entities/user.entity';
 import { Studio } from 'src/studios/entities/studio.entity';
 import { PricingModule } from 'src/pricingTotal/pricing.module';
 import { Payment } from './entities/payment.entity';
+import { EmailModule } from 'src/auth/modules/email.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { Payment } from './entities/payment.entity';
       User,
       Studio,
       Payment,
+      EmailModule,
     ]),
     PricingModule,
   ],

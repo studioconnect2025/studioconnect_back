@@ -415,4 +415,58 @@ export class EmailService {
     // Y LLAMAMOS a sendEmail CON LOS DOS ARGUMENTOS CORRECTOS
     await this.sendEmail(mailOptions, `recordatorio de reserva (${timeRemaining})`); 
   }
+
+  async sendPaymentSuccessMusician(musicianEmail: string, details: BookingDetails, paymentIntentId: string): Promise<void> {
+    const mailOptions = {
+      from: `StudioConnect <${this.configService.get<string>('FROM_EMAIL')}>`,
+      to: musicianEmail,
+      subject: `Recibo de tu pago para la reserva en ${details.studioName}`,
+      html: `
+        <h1>¡Gracias por tu pago!</h1>
+        <p>Hola ${details.musicianName || ''},</p>
+        <p>Hemos procesado exitosamente tu pago para la reserva en <strong>${details.studioName}</strong>. Tu reserva está confirmada y lista.</p>
+        
+        <h2>Recibo de Pago</h2>
+        <ul>
+          <li><strong>ID de Transacción:</strong> ${paymentIntentId}</li>
+          <li><strong>Estudio:</strong> ${details.studioName}</li>
+          <li><strong>Sala:</strong> ${details.roomName}</li>
+          <li><strong>Fecha y Hora:</strong> ${details.startTime.toLocaleString()}</li>
+          <li><strong>Monto Total Pagado:</strong> $${details.totalPrice.toFixed(2)}</li>
+        </ul>
+        <p>¡Esperamos que tengas una sesión increíble!</p>
+      `,
+    };
+    await this.sendEmail(mailOptions, `recibo de pago para ${musicianEmail}`);
+  }
+
+  /**
+   * Notifica al dueño del estudio que ha recibido el pago de una reserva.
+   */
+  async sendPaymentReceivedOwner(ownerEmail: string, details: BookingDetails, ownerPayoutAmount: number): Promise<void> {
+    const commission = details.totalPrice - ownerPayoutAmount;
+    const mailOptions = {
+      from: `StudioConnect <${this.configService.get<string>('FROM_EMAIL')}>`,
+      to: ownerEmail,
+      subject: `¡Has recibido un pago de StudioConnect!`,
+      html: `
+        <h1>¡Has recibido un pago!</h1>
+        <p>Hola,</p>
+        <p>Te hemos transferido las ganancias correspondientes a una nueva reserva pagada en tu estudio <strong>${details.studioName}</strong>.</p>
+        
+        <h2>Desglose de la Transacción</h2>
+        <ul>
+          <li><strong>Reserva para:</strong> ${details.musicianName || details.musicianEmail}</li>
+          <li><strong>Sala:</strong> ${details.roomName}</li>
+          <li><strong>Fecha:</strong> ${details.startTime.toLocaleString()}</li>
+          <li>----------------------------------</li>
+          <li><strong>Monto total pagado por el músico:</strong> $${details.totalPrice.toFixed(2)}</li>
+          <li><strong>Comisión de StudioConnect:</strong> -$${commission.toFixed(2)}</li>
+          <li><strong>Total transferido a tu cuenta:</strong> <strong>$${ownerPayoutAmount.toFixed(2)}</strong></li>
+        </ul>
+        <p>Los fondos han sido enviados a tu cuenta de Stripe conectada.</p>
+      `,
+    };
+    await this.sendEmail(mailOptions, `notificación de pago para ${ownerEmail}`);
+  }
 }

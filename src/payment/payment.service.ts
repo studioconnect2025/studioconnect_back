@@ -20,6 +20,7 @@ import {
 } from './dto/Create-Membership-Paymentdto';
 import { PricingService } from 'src/pricingTotal/pricing.service';
 import { Payment } from './entities/payment.entity';
+import { EmailService } from 'src/auth/services/email.service';
 
 @Injectable()
 export class PaymentsService {
@@ -36,6 +37,7 @@ export class PaymentsService {
     @InjectRepository(Payment)
     private readonly paymentRepo: Repository<Payment>,
     private readonly pricingService: PricingService,
+    private readonly emailService: EmailService,
   ) {
     const stripeKey = process.env.STRIPE_SECRET_KEY;
     if (!stripeKey) throw new Error('STRIPE_SECRET_KEY no definido');
@@ -347,5 +349,39 @@ export class PaymentsService {
     await this.paymentRepo.save(payment);
 
     return { booking, paymentId: payment.id };
+  }
+
+  private async handleSuccessfulPayment(booking: Booking, intent: Stripe.PaymentIntent) {
+    // Marcar reserva como pagada
+    booking.isPaid = true;
+    booking.paymentStatus = 'SUCCEEDED';
+    await this.bookingRepo.save(booking);
+    
+    // Guardar registro del pago
+    await this.savePaymentRecordFromIntent(intent, 'succeeded');
+
+    // --- LÓGICA DE NOTIFICACIONES DE PAGO ---
+    const totalAmount = intent.amount / 100;
+    const commission = (intent.application_fee_amount || 0) / 100;
+    const ownerPayout = totalAmount - commission;
+
+    const bookingDetails = {
+      studioName: booking.studio.name,
+      roomName: booking.room.name,
+      startTime: booking.startTime,
+      endTime: booking.endTime,
+      totalPrice: totalAmount,
+      musicianEmail: booking.musician.email,
+    };
+
+    // Enviar email al músico
+    if (booking.musician?.email) {
+      this.emailService.sendPaymentSuccessMusician(booking.musician.email, bookingDetails, intent.id);
+    }
+
+    // Enviar email al dueño del estudio
+    if (booking.studio.owner?.email) {
+      this.emailService.sendPaymentReceivedOwner(booking.studio.owner.email, bookingDetails, ownerPayout);
+    }
   }
 }
