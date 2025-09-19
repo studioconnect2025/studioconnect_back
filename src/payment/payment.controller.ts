@@ -100,6 +100,23 @@ export class PaymentsController {
     return this.paymentsService.handleStripeWebhook(rawBody, signature);
   }
 
+  @Post('capture/:paymentIntentId')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles(UserRole.STUDIO_OWNER)
+  @ApiOperation({
+    summary:
+      'Captura manual de un PaymentIntent (solo dueños, al confirmar reserva)',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Pago capturado y liberado al dueño del estudio',
+  })
+  async capturePayment(
+    @Param('paymentIntentId') paymentIntentId: string,
+  ): Promise<Stripe.PaymentIntent> {
+    return await this.paymentsService.capturePayment(paymentIntentId); // NEW
+  }
+
   /**
    * Endpoint dev-only para simular pago de reserva.
    * Respeta tu lógica: solo músicos pueden pagar reservas, y solo en dev.

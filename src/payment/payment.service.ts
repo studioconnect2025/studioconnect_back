@@ -74,30 +74,56 @@ export class PaymentsService {
       );
     }
 
+    const validInstrumentIds = dto.instrumentIds?.filter((id) => id) ?? [];
+
     // 🔹 Calcular precio de sala
     const pricing = await this.pricingService.calculatePrice(
       booking.room.id,
       booking.startTime,
       booking.endTime,
-      dto.instrumentIds,
+      validInstrumentIds,
     );
 
     booking.totalPrice = pricing.totalPrice;
 
-    // 🔹 Crear PaymentIntent en Stripe
-    const paymentIntent = await this.stripe.paymentIntents.create({
-      amount: Math.round(pricing.totalPrice * 100), // centavos
-      currency: 'usd',
-      metadata: {
-        bookingId: booking.id,
-        studioId: booking.studio.id,
-        roomId: booking.room.id,
-        instruments: pricing.instrumentsList.map((i) => i.id).join(','),
-        roomCommission: pricing.roomCommission.toFixed(2),
-        roomOwnerAmount: pricing.roomOwnerAmount.toFixed(2),
-        instrumentsAmount: pricing.instrumentsAmount.toFixed(2),
-      },
-    });
+    const commissionAmountInCents =
+      this.pricingService.calculateCommissionInCents(pricing.totalPrice);
+
+    if (!booking.studio?.stripeAccountId) {
+      throw new BadRequestException(
+        'El estudio no tiene stripeAccountId configurado. No se puede realizar la transferencia.',
+      );
+    }
+
+    // 🔹 Crear PaymentIntent en Stripe (con reparto de comisión)
+    let paymentIntent: Stripe.PaymentIntent;
+    try {
+      paymentIntent = await this.stripe.paymentIntents.create({
+        amount: Math.round(pricing.totalPrice * 100), // centavos
+        currency: 'usd',
+        capture_method: 'manual',
+        application_fee_amount: commissionAmountInCents, // 👈 comisión que se queda tu plataforma
+        transfer_data: {
+          destination: booking.studio.stripeAccountId, // 👈 la cuenta del dueño del estudio
+        },
+        metadata: {
+          bookingId: booking.id,
+          studioId: booking.studio.id,
+          roomId: booking.room.id,
+          instruments: pricing.instrumentsList.map((i) => i.id).join(','),
+          roomCommission: pricing.roomCommission.toFixed(2),
+          roomOwnerAmount: pricing.roomOwnerAmount.toFixed(2),
+          instrumentsAmount: pricing.instrumentsAmount.toFixed(2),
+        },
+      });
+    } catch (error) {
+      if (error instanceof Error) {
+        throw new BadRequestException(
+          `Error creando PaymentIntent en Stripe: ${error.message}`,
+        );
+      }
+      throw new BadRequestException('Error creando PaymentIntent en Stripe');
+    }
 
     booking.paymentIntentId = paymentIntent.id;
     booking.paymentStatus = 'PENDING';
@@ -176,6 +202,31 @@ export class PaymentsService {
     }
 
     return paymentIntent;
+  }
+
+  async capturePayment(paymentIntentId: string) {
+    try {
+      const intent = await this.stripe.paymentIntents.capture(paymentIntentId);
+
+      // ✅ Ahora sí, se marca como pagado después de la confirmación del dueño
+      const booking = await this.bookingRepo.findOne({
+        where: { paymentIntentId },
+        relations: ['room', 'studio', 'musician'],
+      });
+
+      if (booking) {
+        booking.isPaid = true;
+        booking.paymentStatus = 'SUCCEEDED';
+        await this.bookingRepo.save(booking);
+        await this.savePaymentRecordFromIntent(intent, 'succeeded');
+      }
+
+      return intent;
+    } catch (err) {
+      throw new BadRequestException(
+        `Error capturando pago: ${(err as Error).message}`,
+      );
+    }
   }
 
   async handleStripeWebhook(rawBody: Buffer, signature: string) {
