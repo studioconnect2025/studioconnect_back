@@ -69,7 +69,6 @@ export class PaymentsService {
     if (!booking.room)
       throw new BadRequestException('La reserva debe tener una sala asignada');
 
-    // 🔹 Verificar que el estudio esté activo
     if (!booking.studio.isActive) {
       throw new ForbiddenException(
         'El estudio no está activo. No se pueden recibir reservas.',
@@ -78,7 +77,6 @@ export class PaymentsService {
 
     const validInstrumentIds = dto.instrumentIds?.filter((id) => id) ?? [];
 
-    // 🔹 Calcular precio de sala
     const pricing = await this.pricingService.calculatePrice(
       booking.room.id,
       booking.startTime,
@@ -97,16 +95,15 @@ export class PaymentsService {
       );
     }
 
-    // 🔹 Crear PaymentIntent en Stripe (con reparto de comisión)
     let paymentIntent: Stripe.PaymentIntent;
     try {
       paymentIntent = await this.stripe.paymentIntents.create({
         amount: Math.round(pricing.totalPrice * 100), // centavos
         currency: 'usd',
         capture_method: 'manual',
-        application_fee_amount: commissionAmountInCents, // 👈 comisión que se queda tu plataforma
+        application_fee_amount: commissionAmountInCents,
         transfer_data: {
-          destination: booking.studio.stripeAccountId, // 👈 la cuenta del dueño del estudio
+          destination: booking.studio.stripeAccountId,
         },
         metadata: {
           bookingId: booking.id,
@@ -174,7 +171,6 @@ export class PaymentsService {
     const paymentIntent =
       await this.stripe.paymentIntents.retrieve(paymentIntentId);
 
-    // 🔹 Caso pago de reserva
     const booking = await this.bookingRepo.findOne({
       where: { paymentIntentId },
       relations: ['room', 'studio', 'musician'],
@@ -191,7 +187,6 @@ export class PaymentsService {
       return booking;
     }
 
-    // 🔹 Caso pago de membresía
     const studioId = paymentIntent.metadata?.studioId;
     if (studioId) {
       const studio = await this.studioRepo.findOne({ where: { id: studioId } });
@@ -210,7 +205,6 @@ export class PaymentsService {
     try {
       const intent = await this.stripe.paymentIntents.capture(paymentIntentId);
 
-      // ✅ Ahora sí, se marca como pagado después de la confirmación del dueño
       const booking = await this.bookingRepo.findOne({
         where: { paymentIntentId },
         relations: ['room', 'studio', 'musician'],
@@ -243,49 +237,55 @@ export class PaymentsService {
         webhookSecret,
       );
     } catch (err) {
-      // relanza para que el controller devuelva 400
       throw new BadRequestException(
         `Stripe webhook signature verification failed: ${(err as Error).message}`,
       );
     }
 
-    // Maneja los eventos que te interesan
     switch (event.type) {
       case 'payment_intent.succeeded': {
         const intent = event.data.object;
-        // Actualiza booking o estudio según metadata
         await this.confirmPayment(intent.id);
-
-        // Guarda registro en payments (historial)
         await this.savePaymentRecordFromIntent(intent, 'succeeded');
         break;
       }
 
       case 'payment_intent.payment_failed': {
         const intent = event.data.object;
-        await this.confirmPayment(intent.id); // tu lógica ya marca como FAILED
+        await this.confirmPayment(intent.id);
         await this.savePaymentRecordFromIntent(intent, 'failed');
+
+        // --- ✅ NOTIFICACIÓN DE FALLO DE PAGO AL ADMINISTRADOR ---
+        const bookingId = intent.metadata?.bookingId;
+        if (bookingId) {
+          const booking = await this.bookingRepo.findOne({
+            where: { id: bookingId },
+            relations: ['musician'],
+          });
+          if (booking && booking.musician) {
+            this.emailService.sendPaymentFailureAdminNotification(
+              booking.id,
+              booking.musician.email,
+              intent.amount / 100,
+              intent.last_payment_error?.message ?? 'Error desconocido desde Stripe',
+            );
+          }
+        }
         break;
       }
 
-      // Puedes añadir otros eventos que quieras procesar (ex: charge.refunded)
       default:
-        // no hacemos nada por defecto, pero podrías loguear
         break;
     }
 
     return { received: true };
   }
 
-  /**
-   * Crea un registro en la tabla payments a partir del PaymentIntent
-   */
   private async savePaymentRecordFromIntent(
     intent: Stripe.PaymentIntent,
     status: string,
   ) {
     try {
-      // Si el Payment entity está pensado para vincular Booking, intenta encontrar la bookingId en metadata
       const bookingId = intent.metadata?.bookingId;
       let bookingEntity: Booking | null = null;
       if (bookingId) {
@@ -294,10 +294,10 @@ export class PaymentsService {
         });
       }
 
-      const amount = (intent.amount_received ?? intent.amount) / 100; // en tu entity guardas decimal en unidades
+      const amount = (intent.amount_received ?? intent.amount) / 100;
 
       const payment = this.paymentRepo.create({
-        booking: bookingEntity, // si tu columna no acepta null, ajusta
+        booking: bookingEntity,
         stripePaymentIntentId: intent.id,
         amount: amount,
         status: status,
@@ -307,15 +307,9 @@ export class PaymentsService {
       await this.paymentRepo.save(payment);
     } catch (err) {
       console.error('Error guardando payment record', err);
-      // No debe bloquear el webhook; solo loguear (o enviar a tu logger)
-      // console.error('Error guardando payment record', err);
     }
   }
 
-  /**
-   * Endpoint utilitario para desarrollo: simula un pago de reserva
-   * Respeta la lógica de marcar isPaid/paymentStatus y guarda Payment record.
-   */
   async simulateBookingPayment(bookingId: string) {
     if (process.env.NODE_ENV === 'production') {
       throw new ForbiddenException(
@@ -332,13 +326,11 @@ export class PaymentsService {
 
     if (booking.isPaid) throw new BadRequestException('Reserva ya pagada');
 
-    // Marca como pagado
     booking.isPaid = true;
     booking.paymentStatus = 'SUCCEEDED';
     booking.paymentIntentId = `dev-simulated-${Date.now()}`;
     await this.bookingRepo.save(booking);
 
-    // Guarda un registro en payments
     const payment = this.paymentRepo.create({
       booking: booking,
       stripePaymentIntentId: booking.paymentIntentId,
@@ -352,15 +344,12 @@ export class PaymentsService {
   }
 
   private async handleSuccessfulPayment(booking: Booking, intent: Stripe.PaymentIntent) {
-    // Marcar reserva como pagada
     booking.isPaid = true;
     booking.paymentStatus = 'SUCCEEDED';
     await this.bookingRepo.save(booking);
     
-    // Guardar registro del pago
     await this.savePaymentRecordFromIntent(intent, 'succeeded');
 
-    // --- LÓGICA DE NOTIFICACIONES DE PAGO ---
     const totalAmount = intent.amount / 100;
     const commission = (intent.application_fee_amount || 0) / 100;
     const ownerPayout = totalAmount - commission;
@@ -374,12 +363,10 @@ export class PaymentsService {
       musicianEmail: booking.musician.email,
     };
 
-    // Enviar email al músico
     if (booking.musician?.email) {
       this.emailService.sendPaymentSuccessMusician(booking.musician.email, bookingDetails, intent.id);
     }
 
-    // Enviar email al dueño del estudio
     if (booking.studio.owner?.email) {
       this.emailService.sendPaymentReceivedOwner(booking.studio.owner.email, bookingDetails, ownerPayout);
     }
