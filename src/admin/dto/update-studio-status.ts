@@ -1,4 +1,4 @@
-import { IsEnum, IsNotEmpty } from 'class-validator';
+import { IsEnum, IsNotEmpty, IsOptional, IsString, MinLength } from 'class-validator';
 import { StudioStatus } from '../../studios/enum/studio-status.enum';
 import { ApiProperty } from '@nestjs/swagger';
 
@@ -15,4 +15,9 @@ export class UpdateStudioStatusDto {
   @IsNotEmpty()
   @IsEnum([StudioStatus.APPROVED, StudioStatus.REJECTED])
   status: StudioStatus;
+
+  @IsString()
+  @IsOptional() // Es opcional, porque solo se usa al rechazar
+  @MinLength(10, { message: 'La razón del rechazo debe tener al menos 10 caracteres.' })
+  rejectionReason?: string;
 }

@@ -469,4 +469,31 @@ export class EmailService {
     };
     await this.sendEmail(mailOptions, `notificación de pago para ${ownerEmail}`);
   }
+
+   async sendStudioRejectionEmail(ownerEmail: string, studioName: string, rejectionReason: string): Promise<void> {
+    const mailOptions = {
+      from: `StudioConnect <${this.configService.get<string>('FROM_EMAIL')}>`,
+      to: ownerEmail,
+      subject: `Actualización sobre tu solicitud para ${studioName}`,
+      html: this.getStudioRejectionTemplate(studioName, rejectionReason),
+    };
+    await this.sendEmail(mailOptions, `rechazo de estudio para ${ownerEmail}`);
+  }
+
+  private getStudioRejectionTemplate(studioName: string, rejectionReason: string): string {
+    const frontendUrl = this.configService.get<string>('FRONTEND_URL');
+    return `
+      <h1>Tu solicitud para ${studioName} no fue aprobada</h1>
+      <p>Hola,</p>
+      <p>Lamentamos informarte que, tras una revisión, tu solicitud para registrar el estudio <strong>${studioName}</strong> no ha sido aprobada en este momento.</p>
+      
+      <h2>Motivo del Rechazo:</h2>
+      <div style="padding: 15px; border-left: 4px solid #d9534f; background-color: #f9f2f2; margin: 15px 0;">
+        <p style="margin: 0;">${rejectionReason}</p>
+      </div>
+      
+      <p>Te invitamos a actualizar la información de tu estudio abordando los puntos mencionados y volver a enviarlo para su revisión. Puedes editar los datos desde tu panel de control.</p>
+      <a href="${frontendUrl}/dashboard/studio" class="button">Editar mi Estudio</a>
+    `;
+  }
 }

@@ -61,7 +61,7 @@ export class AdminController {
     @Param('id', ParseUUIDPipe) id: string,
     @Body() updateStudioStatusDto: UpdateStudioStatusDto,
   ) {
-    return this.adminService.processStudioRequest(id, updateStudioStatusDto.status);
+    return this.adminService.processStudioRequest(id, updateStudioStatusDto);
   }
   
   // --- Endpoint de Reservas ---

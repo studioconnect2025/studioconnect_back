@@ -95,4 +95,7 @@ export class Studio {
 
   @Column({ nullable: true })
   stripeAccountId: string;
+
+   @Column({ type: 'text', nullable: true })
+  rejectionReason?: string;
 }
