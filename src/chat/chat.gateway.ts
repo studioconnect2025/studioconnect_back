@@ -15,6 +15,8 @@ import { WsAuthGuard } from 'src/auth/guard/ws-auth.guard'; // Revisa que la rut
 import { BookingsService } from 'src/bookings/bookings.service';
 import { ChatService } from './chat.service';
 import { BookingStatus } from 'src/bookings/enum/enums-bookings';
+import { EmailService } from '../auth/services/email.service';
+import { UserRole } from '../auth/enum/roles.enum';
 
 @UseGuards(WsAuthGuard) 
 @WebSocketGateway({ namespace: '/chat', cors: true })
@@ -27,6 +29,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   constructor(
     private readonly bookingsService: BookingsService,
     private readonly chatService: ChatService,
+     private readonly emailService: EmailService,
   ) {}
 
   // 👇 LA CORRECIÓN ESTÁ AQUÍ 👇
@@ -97,6 +100,25 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         const newMessage = await this.chatService.createMessage({ content }, user, booking);
 
         this.server.to(roomName).emit('newMessage', newMessage);
+
+        if (user.role === UserRole.MUSICIAN) {
+          const owner = booking.studio.owner;
+          
+          // Verificamos que el dueño exista y tenga un email
+          if (owner && owner.email) {
+            // El nombre del músico puede venir del perfil, si no, usamos su email
+            const musicianName = user.profile?.name || user.email;
+
+            // Enviamos la notificación por correo al dueño del estudio
+            this.emailService.sendNewMessageNotification(
+              owner.email,
+              musicianName,
+              content, // el contenido completo del mensaje
+              booking.id,
+            );
+          }
+        }
+
     } catch(error) {
         this.logger.error(`Error al enviar mensaje: ${error.message}`);
         client.emit('error', { message: 'Error al procesar el mensaje.' });

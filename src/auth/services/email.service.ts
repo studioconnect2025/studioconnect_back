@@ -496,4 +496,95 @@ export class EmailService {
       <a href="${frontendUrl}/dashboard/studio" class="button">Editar mi Estudio</a>
     `;
   }
+
+ 
+
+  /**
+   * Notifica al destinatario que ha recibido un nuevo mensaje en el chat de una reserva.
+   */
+  async sendNewMessageNotification(
+    recipientEmail: string,
+    senderName: string,
+    messagePreview: string,
+    bookingId: string
+  ): Promise<void> {
+    const mailOptions = {
+      from: `StudioConnect <${this.configService.get<string>('FROM_EMAIL')}>`,
+      to: recipientEmail,
+      subject: `Has recibido un nuevo mensaje de ${senderName}`,
+      html: this.getNewMessageNotificationTemplate(senderName, messagePreview, bookingId),
+    };
+    await this.sendEmail(mailOptions, `notificación de nuevo mensaje para ${recipientEmail}`);
+  }
+
+  private getNewMessageNotificationTemplate(senderName: string, messagePreview: string, bookingId: string): string {
+    const frontendUrl = this.configService.get<string>('FRONTEND_URL');
+    // Asumimos una ruta como /dashboard/bookings/:id/chat para ver la conversación
+    const chatUrl = `${frontendUrl}/dashboard/bookings/${bookingId}?tab=chat`; 
+
+    // Acortamos la vista previa si el mensaje es muy largo
+    const preview = messagePreview.length > 150 ? messagePreview.substring(0, 147) + '...' : messagePreview;
+
+    return `
+      <h1>Nuevo Mensaje de ${senderName}</h1>
+      <p>Hola,</p>
+      <p>Has recibido un nuevo mensaje en la plataforma relacionado con una de tus reservas.</p>
+      
+      <div style="padding: 15px; border-left: 4px solid #3498db; background-color: #f2f2f2; margin: 15px 0;">
+        <p style="margin: 0;"><strong>${senderName} dice:</strong></p>
+        <p style="margin: 5px 0 0 0;"><em>"${preview}"</em></p>
+      </div>
+      
+      <p>Puedes ver la conversación completa y responder haciendo clic en el siguiente botón:</p>
+      <a href="${chatUrl}" class="button">Responder al Mensaje</a>
+    `;
+  }
+
+  async sendNewReviewNotification(
+    ownerEmail: string,
+    musicianName: string,
+    studioName: string,
+    rating: number,
+    comment: string,
+    studioId: string
+  ): Promise<void> {
+    const mailOptions = {
+      from: `StudioConnect <${this.configService.get<string>('FROM_EMAIL')}>`,
+      to: ownerEmail,
+      subject: `¡${musicianName} ha calificado tu estudio!`,
+      html: this.getNewReviewTemplate(musicianName, studioName, rating, comment, studioId),
+    };
+    await this.sendEmail(mailOptions, `notificación de nueva reseña para ${ownerEmail}`);
+  }
+
+  private getNewReviewTemplate(
+    musicianName: string,
+    studioName: string,
+    rating: number,
+    comment: string,
+    studioId: string
+  ): string {
+    const frontendUrl = this.configService.get<string>('FRONTEND_URL');
+    // Asumimos una ruta como /studios/:id para ver el estudio y sus reseñas
+    const studioUrl = `${frontendUrl}/studios/${studioId}`;
+
+    // Generamos las estrellas para la calificación
+    const stars = '⭐'.repeat(rating) + '☆'.repeat(5 - rating);
+
+    return `
+      <h1>¡Has recibido una nueva reseña para ${studioName}!</h1>
+      <p>Hola,</p>
+      <p>El músico <strong>${musicianName}</strong> ha dejado una nueva reseña sobre su experiencia en tu estudio.</p>
+      
+      <h2>Detalles de la Reseña:</h2>
+      <div style="padding: 15px; border-left: 4px solid #f0ad4e; background-color: #fcf8e3; margin: 15px 0;">
+        <p style="margin: 0;"><strong>Calificación:</strong> ${stars} (${rating}/5)</p>
+        <p style="margin: 10px 0 0 0;"><strong>Comentario:</strong></p>
+        <p style="margin: 5px 0 0 0;"><em>"${comment}"</em></p>
+      </div>
+      
+      <p>Las reseñas positivas ayudan a que más músicos descubran tu estudio. ¡Sigue así!</p>
+      <a href="${studioUrl}" class="button">Ver todas las reseñas de mi estudio</a>
+    `;
+  }
 }
