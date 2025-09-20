@@ -1,4 +1,4 @@
-import { Injectable, InternalServerErrorException, Logger, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, InternalServerErrorException, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { User } from '../users/entities/user.entity';
 import { In, Repository } from 'typeorm';
@@ -6,6 +6,8 @@ import { UserRole } from '../auth/enum/roles.enum';
 import { Studio } from '../studios/entities/studio.entity';
 import { Booking } from '../bookings/dto/bookings.entity';
 import { StudioStatus } from '../studios/enum/studio-status.enum';
+import { EmailService } from '../auth/services/email.service';
+import { UpdateStudioStatusDto } from './dto/update-studio-status';
 
 @Injectable()
 export class AdminService {
@@ -15,6 +17,7 @@ export class AdminService {
     @InjectRepository(User) private readonly usersRepository: Repository<User>,
     @InjectRepository(Studio) private readonly studioRepository: Repository<Studio>,
     @InjectRepository(Booking) private readonly bookingRepository: Repository<Booking>,
+    private readonly emailService: EmailService,
   ) {}
 
   // --- MÉTODOS DE USUARIOS ---
@@ -88,15 +91,38 @@ export class AdminService {
     }
   }
 
-  async processStudioRequest(studioId: string, status: StudioStatus): Promise<Studio> {
-    const studio = await this.studioRepository.findOneBy({ id: studioId });
+ async processStudioRequest(studioId: string, dto: UpdateStudioStatusDto): Promise<Studio> {
+    const studio = await this.studioRepository.findOne({
+        where: { id: studioId },
+        relations: ['owner'] // <-- Asegúrate de cargar la relación 'owner' para obtener su email
+    });
+    
     if (!studio) {
       throw new NotFoundException(`Estudio con ID "${studioId}" no encontrado.`);
     }
 
-    studio.status = status;
-    if (status === StudioStatus.APPROVED) {
+    studio.status = dto.status;
+
+    if (dto.status === StudioStatus.APPROVED) {
       studio.isActive = true;
+      studio.rejectionReason = undefined; // Limpiamos la razón si se aprueba
+      // (Opcional) Aquí podrías enviar un email de aprobación
+      // await this.emailService.sendStudioApprovalEmail(studio.owner.email, studio.name);
+
+    } else if (dto.status === StudioStatus.REJECTED) {
+      // Si se rechaza, la razón es obligatoria
+      if (!dto.rejectionReason) {
+        throw new BadRequestException('Se requiere una razón para el rechazo del estudio.');
+      }
+      studio.isActive = false;
+      studio.rejectionReason = dto.rejectionReason;
+
+      // Enviamos el email al dueño del estudio con la razón
+      await this.emailService.sendStudioRejectionEmail(
+          studio.owner.email,
+          studio.name,
+          dto.rejectionReason,
+      );
     }
 
     try {
