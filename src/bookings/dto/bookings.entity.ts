@@ -6,6 +6,7 @@ import {
   CreateDateColumn,
   JoinTable,
   ManyToMany,
+  OneToOne,
 } from 'typeorm';
 import { Studio } from 'src/studios/entities/studio.entity';
 import { User } from 'src/users/entities/user.entity';
@@ -13,6 +14,7 @@ import { BookingStatus } from '../enum/enums-bookings';
 import { Room } from 'src/rooms/entities/room.entity';
 import { BookingAction } from '../enum/booking-action.enum';
 import { Instruments } from 'src/instrumentos/entities/instrumento.entity';
+import { Review } from 'src/reviews/entities/review.entity';
 
 @Entity('bookings')
 export class Booking {
@@ -104,4 +106,9 @@ export class Booking {
     inverseJoinColumn: { name: 'instrument_id', referencedColumnName: 'id' },
   })
   instruments: Instruments[];
+
+  // Relacion con reviws
+@OneToOne(() => Review, (review) => review.booking, { nullable: true })
+review: Review;
+
 }
