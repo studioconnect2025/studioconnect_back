@@ -21,6 +21,7 @@ import { GeocodingModule } from './geocoding/geocoding.module';
 import { AdminModule } from './admin/admin.module';
 import { ChatModule } from './chat/chat.module';
 import { PqrsModule } from './pqrs/pqrs.module';
+import { ReviewsModule } from './reviews/reviews.module';
 
 @Module({
   imports: [
@@ -59,7 +60,8 @@ import { PqrsModule } from './pqrs/pqrs.module';
     GeocodingModule,
     AdminModule,
     ChatModule,
-    PqrsModule, 
+    PqrsModule,
+    ReviewsModule, 
   ],
   controllers: [AppController, OwnersController],
   providers: [AppService],
