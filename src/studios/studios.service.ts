@@ -182,7 +182,7 @@ export class StudiosService {
     }
 
     const savedStudio = await this.studioRepository.save(studio);
-    const savedStudio = await this.studioRepository.save(studio);
+  
 
     // --- NOTIFICACIÓN DE BIENVENIDA AL DUEÑO DEL ESTUDIO ---
     this.emailService.sendWelcomeStudioEmail(user.email, savedStudio.name);
@@ -196,6 +196,7 @@ export class StudiosService {
 
     return savedStudio;
   }
+
 
   // --- ACTUALIZAR ESTUDIO CON ARCHIVOS ---
   async updateMyStudioWithFiles(
@@ -269,15 +270,7 @@ export class StudiosService {
     }
 
     const updatedStudio = await this.studioRepository.save(studio);
-    const updatedStudio = await this.studioRepository.save(studio);
 
-    // --- NOTIFICACIÓN DE ACTUALIZACIÓN DE ESTUDIO ---
-    this.emailService.sendProfileUpdateEmail(
-      user.email,
-      'Estudio',
-      updatedStudio.name,
-      'Datos generales y/o archivos',
-    );
     // --- NOTIFICACIÓN DE ACTUALIZACIÓN DE ESTUDIO ---
     this.emailService.sendProfileUpdateEmail(
       user.email,
