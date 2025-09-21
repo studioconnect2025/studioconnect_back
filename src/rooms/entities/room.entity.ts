@@ -10,7 +10,6 @@ import { Instruments } from 'src/instrumentos/entities/instrumento.entity';
 import { Booking } from 'src/bookings/dto/bookings.entity';
 import { Review } from 'src/reviews/entities/review.entity';
 
-
 @Entity('ROOMS')
 export class Room {
   @PrimaryGeneratedColumn('uuid')
@@ -67,7 +66,6 @@ export class Room {
   @OneToMany(() => Booking, (booking) => booking.room)
   bookings: Booking[];
 
-@OneToMany(() => Review, (r) => r.room)
-reviews: Review[];
-
+  @OneToMany(() => Review, (r) => r.room)
+  reviews: Review[];
 }
