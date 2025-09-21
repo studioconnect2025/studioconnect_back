@@ -137,25 +137,25 @@ export class StudiosService {
       );
     }
 
-  if (files.photos && files.photos.length > 5) {
-    throw new BadRequestException('Solo se permiten hasta 5 fotos.');
-  }
+    if (files.photos && files.photos.length > 5) {
+      throw new BadRequestException('Solo se permiten hasta 5 fotos.');
+    }
 
-  const { photos, comercialRegister, ...cleanDto } = createStudioDto;
+    const { photos, comercialRegister, ...cleanDto } = createStudioDto;
 
-  const studio = this.studioRepository.create({
-    ...cleanDto,
-    owner: user,
-  });
-
-  try {
-    const coords = await this.geocodingService.geocodeProfile({
-      calle: studio.address,
-      ciudad: studio.city,
-      provincia: studio.province,
-      pais: studio.pais,
-      codigoPostal: studio.codigoPostal,
+    const studio = this.studioRepository.create({
+      ...cleanDto,
+      owner: user,
     });
+
+    try {
+      const coords = await this.geocodingService.geocodeProfile({
+        calle: studio.address,
+        ciudad: studio.city,
+        provincia: studio.province,
+        pais: studio.pais,
+        codigoPostal: studio.codigoPostal,
+      });
 
       if (coords) {
         studio.lat = coords.lat;
@@ -171,38 +171,35 @@ export class StudiosService {
       );
     }
 
-  if (files.photos) {
-    studio.photos = [];
-    for (const file of files.photos) {
-      const result = await this.fileUploadService.uploadFile(file);
-      studio.photos.push(result.secure_url);
+    if (files.photos) {
+      studio.photos = [];
+      for (const file of files.photos) {
+        const result = await this.fileUploadService.uploadFile(file);
+        studio.photos.push(result.secure_url);
+      }
     }
-  }
 
-  if (files.comercialRegister && files.comercialRegister[0]) {
-    const result = await this.fileUploadService.uploadFile(
-      files.comercialRegister[0],
+    if (files.comercialRegister && files.comercialRegister[0]) {
+      const result = await this.fileUploadService.uploadFile(
+        files.comercialRegister[0],
+      );
+      studio.comercialRegister = result.secure_url;
+    }
+
+    const savedStudio = await this.studioRepository.save(studio);
+
+    // --- NOTIFICACIÓN DE BIENVENIDA AL DUEÑO DEL ESTUDIO ---
+    this.emailService.sendWelcomeStudioEmail(user.email, savedStudio.name);
+
+    // --- ✅ NOTIFICACIÓN DE NUEVO ESTUDIO AL ADMINISTRADOR ---
+    this.emailService.sendNewStudioAdminNotification(
+      savedStudio.name,
+      user.email,
+      savedStudio.id,
     );
-    studio.comercialRegister = result.secure_url;
+
+    return savedStudio;
   }
-
-  const savedStudio = await this.studioRepository.save(studio);
-
-  // --- NOTIFICACIÓN DE BIENVENIDA AL DUEÑO DEL ESTUDIO ---
-  this.emailService.sendWelcomeStudioEmail(user.email, savedStudio.name);
-
-  // --- ✅ NOTIFICACIÓN DE NUEVO ESTUDIO AL ADMINISTRADOR ---
-  this.emailService.sendNewStudioAdminNotification(
-    savedStudio.name,
-    user.email,
-    savedStudio.id,
-  );
-
-  return savedStudio;
-}
-
-
-
 
   // --- ACTUALIZAR ESTUDIO CON ARCHIVOS ---
   async updateMyStudioWithFiles(
@@ -229,16 +226,16 @@ export class StudiosService {
       );
     }
 
-  Object.assign(studio, dto);
+    Object.assign(studio, dto);
 
-  try {
-    const coords = await this.geocodingService.geocodeProfile({
-      calle: studio.address,
-      ciudad: studio.city,
-      provincia: studio.province,
-      pais: studio.pais,
-      codigoPostal: studio.codigoPostal,
-    });
+    try {
+      const coords = await this.geocodingService.geocodeProfile({
+        calle: studio.address,
+        ciudad: studio.city,
+        provincia: studio.province,
+        pais: studio.pais,
+        codigoPostal: studio.codigoPostal,
+      });
 
       if (coords) {
         studio.lat = coords.lat;
@@ -254,38 +251,37 @@ export class StudiosService {
       );
     }
 
-  if (files.photos && files.photos.length > 0) {
-    const currentPhotos = studio.photos || [];
-    if (currentPhotos.length + files.photos.length > 5) {
-      throw new BadRequestException(
-        'Solo se permiten hasta 5 fotos en total.',
-      );
+    if (files.photos && files.photos.length > 0) {
+      const currentPhotos = studio.photos || [];
+      if (currentPhotos.length + files.photos.length > 5) {
+        throw new BadRequestException(
+          'Solo se permiten hasta 5 fotos en total.',
+        );
+      }
+      for (const file of files.photos) {
+        const result = await this.fileUploadService.uploadFile(file);
+        currentPhotos.push(result.secure_url);
+      }
+      studio.photos = currentPhotos;
     }
-    for (const file of files.photos) {
-      const result = await this.fileUploadService.uploadFile(file);
-      currentPhotos.push(result.secure_url);
-    }
-    studio.photos = currentPhotos;
-  }
 
-  if (files.comercialRegister && files.comercialRegister[0]) {
-    const result = await this.fileUploadService.uploadFile(
-      files.comercialRegister[0],
-    );
-    studio.comercialRegister = result.secure_url;
-  }
-  
-  const updatedStudio = await this.studioRepository.save(studio);
-  
-  // --- NOTIFICACIÓN DE ACTUALIZACIÓN DE ESTUDIO ---
-  this.emailService.sendProfileUpdateEmail(
+    if (files.comercialRegister && files.comercialRegister[0]) {
+      const result = await this.fileUploadService.uploadFile(
+        files.comercialRegister[0],
+      );
+      studio.comercialRegister = result.secure_url;
+    }
+
+    const updatedStudio = await this.studioRepository.save(studio);
+
+    // --- NOTIFICACIÓN DE ACTUALIZACIÓN DE ESTUDIO ---
+    this.emailService.sendProfileUpdateEmail(
       user.email,
       'Estudio',
       updatedStudio.name,
       'Datos generales y/o archivos',
-  );
+    );
 
-  return updatedStudio;
-}
-
+    return updatedStudio;
+  }
 }
