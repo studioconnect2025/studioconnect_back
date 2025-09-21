@@ -131,20 +131,17 @@ export class StudiosService {
     );
   }
 
-  // Validar cantidad máxima de fotos
   if (files.photos && files.photos.length > 5) {
     throw new BadRequestException('Solo se permiten hasta 5 fotos.');
   }
 
-  // 🔹 Clonar DTO y quitar campos que no deben ir directo a create
   const { photos, comercialRegister, ...cleanDto } = createStudioDto;
 
   const studio = this.studioRepository.create({
-    ...cleanDto, // contiene pais, codigoPostal, city, province, address
+    ...cleanDto,
     owner: user,
   });
 
-  // 🔹 Geocodificar antes de guardar (usando geocodeProfile)
   try {
     const coords = await this.geocodingService.geocodeProfile({
       calle: studio.address,
@@ -168,7 +165,6 @@ export class StudiosService {
     );
   }
 
-  // Subir fotos
   if (files.photos) {
     studio.photos = [];
     for (const file of files.photos) {
@@ -177,22 +173,26 @@ export class StudiosService {
     }
   }
 
-  // Subir registro comercial si existe
   if (files.comercialRegister && files.comercialRegister[0]) {
     const result = await this.fileUploadService.uploadFile(
       files.comercialRegister[0],
     );
     studio.comercialRegister = result.secure_url;
-
-    const savedStudio = await this.studioRepository.save(studio);
-
-    // --- NOTIFICACIÓN DE BIENVENIDA AL ESTUDIO ---
-    this.emailService.sendWelcomeStudioEmail(user.email, savedStudio.name);
-
-    return savedStudio;
   }
 
-  return this.studioRepository.save(studio);
+  const savedStudio = await this.studioRepository.save(studio);
+
+  // --- NOTIFICACIÓN DE BIENVENIDA AL DUEÑO DEL ESTUDIO ---
+  this.emailService.sendWelcomeStudioEmail(user.email, savedStudio.name);
+
+  // --- ✅ NOTIFICACIÓN DE NUEVO ESTUDIO AL ADMINISTRADOR ---
+  this.emailService.sendNewStudioAdminNotification(
+    savedStudio.name,
+    user.email,
+    savedStudio.id,
+  );
+
+  return savedStudio;
 }
 
 
@@ -223,10 +223,8 @@ export class StudiosService {
     );
   }
 
-  // --- Actualizar datos básicos
   Object.assign(studio, dto);
 
-  // --- Recalcular coordenadas si cambió la dirección
   try {
     const coords = await this.geocodingService.geocodeProfile({
       calle: studio.address,
@@ -250,7 +248,6 @@ export class StudiosService {
     );
   }
 
-  // --- Manejo de fotos (máx. 5)
   if (files.photos && files.photos.length > 0) {
     const currentPhotos = studio.photos || [];
     if (currentPhotos.length + files.photos.length > 5) {
@@ -265,27 +262,24 @@ export class StudiosService {
     studio.photos = currentPhotos;
   }
 
-  // --- Manejo del registro comercial
   if (files.comercialRegister && files.comercialRegister[0]) {
     const result = await this.fileUploadService.uploadFile(
       files.comercialRegister[0],
     );
     studio.comercialRegister = result.secure_url;
-
-    const updatedStudio = await this.studioRepository.save(studio);
-
-    // --- NOTIFICACIÓN DE ACTUALIZACIÓN DE ESTUDIO ---
-    this.emailService.sendProfileUpdateEmail(
+  }
+  
+  const updatedStudio = await this.studioRepository.save(studio);
+  
+  // --- NOTIFICACIÓN DE ACTUALIZACIÓN DE ESTUDIO ---
+  this.emailService.sendProfileUpdateEmail(
       user.email,
       'Estudio',
       updatedStudio.name,
       'Datos generales y/o archivos',
-    );
+  );
 
-    return updatedStudio;
-  }
-
-  return this.studioRepository.save(studio);
+  return updatedStudio;
 }
 
 }

@@ -17,5 +17,10 @@ export class CreatePqrDto {
 
   @IsUUID()
   @IsOptional()
-  reportedUserId?: string; // Opcional
+  reportedUserId?: string;
+
+  // ✅ Líneas agregadas para solucionar el error
+  @IsUUID()
+  @IsOptional()
+  bookingId?: string; // Opcional, para asociar la PQR a una reserva
 }

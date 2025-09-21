@@ -8,6 +8,7 @@ import { UsersService } from 'src/users/users.service';
 import { PqrsGateway } from './pqrs.gateway';
 import { PqrResponse } from './entities/pqr-response.entity';
 import { CreatePqrResponseDto } from './dto/create-pqr-response.dto';
+import { EmailService } from 'src/auth/services/email.service';
 
 @Injectable()
 export class PqrsService {
@@ -21,11 +22,13 @@ export class PqrsService {
     private readonly usersService: UsersService, 
     
     private readonly pqrsGateway: PqrsGateway,
+
+    private readonly emailService: EmailService,
   ) {}
   // --- FIN DE LA CORRECCIÓN ---
 
-  async create(createPqrDto: CreatePqrDto, createdBy: User): Promise<Pqr> {
-    const { subject, description, type, reportedUserId } = createPqrDto;
+ async create(createPqrDto: CreatePqrDto, createdBy: User): Promise<Pqr> {
+    const { subject, description, type, reportedUserId, bookingId } = createPqrDto; // Asumimos que bookingId viene en el DTO
     
     const newPqr = this.pqrRepository.create({
       subject,
@@ -43,6 +46,15 @@ export class PqrsService {
 
     const savedPqr = await this.pqrRepository.save(newPqr);
     this.pqrsGateway.server.to('admin-room').emit('newPqr', savedPqr);
+
+    // 3. Disparar la notificación de nueva PQRS al administrador
+    // Nota: El DTO 'createPqrDto' debería incluir el 'bookingId' asociado a la disputa.
+    // Usamos la descripción del PQR como el motivo en el correo.
+    await this.emailService.sendNewDisputeAdminNotification(
+      bookingId || 'N/A', // Opcional, pero recomendado
+      createdBy.email,
+      savedPqr.description,
+    );
     
     return savedPqr;
   }

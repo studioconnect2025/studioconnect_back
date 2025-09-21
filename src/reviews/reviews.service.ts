@@ -11,6 +11,7 @@ import { CreateReviewDto } from './dto/create-review.dto';
 import { User } from 'src/users/entities/user.entity';
 import { Booking } from 'src/bookings/dto/bookings.entity';
 import { BookingStatus } from 'src/bookings/enum/enums-bookings';
+import { EmailService } from 'src/auth/services/email.service';
 
 @Injectable()
 export class ReviewsService {
@@ -19,6 +20,7 @@ export class ReviewsService {
     private readonly reviewRepository: Repository<Review>,
     @InjectRepository(Booking)
     private readonly bookingRepository: Repository<Booking>,
+    private readonly emailService: EmailService,
   ) {}
 
   // Crear reseña
@@ -70,7 +72,25 @@ export class ReviewsService {
       booking,
     });
 
-    return this.reviewRepository.save(review);
+      const savedReview = await this.reviewRepository.save(review);
+
+    // --- INICIO DE LA NUEVA LÓGICA DE NOTIFICACIÓN ---
+    const owner = booking.room.studio.owner;
+    if (owner && owner.email) {
+      const musicianName = musician.profile?.nombre || musician.email;
+      
+      this.emailService.sendNewReviewNotification(
+        owner.email,
+        musicianName,
+        booking.room.studio.name,
+        savedReview.rating,
+        savedReview.comment,
+        booking.room.studio.id,
+      );
+    }
+    // --- FIN DE LA NUEVA LÓGICA ---
+
+    return savedReview;
   }
 
   // Obtener reseñas de una sala (propiedades TS)
