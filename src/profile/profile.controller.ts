@@ -29,7 +29,7 @@ import { UpdateProfileDto } from './dto/update-profile.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
 
 @ApiTags('Profile')
-@ApiBearerAuth()
+@ApiBearerAuth('JWT-auth')
 @UseGuards(AuthGuard('jwt'), RolesGuard)
 @Controller('profile')
 export class ProfileController {

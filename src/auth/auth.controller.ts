@@ -9,6 +9,7 @@ import {
   Req,
   Session,
   Res,
+  BadRequestException,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
@@ -27,6 +28,9 @@ import { MusicianRegisterDto } from 'src/users/dto/musician-register.dto';
 import { StudioOwnerRegisterDto } from 'src/users/dto/owner-register.dto';
 
 import { ReactivateAccountDto } from './dto/reactivate-account.dto';
+import { JwtRegistrationGuard } from './guard/jwt-registration.guard';
+import { GoogleRegistrationDto } from './dto/google-registration.dto';
+import { UserRole } from './enum/roles.enum';
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -57,6 +61,7 @@ export class AuthController {
               provincia: 'CABA',
               calle: 'Av. Corrientes 1234',
               codigoPostal: 'C1043AAS',
+              pais: 'Argentina',
             },
           },
         },
@@ -91,6 +96,7 @@ export class AuthController {
               provincia: 'Córdoba',
               calle: 'San Martín 1500',
               codigoPostal: '5000',
+              pais: 'Argentina',
             },
           },
         },
@@ -132,29 +138,57 @@ export class AuthController {
   }
 
   // --- Google OAuth ---
-  @Get('google/login')
-  @UseGuards(AuthGuard('google'))
-  handleGoogleLogin(@Req() req, @Session() session: Record<string, any>) {
-    const redirectUri = req.query.redirect_uri as string;
-    if (redirectUri) session.redirectUri = redirectUri;
-  }
+ @Get('google/login')
+@UseGuards(AuthGuard('google'))
+@ApiOperation({ summary: 'Iniciar autenticación con Google' })
+handleGoogleLogin() {
+  // El cuerpo de este método puede estar vacío.
+  // El guard @UseGuards(AuthGuard('google')) intercepta la solicitud
+  // y redirige al usuario a Google antes de que se ejecute este código.
+}
 
-  @Get('google/callback')
-  @UseGuards(AuthGuard('google'))
-  async handleGoogleCallback(
-    @Req() req,
-    @Res() res: Response,
-    @Session() session: Record<string, any>,
-  ) {
-    const tokenData = await this.authService.googleLogin(req);
-    const jwtToken = tokenData.access_token;
-    const redirectUri = session.redirectUri || process.env.FRONTEND_URL;
-    session.redirectUri = null;
-    res.redirect(`${redirectUri}?token=${jwtToken}`);
+ @Get('google/callback')
+@UseGuards(AuthGuard('google'))
+@ApiOperation({ summary: 'Callback de Google' })
+async handleGoogleCallback(@Req() req, @Res() res: Response) {
+ 
+  
+  const result = await this.authService.handleGoogleAuth(req.user);
+  const frontendUrl = process.env.FRONTEND_URL; // Debe ser http://localhost:3000
+
+  
+
+  if (result.status === 'LOGIN_SUCCESS') {
+    const accessToken = result.data.access_token;
+    const redirectUrl = `${frontendUrl}/auth/callback?token=${accessToken}`;
+    res.redirect(redirectUrl);
+  } 
+  else if (result.status === 'REGISTRATION_REQUIRED') {
+    const registrationToken = result.data.token;
+    const redirectUrl = `${frontendUrl}/register-google?reg_token=${registrationToken}`;
+    res.redirect(redirectUrl);
+  }
+}
+
+  @Post('register/google')
+  @UseGuards(JwtRegistrationGuard) // <-- Usa el nuevo guard para proteger la ruta
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Completar registro con Google' })
+  @ApiBearerAuth('JWT-Registration') // Documentación para Swagger
+  async completeGoogleRegistration(@Req() req, @Body() dto: GoogleRegistrationDto) {
+    const googleProfile = req.user;
+    const { role } = dto;
+    
+    // Una validación extra nunca está de más
+    if (!Object.values(UserRole).includes(role)) {
+      throw new BadRequestException('El rol proporcionado no es válido.');
+    }
+
+    return this.authService.completeGoogleRegistration(googleProfile, role);
   }
 
   @Post('logout')
-  @ApiBearerAuth()
+  @ApiBearerAuth('JWT-auth')
   @UseGuards(AuthGuard('jwt'))
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Cerrar sesión' })

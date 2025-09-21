@@ -4,12 +4,17 @@ import {
   ManyToOne,
   PrimaryGeneratedColumn,
   CreateDateColumn,
+  JoinTable,
+  ManyToMany,
+  OneToOne,
 } from 'typeorm';
 import { Studio } from 'src/studios/entities/studio.entity';
 import { User } from 'src/users/entities/user.entity';
 import { BookingStatus } from '../enum/enums-bookings';
 import { Room } from 'src/rooms/entities/room.entity';
 import { BookingAction } from '../enum/booking-action.enum';
+import { Instruments } from 'src/instrumentos/entities/instrumento.entity';
+import { Review } from 'src/reviews/entities/review.entity';
 
 @Entity('bookings')
 export class Booking {
@@ -80,10 +85,30 @@ export class Booking {
   // ===========================
   // NEW: Guardar acción específica del músico (separado de BookingStatus)
   // ===========================
+
+   @Column({ default: false })
+  reminder48hSent: boolean;
+
+  @Column({ default: false })
+  reminder24hSent: boolean;
+
   @Column({
     type: 'enum',
     enum: BookingAction,
     default: BookingAction.ACTIVE,
   })
   action: BookingAction; // NEW: ACTIVE / CANCELED / REPROGRAMMED
+
+  @ManyToMany(() => Instruments, { eager: true })
+  @JoinTable({
+    name: 'bookings_instruments', // tabla intermedia
+    joinColumn: { name: 'bookingid', referencedColumnName: 'id' },
+    inverseJoinColumn: { name: 'instrument_id', referencedColumnName: 'id' },
+  })
+  instruments: Instruments[];
+
+  // Relacion con reviws
+@OneToOne(() => Review, (review) => review.booking, { nullable: true })
+review: Review;
+
 }

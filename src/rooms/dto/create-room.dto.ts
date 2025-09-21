@@ -1,4 +1,10 @@
-import { IsString, IsNotEmpty, IsNumber, IsOptional, Min } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  IsNumber,
+  IsOptional,
+  Min,
+} from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateRoomDto {
@@ -33,7 +39,10 @@ export class CreateRoomDto {
   @IsString()
   description?: string;
 
-  @ApiPropertyOptional({ description: 'Características (ej. aire acondicionado, espejos, etc.)', type: [String] })
+  @ApiPropertyOptional({
+    description: 'Características (ej. aire acondicionado, espejos, etc.)',
+    type: [String],
+  })
   @IsOptional()
   features?: string[];
 

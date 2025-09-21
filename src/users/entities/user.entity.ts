@@ -10,6 +10,8 @@ import { UserRole } from '../../auth/enum/roles.enum';
 import { Studio } from '../../studios/entities/studio.entity';
 import { Booking } from '../../bookings/dto/bookings.entity'; // Corregido el import
 import { Profile } from '../../profile/entities/profile.entity';
+  import { Review } from 'src/reviews/entities/review.entity';
+
 
 @Entity({ name: 'users' })
 export class User {
@@ -43,4 +45,9 @@ export class User {
 
   @OneToMany(() => Booking, (booking) => booking.musician)
   bookings: Booking[];
+
+
+@OneToMany(() => Review, (review) => review.musician)
+reviews: Review[];
+
 }

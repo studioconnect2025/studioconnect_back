@@ -4,6 +4,7 @@ import {
   ForbiddenException,
   InternalServerErrorException,
   BadRequestException,
+  Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -13,6 +14,8 @@ import { UpdateStudioDto } from './dto/update-studio.dto';
 import { User } from 'src/users/entities/user.entity';
 import { UserRole } from 'src/auth/enum/roles.enum';
 import { FileUploadService } from '../file-upload/file-upload.service';
+import { GeocodingService } from 'src/geocoding/geocoding.service';
+import { EmailService } from 'src/auth/services/email.service';
 
 @Injectable()
 export class StudiosService {
@@ -20,7 +23,11 @@ export class StudiosService {
     @InjectRepository(Studio)
     private readonly studioRepository: Repository<Studio>,
     private readonly fileUploadService: FileUploadService,
+    private readonly geocodingService: GeocodingService,
+    private readonly emailService: EmailService,
   ) {}
+
+  private readonly logger = new Logger(StudiosService.name);
 
   // --- MÉTODOS PÚBLICOS ---
   async findAll(): Promise<Studio[]> {
@@ -28,7 +35,10 @@ export class StudiosService {
   }
 
   async findOne(id: string): Promise<Studio> {
-    const studio = await this.studioRepository.findOneBy({ id });
+    const studio = await this.studioRepository.findOne({
+      where: { id },
+      relations: { rooms: { instruments: true } },
+    });
     if (!studio) {
       throw new NotFoundException(`Estudio con ID #${id} no encontrado.`);
     }
@@ -39,6 +49,7 @@ export class StudiosService {
   async findMyStudios(user: User): Promise<Studio[]> {
     return this.studioRepository.find({
       where: { owner: { id: user.id } },
+      relations: { rooms: { instruments: true } },
     });
   }
 
@@ -58,7 +69,17 @@ export class StudiosService {
     }
 
     Object.assign(studio, dto);
-    return this.studioRepository.save(studio);
+    const updatedStudio = await this.studioRepository.save(studio);
+
+    // --- NOTIFICACIÓN DE ACTUALIZACIÓN DE ESTUDIO ---
+    this.emailService.sendProfileUpdateEmail(
+      user.email,
+      'Estudio',
+      updatedStudio.name,
+      'Datos del perfil',
+    );
+
+    return updatedStudio;
   }
 
   // --- SUBIR FOTOS INDIVIDUALES ---
@@ -111,21 +132,40 @@ export class StudiosService {
       );
     }
 
-    // Validar cantidad máxima de fotos
     if (files.photos && files.photos.length > 5) {
       throw new BadRequestException('Solo se permiten hasta 5 fotos.');
     }
 
-    // 🔹 Clonar DTO y quitar campos que no deben ir directo a create
     const { photos, comercialRegister, ...cleanDto } = createStudioDto;
 
     const studio = this.studioRepository.create({
-      ...cleanDto, // ✅ solo campos simples que sí mapean al entity
+      ...cleanDto,
+      owner: user,
     });
 
-    studio.owner = user;
+    try {
+      const coords = await this.geocodingService.geocodeProfile({
+        calle: studio.address,
+        ciudad: studio.city,
+        provincia: studio.province,
+        pais: studio.pais,
+        codigoPostal: studio.codigoPostal,
+      });
 
-    // Subir fotos
+      if (coords) {
+        studio.lat = coords.lat;
+        studio.lng = coords.lng;
+      } else {
+        this.logger.warn(
+          `No se pudieron obtener coordenadas para el estudio ${studio.name}`,
+        );
+      }
+    } catch (error) {
+      console.warn(
+        `Error al geocodificar estudio ${studio.name}: ${error.message}`,
+      );
+    }
+
     if (files.photos) {
       studio.photos = [];
       for (const file of files.photos) {
@@ -134,7 +174,6 @@ export class StudiosService {
       }
     }
 
-    // Subir registro comercial si existe
     if (files.comercialRegister && files.comercialRegister[0]) {
       const result = await this.fileUploadService.uploadFile(
         files.comercialRegister[0],
@@ -142,8 +181,22 @@ export class StudiosService {
       studio.comercialRegister = result.secure_url;
     }
 
-    return this.studioRepository.save(studio);
+    const savedStudio = await this.studioRepository.save(studio);
+  
+
+    // --- NOTIFICACIÓN DE BIENVENIDA AL DUEÑO DEL ESTUDIO ---
+    this.emailService.sendWelcomeStudioEmail(user.email, savedStudio.name);
+
+    // --- ✅ NOTIFICACIÓN DE NUEVO ESTUDIO AL ADMINISTRADOR ---
+    this.emailService.sendNewStudioAdminNotification(
+      savedStudio.name,
+      user.email,
+      savedStudio.id,
+    );
+
+    return savedStudio;
   }
+
 
   // --- ACTUALIZAR ESTUDIO CON ARCHIVOS ---
   async updateMyStudioWithFiles(
@@ -170,28 +223,45 @@ export class StudiosService {
       );
     }
 
-    // --- Actualizar datos básicos
     Object.assign(studio, dto);
 
-    // --- Manejo de fotos (máx. 5)
+    try {
+      const coords = await this.geocodingService.geocodeProfile({
+        calle: studio.address,
+        ciudad: studio.city,
+        provincia: studio.province,
+        pais: studio.pais,
+        codigoPostal: studio.codigoPostal,
+      });
+
+      if (coords) {
+        studio.lat = coords.lat;
+        studio.lng = coords.lng;
+      } else {
+        this.logger.warn(
+          `No se pudieron obtener coordenadas para el estudio ${studio.name}`,
+        );
+      }
+    } catch (error) {
+      this.logger.warn(
+        `Error al geocodificar estudio ${studio.name}: ${error.message}`,
+      );
+    }
+
     if (files.photos && files.photos.length > 0) {
       const currentPhotos = studio.photos || [];
-
       if (currentPhotos.length + files.photos.length > 5) {
         throw new BadRequestException(
           'Solo se permiten hasta 5 fotos en total.',
         );
       }
-
       for (const file of files.photos) {
         const result = await this.fileUploadService.uploadFile(file);
         currentPhotos.push(result.secure_url);
       }
-
       studio.photos = currentPhotos;
     }
 
-    // --- Manejo del registro comercial
     if (files.comercialRegister && files.comercialRegister[0]) {
       const result = await this.fileUploadService.uploadFile(
         files.comercialRegister[0],
@@ -199,6 +269,16 @@ export class StudiosService {
       studio.comercialRegister = result.secure_url;
     }
 
-    return this.studioRepository.save(studio);
+    const updatedStudio = await this.studioRepository.save(studio);
+
+    // --- NOTIFICACIÓN DE ACTUALIZACIÓN DE ESTUDIO ---
+    this.emailService.sendProfileUpdateEmail(
+      user.email,
+      'Estudio',
+      updatedStudio.name,
+      'Datos generales y/o archivos',
+    );
+
+    return updatedStudio;
   }
 }

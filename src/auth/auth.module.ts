@@ -2,36 +2,34 @@ import { Module } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { UsersModule } from 'src/users/users.module';
-import { StudiosModule } from 'src/studios/studios.module';
-import { JwtModule } from '@nestjs/jwt';
+import { JwtModule, JwtService } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { JwtStrategy } from './jwt-strategy';
-import { TokenBlacklistService } from './token-blacklist.service';
+import { JwtStrategy } from './strategys/jwt-strategy';
+import { GoogleStrategy } from './strategys/google.strategy';
+import { JwtRegistrationStrategy } from './strategys/jwt-registration.strategy';
+import { JWT_REGISTRATION_SERVICE } from './constants';
+import { TokenBlacklistService } from './services/token-blacklist.service';
+import { EmailService } from './services/email.service';
 import { CacheModule } from '@nestjs/cache-manager';
 import { redisStore } from 'cache-manager-redis-store';
-import { PasswordResetModule } from './modules/password-reset.module';
-import { GoogleStrategy } from './google.strategy';
-import { EmailService } from './services/email.service';
 
 @Module({
   imports: [
     UsersModule,
-    StudiosModule,
     ConfigModule,
-    PasswordResetModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: async (configService: ConfigService) => ({
         secret: configService.get<string>('JWT_SECRET'),
-        signOptions: { expiresIn: '1h' }, // Ejemplo: tokens expiran en 1 hora
+        signOptions: { expiresIn: '1h' },
       }),
     }),
-    // Configuración de Cache para Redis
+    // Asumo que tienes esta configuración de Cache/Redis
     CacheModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
-      isGlobal: true, // Hace el CacheModule disponible globalmente
+      isGlobal: true,
       useFactory: async (configService: ConfigService) => ({
         store: redisStore,
         host: configService.get<string>('REDIS_HOST'),
@@ -40,6 +38,26 @@ import { EmailService } from './services/email.service';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy, TokenBlacklistService, GoogleStrategy, EmailService],
+  providers: [
+    AuthService,
+    JwtStrategy,
+    GoogleStrategy,
+    JwtRegistrationStrategy,
+    // ✅ Servicios que faltaban y ahora están añadidos de vuelta
+    TokenBlacklistService,
+    EmailService,
+    // Proveedor personalizado para el JWT de registro
+    {
+      provide: JWT_REGISTRATION_SERVICE,
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => {
+        return new JwtService({
+          secret: configService.get<string>('JWT_REGISTRATION_SECRET'),
+          signOptions: { expiresIn: '2h' },
+        });
+      },
+    },
+  ],
+   exports: [AuthService, EmailService],
 })
 export class AuthModule {}

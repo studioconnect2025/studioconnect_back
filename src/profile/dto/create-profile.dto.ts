@@ -8,4 +8,5 @@ export class CreateProfileDto {
   @IsString() @IsOptional() provincia?: string;
   @IsString() @IsOptional() calle?: string;
   @IsString() @IsOptional() codigoPostal?: string;
+  @IsString() @IsOptional() pais?: string;
 }

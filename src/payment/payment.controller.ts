@@ -6,6 +6,12 @@ import {
   Request,
   Get,
   Param,
+  ForbiddenException,
+  BadRequestException,
+  HttpCode,
+  HttpStatus,
+  Req,
+  Headers,
 } from '@nestjs/common';
 import { PaymentsService } from './payment.service';
 import { AuthGuard } from '@nestjs/passport';
@@ -23,9 +29,11 @@ import {
   ApiResponse,
   ApiBearerAuth,
 } from '@nestjs/swagger';
+import { Request as ExpressRequest } from 'express';
+type RawBodyRequest = ExpressRequest & { body: Buffer };
 
 @ApiTags('Payments')
-@ApiBearerAuth()
+@ApiBearerAuth('JWT-auth')
 @Controller('payments')
 export class PaymentsController {
   constructor(private readonly paymentsService: PaymentsService) {}
@@ -72,9 +80,62 @@ export class PaymentsController {
   async confirmPayment(
     @Param('paymentIntentId') paymentIntentId: string,
   ): Promise<
-    // eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
     Booking | { studioId: string; isActive: boolean } | Stripe.PaymentIntent
   > {
     return this.paymentsService.confirmPayment(paymentIntentId);
+  }
+  @Post('webhook')
+  @HttpCode(HttpStatus.OK)
+  async stripeWebhook(
+    @Req() req: RawBodyRequest,
+    @Headers('stripe-signature') signature: string,
+  ) {
+    // req.body es Buffer por bodyParser.raw
+    const rawBody = req.body as Buffer;
+
+    if (!signature) {
+      throw new BadRequestException('Stripe signature header missing');
+    }
+
+    return this.paymentsService.handleStripeWebhook(rawBody, signature);
+  }
+
+  @Post('capture/:paymentIntentId')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles(UserRole.STUDIO_OWNER)
+  @ApiOperation({
+    summary:
+      'Captura manual de un PaymentIntent (solo dueños, al confirmar reserva)',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Pago capturado y liberado al dueño del estudio',
+  })
+  async capturePayment(
+    @Param('paymentIntentId') paymentIntentId: string,
+  ): Promise<Stripe.PaymentIntent> {
+    return await this.paymentsService.capturePayment(paymentIntentId); // NEW
+  }
+
+  /**
+   * Endpoint dev-only para simular pago de reserva.
+   * Respeta tu lógica: solo músicos pueden pagar reservas, y solo en dev.
+   */
+  @Post('simulate')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles(UserRole.MUSICIAN)
+  @ApiOperation({ summary: '[DEV] Simular pago de reserva (solo dev env)' })
+  async simulatePayment(
+    @Request() req: { user: User },
+    @Body() body: { bookingId: string },
+  ) {
+    if (process.env.NODE_ENV === 'production') {
+      throw new ForbiddenException('Simulación no permitida en producción');
+    }
+
+    const result = await this.paymentsService.simulateBookingPayment(
+      body.bookingId,
+    );
+    return { ok: true, ...result };
   }
 }

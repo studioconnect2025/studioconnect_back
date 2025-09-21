@@ -12,6 +12,8 @@ import { UpdateRoomDto } from './dto/update-room.dto';
 import { Studio } from 'src/studios/entities/studio.entity';
 import { User } from 'src/users/entities/user.entity';
 import { FileUploadService } from '../file-upload/file-upload.service';
+import { EmailService } from 'src/auth/services/email.service';
+import { StudioStatus } from 'src/studios/enum/studio-status.enum'; // importa tu enum
 
 @Injectable()
 export class RoomsService {
@@ -21,14 +23,14 @@ export class RoomsService {
     @InjectRepository(Studio)
     private readonly studioRepository: Repository<Studio>,
     private readonly fileUploadService: FileUploadService,
-  ) {}
+    private readonly emailService: EmailService,
+  ) { }
 
   /**
    * Crear una sala obteniendo automáticamente el studioId del usuario autenticado
    * NUEVO MÉTODO para flujo más fluido
    */
   async createWithAutoStudio(dto: CreateRoomDto, user: User): Promise<Room> {
-    // Buscar el studio del usuario
     const studio = await this.studioRepository.findOne({
       where: { owner: { id: user.id } },
       relations: ['owner'],
@@ -40,6 +42,13 @@ export class RoomsService {
       );
     }
 
+    // 🚨 Validación con enum
+    if (studio.status !== StudioStatus.APPROVED) {
+      throw new BadRequestException(
+        'Tu estudio aún no está aprobado por el administrador, no puedes crear salas.',
+      );
+    }
+
     const room = this.roomRepository.create({
       ...dto,
       studio,
@@ -47,8 +56,19 @@ export class RoomsService {
       imagePublicIds: [],
     });
 
-    return this.roomRepository.save(room);
+    const savedRoom = await this.roomRepository.save(room);
+
+    this.emailService.sendNewRoomAddedEmail(
+      user.email,
+      studio.name,
+      savedRoom.name,
+      savedRoom.id,
+    );
+
+    return savedRoom;
   }
+
+
 
   /**
    * Método original - mantiene compatibilidad hacia atrás
@@ -70,6 +90,13 @@ export class RoomsService {
       );
     }
 
+    // 🚨 Validación con enum
+    if (studio.status !== StudioStatus.APPROVED) {
+      throw new BadRequestException(
+        'Este estudio aún no está aprobado, no puedes crear salas.',
+      );
+    }
+
     const room = this.roomRepository.create({
       ...dto,
       studio,
@@ -79,6 +106,8 @@ export class RoomsService {
 
     return this.roomRepository.save(room);
   }
+
+
 
   async update(roomId: string, dto: UpdateRoomDto, user: User): Promise<Room> {
     const room = await this.roomRepository.findOne({
@@ -92,7 +121,17 @@ export class RoomsService {
     }
 
     Object.assign(room, dto);
-    return this.roomRepository.save(room);
+    const updatedRoom = await this.roomRepository.save(room);
+
+    // --- NOTIFICACIÓN DE ACTUALIZACIÓN DE SALA ---
+    this.emailService.sendProfileUpdateEmail(
+      user.email,
+      'Sala',
+      updatedRoom.name,
+      'Detalles de la sala'
+    );
+
+    return updatedRoom;
   }
 
   async remove(roomId: string, user: User): Promise<void> {
@@ -286,7 +325,7 @@ export class RoomsService {
     user: User,
   ): Promise<Room> {
     const studios = await this.studioRepository.find({
-      where: { owner: { id: user.id } }, // Si tienes campo isActive: , isActive: true
+      where: { owner: { id: user.id } },
       relations: ['owner'],
     });
 
@@ -296,8 +335,18 @@ export class RoomsService {
       );
     }
 
-    // Usar el primer studio o implementar lógica para seleccionar el principal
-    const studio = studios[0];
+    // 🚨 Filtrar solo los aprobados
+    const approvedStudios = studios.filter(
+      (studio) => studio.status === StudioStatus.APPROVED,
+    );
+
+    if (approvedStudios.length === 0) {
+      throw new BadRequestException(
+        'No tienes estudios aprobados por el administrador, no puedes crear salas.',
+      );
+    }
+
+    const studio = approvedStudios[0];
 
     const room = this.roomRepository.create({
       ...dto,
@@ -308,4 +357,6 @@ export class RoomsService {
 
     return this.roomRepository.save(room);
   }
+
+
 }

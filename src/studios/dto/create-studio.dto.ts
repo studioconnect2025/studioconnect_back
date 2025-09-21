@@ -4,14 +4,11 @@ import {
   MaxLength,
   IsOptional,
   IsArray,
-  IsNumber,
-  Min,
   IsEnum,
   ArrayMaxSize,
   Matches,
 } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
 import { StudioTypeEnum } from '../enum/studio-type.enum';
 import { ServicesType } from '../enum/ServicesType.enum';
 
@@ -31,6 +28,17 @@ export class CreateStudioDto {
   })
   @IsEnum(StudioTypeEnum)
   studioType: StudioTypeEnum;
+
+  // Ubicación desanidada para que el servicio pueda usarla directamente
+  @ApiProperty({ description: 'País', example: 'Mexico' })
+  @IsString()
+  @IsNotEmpty()
+  pais: string;
+
+  @ApiProperty({ description: 'Código postal', example: '54476' })
+  @IsString()
+  @IsNotEmpty()
+  codigoPostal: string;
 
   @ApiProperty({ description: 'Ciudad', example: 'Monterrey' })
   @IsString()
@@ -106,6 +114,8 @@ export class CreateStudioDto {
   })
   closingTime?: string;
 }
+
+
 
 // @ApiPropertyOptional({ description: 'Hora de apertura, formato HH:MM', example: '09:30' })
 // @IsOptional()

@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { ScheduleModule } from '@nestjs/schedule'; // Importación correcta
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { InstrumentosModule } from './instrumentos/instrumentos.module';
@@ -16,14 +17,22 @@ import { OwnersModule } from './owner/owner.module';
 import { OwnersController } from './owner/owner.controller';
 import { PaymentsModule } from './payment/payment.module';
 import { ProfileModule } from './profile/profile.module';
+import { GeocodingModule } from './geocoding/geocoding.module';
+import { AdminModule } from './admin/admin.module';
+import { ChatModule } from './chat/chat.module';
+import { PqrsModule } from './pqrs/pqrs.module';
+import { ReviewsModule } from './reviews/reviews.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
     }),
+    // ---- MODULO DE SCHEDULE PUESTO EN EL LUGAR CORRECTO ----
+    ScheduleModule.forRoot(),
+    
     TypeOrmModule.forRootAsync({
-      imports: [ConfigModule],
+      imports: [ConfigModule], // Se quita ScheduleModule de aquí
       inject: [ConfigService],
       useFactory: (cfg: ConfigService) => {
         return {
@@ -48,8 +57,14 @@ import { ProfileModule } from './profile/profile.module';
     OwnersModule,
     PaymentsModule,
     ProfileModule,
+    GeocodingModule,
+    AdminModule,
+    ChatModule,
+    PqrsModule,
+    ReviewsModule, 
   ],
   controllers: [AppController, OwnersController],
   providers: [AppService],
 })
 export class AppModule {}
+

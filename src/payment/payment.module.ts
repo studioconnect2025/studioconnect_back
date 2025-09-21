@@ -8,11 +8,21 @@ import { Instruments } from 'src/instrumentos/entities/instrumento.entity';
 import { User } from 'src/users/entities/user.entity';
 import { Studio } from 'src/studios/entities/studio.entity';
 import { PricingModule } from 'src/pricingTotal/pricing.module';
+import { Payment } from './entities/payment.entity';
+import { AuthModule } from 'src/auth/auth.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Booking, Room, Instruments, User, Studio]),
+    TypeOrmModule.forFeature([
+      Booking,
+      Room,
+      Instruments,
+      User,
+      Studio,
+      Payment,
+    ]),
     PricingModule,
+     AuthModule,
   ],
   controllers: [PaymentsController],
   providers: [PaymentsService],

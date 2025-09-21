@@ -26,22 +26,32 @@ export class UpdateStudioDto {
   @IsOptional()
   studioType?: StudioTypeEnum;
 
-  @ApiPropertyOptional({ description: 'Ciudad del estudio', example: 'Guadalajara' })
+  @ApiPropertyOptional({ description: 'Pais', example: 'Mexico' })
+  @IsString()
+  @IsOptional()
+  pais?: string;
+
+  @ApiPropertyOptional({ description: 'Codigo Postal', example: '54476' })
+  @IsString()
+  @IsOptional()
+  codigoPostal?: string;
+
+  @ApiPropertyOptional({ description: 'Ciudad', example: 'Guadalajara' })
   @IsString()
   @IsOptional()
   city?: string;
 
-  @ApiPropertyOptional({ description: 'Provincia del estudio', example: 'Jalisco' })
+  @ApiPropertyOptional({ description: 'Provincia', example: 'Jalisco' })
   @IsString()
   @IsOptional()
   province?: string;
 
-  @ApiPropertyOptional({ description: 'Dirección del estudio', example: 'Calle Nueva 456' })
+  @ApiPropertyOptional({ description: 'Dirección', example: 'Calle Nueva 456' })
   @IsString()
   @IsOptional()
   address?: string;
 
-  @ApiPropertyOptional({ description: 'Teléfono de contacto', example: '+52 3312345678' })
+  @ApiPropertyOptional({ description: 'Teléfono', example: '+52 3312345678' })
   @IsString()
   @IsOptional()
   phoneNumber?: string;
@@ -75,10 +85,12 @@ export class UpdateStudioDto {
 
   @ApiPropertyOptional({ description: 'Hora de apertura, formato HH:MM', example: '09:30' })
   @Matches(/^([0-1]\d|2[0-3]):([0-5]\d)$/, { message: 'Hora debe tener formato HH:MM' })
+  @IsOptional()
   openingTime?: string;
 
   @ApiPropertyOptional({ description: 'Hora de cierre, formato HH:MM', example: '21:00' })
   @Matches(/^([0-1]\d|2[0-3]):([0-5]\d)$/, { message: 'Hora debe tener formato HH:MM' })
+  @IsOptional()
   closingTime?: string;
 
   @ApiPropertyOptional({ description: 'Estado del estudio', example: 'approved', enum: StudioStatus })
@@ -86,5 +98,3 @@ export class UpdateStudioDto {
   @IsOptional()
   status?: StudioStatus;
 }
-
-
