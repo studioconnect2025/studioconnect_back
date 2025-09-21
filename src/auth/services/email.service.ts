@@ -469,4 +469,252 @@ export class EmailService {
     };
     await this.sendEmail(mailOptions, `notificación de pago para ${ownerEmail}`);
   }
+
+   async sendStudioRejectionEmail(ownerEmail: string, studioName: string, rejectionReason: string): Promise<void> {
+    const mailOptions = {
+      from: `StudioConnect <${this.configService.get<string>('FROM_EMAIL')}>`,
+      to: ownerEmail,
+      subject: `Actualización sobre tu solicitud para ${studioName}`,
+      html: this.getStudioRejectionTemplate(studioName, rejectionReason),
+    };
+    await this.sendEmail(mailOptions, `rechazo de estudio para ${ownerEmail}`);
+  }
+
+  private getStudioRejectionTemplate(studioName: string, rejectionReason: string): string {
+    const frontendUrl = this.configService.get<string>('FRONTEND_URL');
+    return `
+      <h1>Tu solicitud para ${studioName} no fue aprobada</h1>
+      <p>Hola,</p>
+      <p>Lamentamos informarte que, tras una revisión, tu solicitud para registrar el estudio <strong>${studioName}</strong> no ha sido aprobada en este momento.</p>
+      
+      <h2>Motivo del Rechazo:</h2>
+      <div style="padding: 15px; border-left: 4px solid #d9534f; background-color: #f9f2f2; margin: 15px 0;">
+        <p style="margin: 0;">${rejectionReason}</p>
+      </div>
+      
+      <p>Te invitamos a actualizar la información de tu estudio abordando los puntos mencionados y volver a enviarlo para su revisión. Puedes editar los datos desde tu panel de control.</p>
+      <a href="${frontendUrl}/dashboard/studio" class="button">Editar mi Estudio</a>
+    `;
+  }
+
+ 
+
+  /**
+   * Notifica al destinatario que ha recibido un nuevo mensaje en el chat de una reserva.
+   */
+  async sendNewMessageNotification(
+    recipientEmail: string,
+    senderName: string,
+    messagePreview: string,
+    bookingId: string
+  ): Promise<void> {
+    const mailOptions = {
+      from: `StudioConnect <${this.configService.get<string>('FROM_EMAIL')}>`,
+      to: recipientEmail,
+      subject: `Has recibido un nuevo mensaje de ${senderName}`,
+      html: this.getNewMessageNotificationTemplate(senderName, messagePreview, bookingId),
+    };
+    await this.sendEmail(mailOptions, `notificación de nuevo mensaje para ${recipientEmail}`);
+  }
+
+  private getNewMessageNotificationTemplate(senderName: string, messagePreview: string, bookingId: string): string {
+    const frontendUrl = this.configService.get<string>('FRONTEND_URL');
+    // Asumimos una ruta como /dashboard/bookings/:id/chat para ver la conversación
+    const chatUrl = `${frontendUrl}/dashboard/bookings/${bookingId}?tab=chat`; 
+
+    // Acortamos la vista previa si el mensaje es muy largo
+    const preview = messagePreview.length > 150 ? messagePreview.substring(0, 147) + '...' : messagePreview;
+
+    return `
+      <h1>Nuevo Mensaje de ${senderName}</h1>
+      <p>Hola,</p>
+      <p>Has recibido un nuevo mensaje en la plataforma relacionado con una de tus reservas.</p>
+      
+      <div style="padding: 15px; border-left: 4px solid #3498db; background-color: #f2f2f2; margin: 15px 0;">
+        <p style="margin: 0;"><strong>${senderName} dice:</strong></p>
+        <p style="margin: 5px 0 0 0;"><em>"${preview}"</em></p>
+      </div>
+      
+      <p>Puedes ver la conversación completa y responder haciendo clic en el siguiente botón:</p>
+      <a href="${chatUrl}" class="button">Responder al Mensaje</a>
+    `;
+  }
+
+  async sendNewReviewNotification(
+    ownerEmail: string,
+    musicianName: string,
+    studioName: string,
+    rating: number,
+    comment: string,
+    studioId: string
+  ): Promise<void> {
+    const mailOptions = {
+      from: `StudioConnect <${this.configService.get<string>('FROM_EMAIL')}>`,
+      to: ownerEmail,
+      subject: `¡${musicianName} ha calificado tu estudio!`,
+      html: this.getNewReviewTemplate(musicianName, studioName, rating, comment, studioId),
+    };
+    await this.sendEmail(mailOptions, `notificación de nueva reseña para ${ownerEmail}`);
+  }
+
+  private getNewReviewTemplate(
+    musicianName: string,
+    studioName: string,
+    rating: number,
+    comment: string,
+    studioId: string
+  ): string {
+    const frontendUrl = this.configService.get<string>('FRONTEND_URL');
+    // Asumimos una ruta como /studios/:id para ver el estudio y sus reseñas
+    const studioUrl = `${frontendUrl}/studios/${studioId}`;
+
+    // Generamos las estrellas para la calificación
+    const stars = '⭐'.repeat(rating) + '☆'.repeat(5 - rating);
+
+    return `
+      <h1>¡Has recibido una nueva reseña para ${studioName}!</h1>
+      <p>Hola,</p>
+      <p>El músico <strong>${musicianName}</strong> ha dejado una nueva reseña sobre su experiencia en tu estudio.</p>
+      
+      <h2>Detalles de la Reseña:</h2>
+      <div style="padding: 15px; border-left: 4px solid #f0ad4e; background-color: #fcf8e3; margin: 15px 0;">
+        <p style="margin: 0;"><strong>Calificación:</strong> ${stars} (${rating}/5)</p>
+        <p style="margin: 10px 0 0 0;"><strong>Comentario:</strong></p>
+        <p style="margin: 5px 0 0 0;"><em>"${comment}"</em></p>
+      </div>
+      
+      <p>Las reseñas positivas ayudan a que más músicos descubran tu estudio. ¡Sigue así!</p>
+      <a href="${studioUrl}" class="button">Ver todas las reseñas de mi estudio</a>
+    `;
+  }
+
+   // --- NOTIFICACIONES PARA EL ADMINISTRADOR ---
+  // ✅ --- INICIO DE NUEVO CÓDIGO --- ✅
+
+  /**
+   * Notifica al admin sobre un nuevo estudio que necesita aprobación.
+   */
+  async sendNewStudioAdminNotification(studioName: string, ownerEmail: string, studioId: string): Promise<void> {
+    const adminEmail = this.configService.get<string>('ADMIN_EMAIL');
+    if (!adminEmail) {
+      this.logger.warn('ADMIN_EMAIL no está configurado. No se puede enviar la notificación de nuevo estudio.');
+      return;
+    }
+
+    const frontendUrl = this.configService.get<string>('FRONTEND_URL');
+    // Asumimos que hay un panel de admin para ver los estudios pendientes
+    const reviewUrl = `${frontendUrl}/admin/studios/pending`; 
+
+    const mailOptions = {
+      from: `StudioConnect Alertas <${this.configService.get<string>('FROM_EMAIL')}>`,
+      to: adminEmail,
+      subject: `Nuevo estudio registrado: ${studioName}`,
+      html: `
+        <h1>Nuevo Estudio Requiere Aprobación</h1>
+        <p>Un nuevo estudio se ha registrado en la plataforma y está pendiente de revisión.</p>
+        <ul>
+          <li><strong>Nombre del Estudio:</strong> ${studioName}</li>
+          <li><strong>Email del Dueño:</strong> ${ownerEmail}</li>
+          <li><strong>ID de Estudio:</strong> ${studioId}</li>
+        </ul>
+        <p>Por favor, revisa la información y aprueba o rechaza la solicitud desde el panel de administración.</p>
+        <a href="${reviewUrl}" class="button">Revisar Solicitudes</a>
+      `,
+    };
+    await this.sendEmail(mailOptions, 'nuevo estudio para admin');
+  }
+
+  /**
+   * Notifica al admin sobre una nueva disputa (PQRS).
+   */
+  async sendNewDisputeAdminNotification(bookingId: string, reporterEmail: string, reason: string): Promise<void> {
+    const adminEmail = this.configService.get<string>('ADMIN_EMAIL');
+    if (!adminEmail) {
+      this.logger.warn('ADMIN_EMAIL no está configurado. No se puede enviar la notificación de disputa.');
+      return;
+    }
+
+    const frontendUrl = this.configService.get<string>('FRONTEND_URL');
+    const disputeUrl = `${frontendUrl}/admin/disputes`;
+
+    const mailOptions = {
+      from: `StudioConnect Soporte <${this.configService.get<string>('FROM_EMAIL')}>`,
+      to: adminEmail,
+      subject: 'Se ha generado una PQRS',
+      html: `
+        <h1>Nueva Disputa (PQRS) Registrada</h1>
+        <p>Un usuario ha iniciado un proceso de disputa formal y requiere intervención del equipo de soporte.</p>
+        <ul>
+          <li><strong>Usuario que reporta:</strong> ${reporterEmail}</li>
+          <li><strong>ID de Reserva Afectada:</strong> ${bookingId}</li>
+          <li><strong>Motivo:</strong> ${reason}</li>
+        </ul>
+        <a href="${disputeUrl}" class="button">Gestionar Disputa</a>
+      `,
+    };
+    await this.sendEmail(mailOptions, 'nueva disputa para admin');
+  }
+
+  /**
+   * Notifica al admin sobre un fallo en el procesamiento de un pago.
+   */
+  async sendPaymentFailureAdminNotification(bookingId: string, musicianEmail: string, amount: number, errorMessage: string): Promise<void> {
+    const adminEmail = this.configService.get<string>('ADMIN_EMAIL');
+    if (!adminEmail) {
+      this.logger.warn('ADMIN_EMAIL no está configurado. No se puede enviar la notificación de fallo de pago.');
+      return;
+    }
+
+    const mailOptions = {
+      from: `StudioConnect Sistema <${this.configService.get<string>('FROM_EMAIL')}>`,
+      to: adminEmail,
+      subject: 'Fallo en el pago de una reserva',
+      html: `
+        <h1>Alerta Técnica: Fallo de Pago</h1>
+        <p>Se ha detectado un error al procesar un pago en la plataforma. Se requiere revisión técnica.</p>
+        <h2>Detalles del Error:</h2>
+        <ul>
+          <li><strong>ID de Reserva:</strong> ${bookingId}</li>
+          <li><strong>Email del Músico:</strong> ${musicianEmail}</li>
+          <li><strong>Monto:</strong> $${amount.toFixed(2)}</li>
+          <li><strong>Mensaje de la Pasarela:</strong> ${errorMessage}</li>
+        </ul>
+        <p>Por favor, investiga el problema con la pasarela de pagos y el estado de la reserva asociada.</p>
+      `,
+    };
+    await this.sendEmail(mailOptions, 'fallo de pago para admin');
+  }
+
+  /**
+   * Notifica al admin sobre contenido reportado por un usuario.
+   */
+  async sendContentReportedAdminNotification(reportType: 'Reseña' | 'Foto' | 'Perfil', contentId: string, reporterEmail: string, reason: string): Promise<void> {
+    const adminEmail = this.configService.get<string>('ADMIN_EMAIL');
+    if (!adminEmail) {
+      this.logger.warn('ADMIN_EMAIL no está configurado. No se puede enviar la notificación de contenido reportado.');
+      return;
+    }
+
+    const frontendUrl = this.configService.get<string>('FRONTEND_URL');
+    const moderationUrl = `${frontendUrl}/admin/moderation`;
+
+    const mailOptions = {
+      from: `StudioConnect Moderación <${this.configService.get<string>('FROM_EMAIL')}>`,
+      to: adminEmail,
+      subject: 'Contenido reportado por un usuario',
+      html: `
+        <h1>Alerta de Moderación</h1>
+        <p>Un usuario ha reportado contenido como inapropiado. Se necesita revisión.</p>
+        <ul>
+          <li><strong>Tipo de Contenido:</strong> ${reportType}</li>
+          <li><strong>ID del Contenido:</strong> ${contentId}</li>
+          <li><strong>Reportado por:</strong> ${reporterEmail}</li>
+          <li><strong>Motivo del reporte:</strong> ${reason}</li>
+        </ul>
+        <a href="${moderationUrl}" class="button">Ir a Moderación</a>
+      `,
+    };
+    await this.sendEmail(mailOptions, 'contenido reportado para admin');
+  }
+
 }

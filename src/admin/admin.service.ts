@@ -4,7 +4,7 @@ import { User } from '../users/entities/user.entity';
 import { In, Repository } from 'typeorm';
 import { UserRole } from '../auth/enum/roles.enum';
 import { Studio } from '../studios/entities/studio.entity';
-import { Booking } from '../bookings/dto/bookings.entity';
+import { Booking } from 'src/bookings/dto/bookings.entity';
 import { StudioStatus } from '../studios/enum/studio-status.enum';
 
 @Injectable()
@@ -66,6 +66,24 @@ export class AdminService {
     } catch (error) {
       this.logger.error('Error al obtener usuarios activos', error.stack);
       throw new InternalServerErrorException('No se pudieron obtener los usuarios activos.');
+    }
+  }
+
+  async toggleUserStatus(userId: string): Promise<User> {
+    const user = await this.usersRepository.findOneBy({ id: userId });
+    if (!user) {
+      throw new NotFoundException(`Usuario con ID "${userId}" no encontrado.`);
+    }
+
+    user.isActive = !user.isActive;
+
+    try {
+      const savedUser = await this.usersRepository.save(user);
+      const { passwordHash, ...result } = savedUser;
+      return result as User;
+    } catch (error) {
+      this.logger.error(`Error al cambiar el estado del usuario ${userId}`, error.stack);
+      throw new InternalServerErrorException('Error al actualizar el estado del usuario.');
     }
   }
 
