@@ -132,6 +132,17 @@ export class StudiosService {
       );
     }
 
+    // 🔴 NEW: Verificar si ya existe un estudio asociado al dueño
+    const existingStudio = await this.studioRepository.findOne({
+      where: { owner: { id: user.id } },
+    });
+
+    if (existingStudio) {
+      throw new BadRequestException(
+        'Ya tienes un estudio registrado. Solo puedes crear uno por dueño.',
+      );
+    }
+
     if (files.photos && files.photos.length > 5) {
       throw new BadRequestException('Solo se permiten hasta 5 fotos.');
     }
@@ -182,7 +193,6 @@ export class StudiosService {
     }
 
     const savedStudio = await this.studioRepository.save(studio);
-  
 
     // --- NOTIFICACIÓN DE BIENVENIDA AL DUEÑO DEL ESTUDIO ---
     this.emailService.sendWelcomeStudioEmail(user.email, savedStudio.name);
@@ -196,7 +206,6 @@ export class StudiosService {
 
     return savedStudio;
   }
-
 
   // --- ACTUALIZAR ESTUDIO CON ARCHIVOS ---
   async updateMyStudioWithFiles(

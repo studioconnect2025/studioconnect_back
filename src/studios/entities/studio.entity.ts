@@ -14,6 +14,7 @@ import { Booking } from 'src/bookings/dto/bookings.entity';
 import { Room } from 'src/rooms/entities/room.entity';
 import { StudioTypeEnum } from '../enum/studio-type.enum';
 import { ServicesType } from '../enum/ServicesType.enum';
+import { Membership } from 'src/membership/entities/membership.entity';
 
 @Entity('studios')
 export class Studio {
@@ -96,6 +97,9 @@ export class Studio {
   @Column({ nullable: true })
   stripeAccountId: string;
 
-   @Column({ type: 'text', nullable: true })
+  @Column({ type: 'text', nullable: true })
   rejectionReason?: string;
+
+  @OneToMany(() => Membership, (membership) => membership.studio)
+  memberships: Membership[];
 }

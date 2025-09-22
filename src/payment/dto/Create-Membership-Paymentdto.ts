@@ -1,10 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsNotEmpty, IsEnum } from 'class-validator';
-
-export enum MembershipPlan {
-  MONTHLY = 'MONTHLY',
-  YEARLY = 'YEARLY',
-}
+import { MembershipPlan } from 'src/membership/enum/enum.membership';
 
 export class CreateMembershipPaymentDto {
   @ApiProperty({ description: 'Plan de membresía', enum: MembershipPlan })
