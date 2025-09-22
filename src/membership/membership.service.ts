@@ -27,6 +27,33 @@ export class MembershipsService {
     private readonly emailService: EmailService,
   ) {}
 
+  async getAllMemberships({
+    page,
+    limit,
+    status,
+    studioId,
+  }: {
+    page: number;
+    limit: number;
+    status?: string;
+    studioId?: string;
+  }) {
+    const query = this.membershipRepository
+      .createQueryBuilder('membership')
+      .leftJoinAndSelect('membership.studio', 'studio');
+
+    if (status) query.andWhere('membership.status = :status', { status });
+    if (studioId) query.andWhere('studio.id = :studioId', { studioId });
+
+    const [items, total] = await query
+      .skip((page - 1) * limit)
+      .take(limit)
+      .orderBy('membership.startDate', 'DESC')
+      .getManyAndCount();
+
+    return { items, total, page, limit };
+  }
+
   // Registrar intención de compra (INACTIVE hasta que pague)
   async create(dto: CreateMembershipDto, owner: User): Promise<Membership> {
     const studio = await this.studioRepository.findOne({
@@ -96,12 +123,15 @@ export class MembershipsService {
 
     // Notificar por correo
     if (membership.studio.owner?.email) {
-      this.emailService.sendMembershipActivated(membership.studio.owner.email, {
-        plan: saved.plan,
-        startDate: saved.startDate,
-        endDate: saved.endDate,
-        studioName: membership.studio.name,
-      });
+      await this.emailService.sendMembershipActivated(
+        membership.studio.owner.email,
+        {
+          plan: saved.plan,
+          startDate: saved.startDate,
+          endDate: saved.endDate,
+          studioName: membership.studio.name,
+        },
+      );
     }
 
     return saved;
@@ -136,7 +166,7 @@ export class MembershipsService {
         await this.membershipRepository.save(m);
 
         if (m.studio.owner?.email) {
-          this.emailService.sendMembershipExpired(m.studio.owner.email, {
+          await this.emailService.sendMembershipExpired(m.studio.owner.email, {
             plan: m.plan,
             studioName: m.studio.name,
             expiredAt: m.endDate,

@@ -46,6 +46,55 @@ export class PaymentsService {
     this.stripe = new Stripe(stripeKey, {});
   }
 
+  async getAllPayments({
+    page,
+    limit,
+    status,
+    type,
+    studioId,
+    userId,
+  }: {
+    page: number;
+    limit: number;
+    status?: string;
+    type?: 'booking' | 'membership';
+    studioId?: string;
+    userId?: string;
+  }) {
+    const query = this.paymentRepo
+      .createQueryBuilder('payment')
+      .leftJoinAndSelect('payment.booking', 'booking')
+      .leftJoinAndSelect('booking.studio', 'bookingStudio')
+      .leftJoinAndSelect('booking.musician', 'musician')
+      .leftJoinAndSelect('payment.membership', 'membership')
+      .leftJoinAndSelect('membership.studio', 'membershipStudio');
+
+    if (status) query.andWhere('payment.status = :status', { status });
+
+    if (type) {
+      if (type === 'booking') query.andWhere('payment.booking IS NOT NULL');
+      if (type === 'membership')
+        query.andWhere('payment.membership IS NOT NULL');
+    }
+
+    if (studioId) {
+      query.andWhere(
+        '(bookingStudio.id = :studioId OR membershipStudio.id = :studioId)',
+        { studioId },
+      );
+    }
+
+    if (userId) query.andWhere('musician.id = :userId', { userId });
+
+    const [items, total] = await query
+      .skip((page - 1) * limit)
+      .take(limit)
+      .orderBy('payment.createdAt', 'DESC')
+      .getManyAndCount();
+
+    return { items, total, page, limit };
+  }
+
   // 🔹 Pago de reserva por músicos
   async createBookingPayment(
     user: User,

@@ -39,7 +39,7 @@ export class RoomsService {
   async createWithAutoStudio(dto: CreateRoomDto, user: User): Promise<Room> {
     const studio = await this.studioRepository.findOne({
       where: { owner: { id: user.id } },
-      relations: ['owner'],
+      relations: ['owner', 'rooms'],
     });
 
     if (!studio) {
@@ -99,7 +99,7 @@ export class RoomsService {
   ): Promise<Room> {
     const studio = await this.studioRepository.findOne({
       where: { id: studioId },
-      relations: ['owner'],
+      relations: ['owner', 'rooms'],
     });
 
     if (!studio) throw new NotFoundException('Estudio no encontrado');

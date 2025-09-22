@@ -12,6 +12,7 @@ import {
   HttpStatus,
   Req,
   Headers,
+  Query,
 } from '@nestjs/common';
 import { PaymentsService } from './payment.service';
 import { AuthGuard } from '@nestjs/passport';
@@ -38,6 +39,32 @@ type RawBodyRequest = ExpressRequest & { body: Buffer };
 @Controller('payments')
 export class PaymentsController {
   constructor(private readonly paymentsService: PaymentsService) {}
+
+  // --- ADMIN: obtener todos los pagos ---
+  @Get('admin/all')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({
+    summary:
+      'Obtener todos los pagos (Booking y Membership) con filtros y paginación (Admin)',
+  })
+  async getAllPaymentsAdmin(
+    @Query('page') page = 1,
+    @Query('limit') limit = 20,
+    @Query('status') status?: string,
+    @Query('type') type?: 'booking' | 'membership',
+    @Query('studioId') studioId?: string,
+    @Query('userId') userId?: string,
+  ) {
+    return this.paymentsService.getAllPayments({
+      page: Number(page),
+      limit: Number(limit),
+      status,
+      type,
+      studioId,
+      userId,
+    });
+  }
 
   // 🔹 Pago de reserva
   @Post('booking')
@@ -83,7 +110,7 @@ export class PaymentsController {
   ): Promise<Booking | Membership | Stripe.PaymentIntent> {
     return this.paymentsService.confirmPayment(paymentIntentId);
   }
-  
+
   @Post('webhook')
   @HttpCode(HttpStatus.OK)
   async stripeWebhook(
