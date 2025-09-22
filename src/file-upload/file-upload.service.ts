@@ -1,4 +1,9 @@
-import { Injectable, BadRequestException, NotFoundException, InternalServerErrorException } from '@nestjs/common';
+import { 
+  Injectable, 
+  BadRequestException, 
+  NotFoundException, 
+  InternalServerErrorException 
+} from '@nestjs/common';
 import { v2 as cloudinary, UploadApiResponse } from 'cloudinary';
 
 @Injectable()
@@ -11,28 +16,41 @@ export class FileUploadService {
     });
   }
 
+  // 🔥 Máximo 10MB (Cloudinary free plan)
+  private readonly MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+
   async uploadFile(
     file: Express.Multer.File,
     folder: string,
   ): Promise<UploadApiResponse> {
     return new Promise<UploadApiResponse>((resolve, reject) => {
+      // ✅ Validar tamaño
+      if (file.size > this.MAX_FILE_SIZE) {
+        return reject(
+          new BadRequestException(
+            `El archivo es demasiado grande. Máximo permitido: ${this.MAX_FILE_SIZE / (1024 * 1024)}MB`,
+          ),
+        );
+      }
+
+      // ✅ Validar PDFs cuando corresponde
       if (folder === 'pdfs') {
-        const isPdf = file.mimetype === 'application/pdf' || 
-                     file.originalname.toLowerCase().endsWith('.pdf');
-        
+        const isPdf =
+          file.mimetype === 'application/pdf' ||
+          file.originalname.toLowerCase().endsWith('.pdf');
+
         if (!isPdf) {
-          return reject(new BadRequestException(
-            `Solo se permiten archivos PDF. Recibido: ${file.mimetype}`
-          ));
+          return reject(
+            new BadRequestException(
+              `Solo se permiten archivos PDF. Recibido: ${file.mimetype}`,
+            ),
+          );
         }
       }
 
       const uploadOptions: any = {
         resource_type: folder === 'pdfs' ? 'raw' : 'image',
         folder,
-        // --- 🔥 SOLUCIÓN DEFINITIVA ---
-        // Forzamos a Cloudinary a usar el preset que configuramos como público.
-        // Asegúrate de que el nombre 'ml_default' coincida exactamente con tu preset.
         upload_preset: 'ml_default',
       };
 
@@ -64,12 +82,14 @@ export class FileUploadService {
     });
   }
 
-  async getPublicPdfUrl(publicId: string): Promise<{ inline: string; download: string }> {
+  async getPublicPdfUrl(
+    publicId: string,
+  ): Promise<{ inline: string; download: string }> {
     try {
       const resource = await cloudinary.api.resource(publicId, {
-        resource_type: 'raw'
+        resource_type: 'raw',
       });
-      
+
       console.log('📄 PDF Resource found:', { public_id: resource.public_id });
 
       const inlineUrl = cloudinary.utils.url(publicId, {
@@ -80,27 +100,25 @@ export class FileUploadService {
       const downloadUrl = cloudinary.utils.url(publicId, {
         resource_type: 'raw',
         secure: true,
-        flags: 'attachment'
+        flags: 'attachment',
       });
 
-      console.log('🔗 Generated URLs:', { inline: inlineUrl, download: downloadUrl });
-
       return { inline: inlineUrl, download: downloadUrl };
-
     } catch (error) {
       console.error('❌ Error getting PDF URLs:', error);
-      
+
       if (error.error?.http_code === 404) {
         throw new NotFoundException(
-          `PDF no encontrado en Cloudinary con Public ID: ${publicId}.`
+          `PDF no encontrado en Cloudinary con Public ID: ${publicId}.`,
         );
       }
-      
-      throw new InternalServerErrorException(`Error al obtener URLs del PDF: ${error.message}`);
+
+      throw new InternalServerErrorException(
+        `Error al obtener URLs del PDF: ${error.message}`,
+      );
     }
   }
 
-  // ... (El resto de los métodos no cambian)
   async getPublicImageUrl(publicId: string): Promise<string> {
     return cloudinary.utils.url(publicId, {
       resource_type: 'image',
@@ -108,7 +126,10 @@ export class FileUploadService {
     });
   }
 
-  async checkFileExists(publicId: string, resourceType: 'image' | 'raw' = 'raw'): Promise<boolean> {
+  async checkFileExists(
+    publicId: string,
+    resourceType: 'image' | 'raw' = 'raw',
+  ): Promise<boolean> {
     try {
       await cloudinary.api.resource(publicId, { resource_type: resourceType });
       return true;
@@ -117,13 +138,18 @@ export class FileUploadService {
     }
   }
 
-  async deleteFile(publicId: string, resourceType: 'image' | 'raw' | 'auto' = 'auto'): Promise<any> {
+  async deleteFile(
+    publicId: string,
+    resourceType: 'image' | 'raw' | 'auto' = 'auto',
+  ): Promise<any> {
     try {
       return await cloudinary.uploader.destroy(publicId, {
         resource_type: resourceType as any,
       });
     } catch (error) {
-      throw new BadRequestException(`Error al eliminar archivo: ${error.message}`);
+      throw new BadRequestException(
+        `Error al eliminar archivo: ${error.message}`,
+      );
     }
   }
 }

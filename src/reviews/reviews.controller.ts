@@ -20,11 +20,12 @@ import {
   ApiParam,
   ApiBody,
 } from '@nestjs/swagger';
+import { PublicReviewDto } from './dto/public-review.dto';
 
 @ApiTags('Reviews')
 @Controller('reviews')
 export class ReviewsController {
-  constructor(private readonly reviewsService: ReviewsService) {}
+  constructor(private readonly reviewsService: ReviewsService) { }
 
   // Crear reseña (solo músico)
   @UseGuards(AuthGuard('jwt'), RolesGuard)
@@ -59,4 +60,11 @@ export class ReviewsController {
   async getOwnerReviews(@Request() req) {
     return this.reviewsService.getReviewsForOwner(req.user.id);
   }
+
+  @ApiOperation({ summary: 'Obtener todas las reseñas públicas resumidas (público)' })
+  @Get('public/all')
+  async getAllPublicReviews(): Promise<PublicReviewDto[]> {
+    return this.reviewsService.getAllPublicReviews();
+  }
+
 }
