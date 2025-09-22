@@ -68,7 +68,11 @@ export class Studio {
   @Column({ type: 'varchar', length: 5, nullable: true })
   closingTime?: string; // formato 'HH:MM'
 
-  @Column({ nullable: true })
+  @Column({
+  name: 'comercialRegister', 
+  type: 'varchar',
+  nullable: true,
+})
   comercialRegister?: string;
 
   @OneToOne(() => User, (user) => user.studio, { eager: true })

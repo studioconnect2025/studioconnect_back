@@ -309,12 +309,17 @@ export class RoomsService {
    * Método auxiliar para eliminar múltiples imágenes de Cloudinary
    */
   private async deleteImagesFromCloudinary(publicIds: string[]): Promise<void> {
-    try {
-      await this.fileUploadService.deleteFiles(publicIds);
-    } catch (error) {
-      console.error('Error eliminando imágenes de Cloudinary:', error);
-    }
+  try {
+    // ✅ CORRECCIÓN: Usamos Promise.all para ejecutar todas las eliminaciones en paralelo.
+    const deletePromises = publicIds.map((publicId) =>
+      this.fileUploadService.deleteFile(publicId, 'image'),
+    );
+    await Promise.all(deletePromises);
+    console.log(`✅ ${publicIds.length} imágenes eliminadas de Cloudinary.`);
+  } catch (error) {
+    console.error('Error eliminando imágenes de Cloudinary:', error);
   }
+}
 
   /**
    * MÉTODO ADICIONAL: Si el usuario puede tener múltiples studios
