@@ -20,7 +20,6 @@ import { Instruments } from 'src/instrumentos/entities/instrumento.entity';
 import { EmailService } from 'src/auth/services/email.service';
 import { Cron } from '@nestjs/schedule'; // Importa el decorador Cron
 
-
 @Injectable()
 export class BookingsService {
   private readonly logger = new Logger(BookingsService.name);
@@ -34,7 +33,6 @@ export class BookingsService {
 
     private readonly pricingService: PricingService,
     private readonly emailService: EmailService,
-    
   ) {}
 
   /**
@@ -138,11 +136,14 @@ export class BookingsService {
     };
 
     // 1. Enviar email de confirmación de solicitud al músico
-    this.emailService.sendBookingRequestMusician(musician.email, bookingDetails);
+    await this.emailService.sendBookingRequestMusician(
+      musician.email,
+      bookingDetails,
+    );
 
     // 2. Enviar email de notificación de nueva reserva al dueño del estudio
     if (room.studio.owner && room.studio.owner.email) {
-      this.emailService.sendBookingRequestOwner(
+      await this.emailService.sendBookingRequestOwner(
         room.studio.owner.email,
         bookingDetails,
       );
@@ -223,26 +224,26 @@ export class BookingsService {
     booking.status = BookingStatus.CONFIRMED;
     await this.bookingRepository.save(booking);
 
-    this.emailService.sendBookingConfirmedEmail(booking.musician.email, {
-    musicianName: booking.musician.email, // o el campo que uses
-    studioName: booking.room.studio.name,
-    studioAddress: booking.room.studio.address, // asumiendo que tienes esta propiedad
-    roomName: booking.room.name,
-    startTime: booking.startTime,
-    endTime: booking.endTime,
-    totalPrice: booking.totalPrice,
-    contactInfo: booking.room.studio.owner.email, // o email
-  });
+    await this.emailService.sendBookingConfirmedEmail(booking.musician.email, {
+      musicianName: booking.musician.email, // o el campo que uses
+      studioName: booking.room.studio.name,
+      studioAddress: booking.room.studio.address, // asumiendo que tienes esta propiedad
+      roomName: booking.room.name,
+      startTime: booking.startTime,
+      endTime: booking.endTime,
+      totalPrice: booking.totalPrice,
+      contactInfo: booking.room.studio.owner.email, // o email
+    });
 
-  this.emailService.sendOwnerBookingConfirmedNotice(user.email, {
-    musicianName: booking.musician.email, // o email
-    roomName: booking.room.name,
-    startTime: booking.startTime,
-    endTime: booking.endTime,
-    totalPrice: booking.totalPrice,
-    studioName: booking.room.studio.name,
-  });
-  // --- Fin Notificación ---
+    await this.emailService.sendOwnerBookingConfirmedNotice(user.email, {
+      musicianName: booking.musician.email, // o email
+      roomName: booking.room.name,
+      startTime: booking.startTime,
+      endTime: booking.endTime,
+      totalPrice: booking.totalPrice,
+      studioName: booking.room.studio.name,
+    });
+    // --- Fin Notificación ---
     return booking;
   }
 
@@ -258,15 +259,15 @@ export class BookingsService {
 
     booking.status = BookingStatus.REJECTED;
     await this.bookingRepository.save(booking);
-     // --- Notificación ---
-    this.emailService.sendBookingRejectedEmail(booking.musician.email, {
-    studioName: booking.room.studio.name,
-    roomName: booking.room.name,
-    startTime: booking.startTime,
-    endTime: booking.endTime,
-    totalPrice: booking.totalPrice,
-  });
-  // --- Fin Notificación ---
+    // --- Notificación ---
+    await this.emailService.sendBookingRejectedEmail(booking.musician.email, {
+      studioName: booking.room.studio.name,
+      roomName: booking.room.name,
+      startTime: booking.startTime,
+      endTime: booking.endTime,
+      totalPrice: booking.totalPrice,
+    });
+    // --- Fin Notificación ---
     return booking;
   }
 
@@ -349,29 +350,29 @@ export class BookingsService {
 
     await this.bookingRepository.save(booking);
 
-     this.emailService.sendBookingCancellationEmail(musician.email, {
-    studioName: booking.room.studio.name,
-    roomName: booking.room.name,
-    startTime: booking.startTime,
-    endTime: booking.endTime,
-    totalPrice: booking.totalPrice,
-  });
+    await this.emailService.sendBookingCancellationEmail(musician.email, {
+      studioName: booking.room.studio.name,
+      roomName: booking.room.name,
+      startTime: booking.startTime,
+      endTime: booking.endTime,
+      totalPrice: booking.totalPrice,
+    });
 
-     if (booking.room.studio.owner?.email) {
-    this.emailService.sendOwnerBookingUpdateAlert(
-      booking.room.studio.owner.email,
-      {
-        musicianName: musician.email, // o email
-        roomName: booking.room.name,
-        startTime: booking.startTime,
-        endTime: booking.endTime,
-        studioName: booking.room.studio.name,
-        totalPrice: booking.totalPrice,
-      },
-      `Se ha cancelado una reserva en ${booking.room.studio.name}`,
-      `El músico ha cancelado su reserva. El siguiente horario ha quedado libre:`
-    );
-  }
+    if (booking.room.studio.owner?.email) {
+      await this.emailService.sendOwnerBookingUpdateAlert(
+        booking.room.studio.owner.email,
+        {
+          musicianName: musician.email, // o email
+          roomName: booking.room.name,
+          startTime: booking.startTime,
+          endTime: booking.endTime,
+          studioName: booking.room.studio.name,
+          totalPrice: booking.totalPrice,
+        },
+        `Se ha cancelado una reserva en ${booking.room.studio.name}`,
+        `El músico ha cancelado su reserva. El siguiente horario ha quedado libre:`,
+      );
+    }
     // --- Fin Notificación ---
     return booking;
   }
@@ -445,8 +446,8 @@ export class BookingsService {
 
     await this.bookingRepository.save(booking);
 
-     if (booking.room.studio.owner?.email) {
-      this.emailService.sendBookingRequestOwner(
+    if (booking.room.studio.owner?.email) {
+      await this.emailService.sendBookingRequestOwner(
         booking.room.studio.owner.email,
         {
           musicianEmail: musician.email,
@@ -454,10 +455,10 @@ export class BookingsService {
           studioName: booking.room.studio.name,
           startTime: booking.startTime,
           endTime: booking.endTime,
-          totalPrice: booking.totalPrice
-        }
+          totalPrice: booking.totalPrice,
+        },
       );
-  }
+    }
 
     // ALERTA para el dueño (console.log)
     console.log(
@@ -467,9 +468,11 @@ export class BookingsService {
     return booking;
   }
 
-   @Cron('0 * * * *') // Se ejecuta cada hora, en el minuto 0.
+  @Cron('0 * * * *') // Se ejecuta cada hora, en el minuto 0.
   async handleBookingReminders() {
-    this.logger.log('Ejecutando CRON job para buscar recordatorios de reservas...');
+    this.logger.log(
+      'Ejecutando CRON job para buscar recordatorios de reservas...',
+    );
 
     const now = new Date();
 
@@ -488,10 +491,16 @@ export class BookingsService {
     });
 
     for (const booking of bookingsFor48hReminder) {
-      this.logger.log(`Enviando recordatorio de 48h para la reserva ID: ${booking.id}`);
+      this.logger.log(
+        `Enviando recordatorio de 48h para la reserva ID: ${booking.id}`,
+      );
       // Asumo que tienes un método en EmailService para esto
-      this.emailService.sendBookingReminder(booking.musician.email, booking, '48 horas');
-      
+      await this.emailService.sendBookingReminder(
+        booking.musician.email,
+        booking,
+        '48 horas',
+      );
+
       booking.reminder48hSent = true;
       await this.bookingRepository.save(booking);
     }
@@ -511,10 +520,16 @@ export class BookingsService {
     });
 
     for (const booking of bookingsFor24hReminder) {
-      this.logger.log(`Enviando recordatorio de 24h para la reserva ID: ${booking.id}`);
-       // Reutilizamos el método de EmailService
-      this.emailService.sendBookingReminder(booking.musician.email, booking, '24 horas');
-      
+      this.logger.log(
+        `Enviando recordatorio de 24h para la reserva ID: ${booking.id}`,
+      );
+      // Reutilizamos el método de EmailService
+      await this.emailService.sendBookingReminder(
+        booking.musician.email,
+        booking,
+        '24 horas',
+      );
+
       booking.reminder24hSent = true;
       await this.bookingRepository.save(booking);
     }
@@ -532,5 +547,4 @@ export class BookingsService {
     }
     return booking;
   }
-
 }

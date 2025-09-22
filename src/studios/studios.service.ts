@@ -45,8 +45,8 @@ export class StudiosService {
     return studio;
   }
 
-  // --- 📄 OBTENER URL INLINE DE REGISTRO COMERCIAL ---
- async getComercialRegisterUrl(id: string): Promise<{ inline: string; download: string }> {
+  // --- OBTENER URL INLINE DE REGISTRO COMERCIAL ---
+  async getComercialRegisterUrl(id: string): Promise<{ inline: string; download: string }> {
     const studio = await this.studioRepository.findOne({ where: { id } });
     
     if (!studio) {
@@ -61,7 +61,6 @@ export class StudiosService {
   
     try {
       // Llamada directa y única al servicio de FileUpload.
-      // Ya no necesitamos la lógica de fallback.
       return await this.fileUploadService.getPublicPdfUrl(studio.comercialRegister);
       
     } catch (error) {
@@ -144,30 +143,41 @@ export class StudiosService {
   }
 
   // --- CREAR ESTUDIO CON ARCHIVOS ---
- async createWithFiles(
-  createStudioDto: CreateStudioDto,
-  user: User,
-  files: {
-    photos?: Express.Multer.File[];
-    comercialRegister?: Express.Multer.File[];
-  },
-): Promise<Studio> {
-  if (user.role !== UserRole.STUDIO_OWNER) {
-    throw new ForbiddenException(
-      'Solo los dueños de estudio pueden crear estudios',
-    );
-  }
+  async createWithFiles(
+    createStudioDto: CreateStudioDto,
+    user: User,
+    files: {
+      photos?: Express.Multer.File[];
+      comercialRegister?: Express.Multer.File[];
+    },
+  ): Promise<Studio> {
+    if (user.role !== UserRole.STUDIO_OWNER) {
+      throw new ForbiddenException(
+        'Solo los dueños de estudio pueden crear estudios',
+      );
+    }
 
-  if (files.photos && files.photos.length > 5) {
-    throw new BadRequestException('Solo se permiten hasta 5 fotos.');
-  }
+    // ✅ Lógica de la rama 'develop': Verificar si el usuario ya tiene un estudio.
+    const existingStudio = await this.studioRepository.findOne({
+      where: { owner: { id: user.id } },
+    });
 
-  const { photos, comercialRegister, ...cleanDto } = createStudioDto;
+    if (existingStudio) {
+      throw new BadRequestException(
+        'Ya tienes un estudio registrado. Solo puedes crear uno por dueño.',
+      );
+    }
 
-  const studio = this.studioRepository.create({
-    ...cleanDto,
-    owner: user,
-  });
+    if (files.photos && files.photos.length > 5) {
+      throw new BadRequestException('Solo se permiten hasta 5 fotos.');
+    }
+    
+    const { photos, comercialRegister, ...cleanDto } = createStudioDto;
+
+    const studio = this.studioRepository.create({
+      ...cleanDto,
+      owner: user,
+    });
 
     try {
       const coords = await this.geocodingService.geocodeProfile({
@@ -189,88 +199,90 @@ export class StudiosService {
     }
 
     if (files.photos) {
-    studio.photos = [];
-    for (const file of files.photos) {
-      const result = await this.fileUploadService.uploadFile(file, 'images');
-      studio.photos.push(result.secure_url);
+      studio.photos = [];
+      for (const file of files.photos) {
+        const result = await this.fileUploadService.uploadFile(file, 'images');
+        studio.photos.push(result.secure_url);
+      }
     }
-  }
 
-  if (files.comercialRegister && files.comercialRegister[0]) {
-    const result = await this.fileUploadService.uploadFile(
-      files.comercialRegister[0],
-      'pdfs',
+    // ✅ Tu lógica para subir el PDF
+    if (files.comercialRegister && files.comercialRegister[0]) {
+      const result = await this.fileUploadService.uploadFile(
+        files.comercialRegister[0],
+        'pdfs',
+      );
+      studio.comercialRegister = result.public_id;
+    }
+
+    const savedStudio = await this.studioRepository.save(studio);
+
+    // ✅ Lógica de la rama 'develop': Enviar emails de notificación
+    this.emailService.sendWelcomeStudioEmail(user.email, savedStudio.name);
+    this.emailService.sendNewStudioAdminNotification(
+      savedStudio.name,
+      user.email,
+      savedStudio.id,
     );
-    studio.comercialRegister = result.public_id;
+
+    return savedStudio;
   }
-
-  const savedStudio = await this.studioRepository.save(studio);
-
-  this.emailService.sendWelcomeStudioEmail(user.email, savedStudio.name);
-  this.emailService.sendNewStudioAdminNotification(
-    savedStudio.name,
-    user.email,
-    savedStudio.id,
-  );
-
-  return savedStudio;
-}
 
   // --- ACTUALIZAR ESTUDIO CON ARCHIVOS ---
- async updateMyStudioWithFiles(
-  user: User,
-  studioId: string,
-  dto: UpdateStudioDto,
-  files: {
-    photos?: Express.Multer.File[];
-    comercialRegister?: Express.Multer.File[];
-  },
-): Promise<Studio> {
-  const studio = await this.studioRepository.findOne({
-    where: { id: studioId },
-    relations: ['owner'],
-  });
+  async updateMyStudioWithFiles(
+    user: User,
+    studioId: string,
+    dto: UpdateStudioDto,
+    files: {
+      photos?: Express.Multer.File[];
+      comercialRegister?: Express.Multer.File[];
+    },
+  ): Promise<Studio> {
+    const studio = await this.studioRepository.findOne({
+      where: { id: studioId },
+      relations: ['owner'],
+    });
 
-  if (!studio) throw new NotFoundException('Estudio no encontrado.');
-  if (studio.owner.id !== user.id) {
-    throw new ForbiddenException(
-      'No tienes permiso para actualizar este estudio.',
-    );
-  }
-
-  Object.assign(studio, dto);
-
-  if (files.photos && files.photos.length > 0) {
-    const currentPhotos = studio.photos || [];
-    if (currentPhotos.length + files.photos.length > 5) {
-      throw new BadRequestException(
-        'Solo se permiten hasta 5 fotos en total.',
+    if (!studio) throw new NotFoundException('Estudio no encontrado.');
+    if (studio.owner.id !== user.id) {
+      throw new ForbiddenException(
+        'No tienes permiso para actualizar este estudio.',
       );
     }
-    for (const file of files.photos) {
-      const result = await this.fileUploadService.uploadFile(file, 'images');
-      currentPhotos.push(result.secure_url);
+
+    Object.assign(studio, dto);
+
+    if (files.photos && files.photos.length > 0) {
+      const currentPhotos = studio.photos || [];
+      if (currentPhotos.length + files.photos.length > 5) {
+        throw new BadRequestException(
+          'Solo se permiten hasta 5 fotos en total.',
+        );
+      }
+      for (const file of files.photos) {
+        const result = await this.fileUploadService.uploadFile(file, 'images');
+        currentPhotos.push(result.secure_url);
+      }
+      studio.photos = currentPhotos;
     }
-    studio.photos = currentPhotos;
-  }
 
-  if (files.comercialRegister && files.comercialRegister[0]) {
-    const result = await this.fileUploadService.uploadFile(
-      files.comercialRegister[0],
-      'pdfs',
+    if (files.comercialRegister && files.comercialRegister[0]) {
+      const result = await this.fileUploadService.uploadFile(
+        files.comercialRegister[0],
+        'pdfs',
+      );
+      studio.comercialRegister = result.public_id;
+    }
+
+    const updatedStudio = await this.studioRepository.save(studio);
+
+    this.emailService.sendProfileUpdateEmail(
+      user.email,
+      'Estudio',
+      updatedStudio.name,
+      'Datos generales y/o archivos',
     );
-    studio.comercialRegister = result.public_id;
+
+    return updatedStudio;
   }
-
-  const updatedStudio = await this.studioRepository.save(studio);
-
-  this.emailService.sendProfileUpdateEmail(
-    user.email,
-    'Estudio',
-    updatedStudio.name,
-    'Datos generales y/o archivos',
-  );
-
-  return updatedStudio;
-}
 }

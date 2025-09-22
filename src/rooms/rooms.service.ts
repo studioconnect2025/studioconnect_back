@@ -3,6 +3,7 @@ import {
   NotFoundException,
   ForbiddenException,
   BadRequestException,
+  Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -14,9 +15,13 @@ import { User } from 'src/users/entities/user.entity';
 import { FileUploadService } from '../file-upload/file-upload.service';
 import { EmailService } from 'src/auth/services/email.service';
 import { StudioStatus } from 'src/studios/enum/studio-status.enum'; // importa tu enum
+import { MembershipsService } from 'src/membership/membership.service'; // NEW
+import { Cron } from '@nestjs/schedule'; // NEW
 
 @Injectable()
 export class RoomsService {
+  private readonly logger = new Logger(RoomsService.name); // NEW
+
   constructor(
     @InjectRepository(Room)
     private readonly roomRepository: Repository<Room>,
@@ -24,7 +29,8 @@ export class RoomsService {
     private readonly studioRepository: Repository<Studio>,
     private readonly fileUploadService: FileUploadService,
     private readonly emailService: EmailService,
-  ) { }
+    private readonly membershipsService: MembershipsService,
+  ) {}
 
   /**
    * Crear una sala obteniendo automáticamente el studioId del usuario autenticado
@@ -49,11 +55,26 @@ export class RoomsService {
       );
     }
 
+    // NEW - Validar membresía para crear más de 2 salas
+    const totalRooms = studio.rooms.length;
+    if (totalRooms >= 2) {
+      const activeMembership =
+        await this.membershipsService.getActiveMembership(studio.id);
+      if (!activeMembership) {
+        throw new ForbiddenException(
+          'Error al crear sala: debes adquirir una membresía para poder crear otra sala',
+        );
+      }
+    }
+
+    const isPremium = studio.rooms.length >= 2; // NEW - a partir de la 3ra sala
     const room = this.roomRepository.create({
       ...dto,
       studio,
       imageUrls: [],
       imagePublicIds: [],
+      isPremium, // NEW
+      isActive: true,
     });
 
     const savedRoom = await this.roomRepository.save(room);
@@ -67,8 +88,6 @@ export class RoomsService {
 
     return savedRoom;
   }
-
-
 
   /**
    * Método original - mantiene compatibilidad hacia atrás
@@ -97,17 +116,30 @@ export class RoomsService {
       );
     }
 
+    const totalRooms = studio.rooms.length;
+    if (totalRooms >= 2) {
+      const activeMembership =
+        await this.membershipsService.getActiveMembership(studio.id);
+      if (!activeMembership) {
+        throw new ForbiddenException(
+          'Error al crear sala: debes adquirir una membresía para poder crear otra sala',
+        );
+      }
+    }
+
+    const isPremium = studio.rooms.length >= 2; // NEW - a partir de la 3ra sala
+
     const room = this.roomRepository.create({
       ...dto,
       studio,
       imageUrls: [],
       imagePublicIds: [],
+      isPremium, // NEW
+      isActive: true,
     });
 
     return this.roomRepository.save(room);
   }
-
-
 
   async update(roomId: string, dto: UpdateRoomDto, user: User): Promise<Room> {
     const room = await this.roomRepository.findOne({
@@ -128,7 +160,7 @@ export class RoomsService {
       user.email,
       'Sala',
       updatedRoom.name,
-      'Detalles de la sala'
+      'Detalles de la sala',
     );
 
     return updatedRoom;
@@ -363,5 +395,40 @@ export class RoomsService {
     return this.roomRepository.save(room);
   }
 
+  // NEW - Cron para desactivar salas premium cuando la membresía expire
+  @Cron('0 0 * * *') // todos los días a medianoche
+  async deactivateExpiredPremiumRooms() {
+    this.logger.log('Ejecutando CRON para desactivar salas premium...');
 
+    const studios = await this.studioRepository.find({ relations: ['rooms'] });
+
+    for (const studio of studios) {
+      const activeMembership =
+        await this.membershipsService.getActiveMembership(studio.id);
+
+      if (!activeMembership) {
+        // Si no hay membresía activa, desactivar todas las salas premium
+        const roomsToDeactivate = studio.rooms.filter(
+          (r) => r.isPremium && r.isActive,
+        );
+        for (const room of roomsToDeactivate) {
+          room.isActive = false;
+          await this.roomRepository.save(room);
+          this.logger.log(
+            `Sala ${room.name} desactivada por membresía expirada.`,
+          );
+        }
+      } else {
+        // Reactivar salas premium si la membresía está activa
+        const roomsToActivate = studio.rooms.filter(
+          (r) => r.isPremium && !r.isActive,
+        );
+        for (const room of roomsToActivate) {
+          room.isActive = true;
+          await this.roomRepository.save(room);
+          this.logger.log(`Sala ${room.name} reactivada por membresía activa.`);
+        }
+      }
+    }
+  }
 }

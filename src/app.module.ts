@@ -22,6 +22,7 @@ import { AdminModule } from './admin/admin.module';
 import { ChatModule } from './chat/chat.module';
 import { PqrsModule } from './pqrs/pqrs.module';
 import { ReviewsModule } from './reviews/reviews.module';
+import { MembershipModule } from './membership/membership.module';
 
 @Module({
   imports: [
@@ -61,7 +62,8 @@ import { ReviewsModule } from './reviews/reviews.module';
     AdminModule,
     ChatModule,
     PqrsModule,
-    ReviewsModule, 
+    ReviewsModule,
+    MembershipModule, 
   ],
   controllers: [AppController, OwnersController],
   providers: [AppService],

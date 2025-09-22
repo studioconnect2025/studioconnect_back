@@ -55,6 +55,9 @@ export class Room {
   @Column({ default: true })
   isActive: boolean;
 
+  @Column({ default: false })
+  isPremium: boolean; // 👈 NEW - indica si depende de una membresía
+
   @ManyToOne(() => Studio, (studio) => studio.rooms, { onDelete: 'CASCADE' })
   studio: Studio;
 
