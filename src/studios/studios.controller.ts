@@ -11,6 +11,8 @@ import {
   UploadedFiles,
   ParseUUIDPipe,
   UploadedFile,
+  BadRequestException,
+  Delete,
 } from '@nestjs/common';
 import { StudiosService } from './studios.service';
 import { CreateStudioDto } from './dto/create-studio.dto';
@@ -30,6 +32,7 @@ import {
   ApiBearerAuth,
   ApiConsumes,
   ApiBody,
+  ApiParam,
 } from '@nestjs/swagger';
 import { ServicesType } from './enum/ServicesType.enum';
 import { StudioTypeEnum } from './enum/studio-type.enum';
@@ -239,5 +242,27 @@ export class StudiosController {
     @Request() req,
   ) {
     return this.studiosService.uploadPhoto(req.user, id, file);
+  }
+
+  @Delete('me/:studioId/photos/:photoIndex')
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Eliminar una foto de un estudio por su índice' })
+  @ApiParam({ name: 'studioId', description: 'ID del estudio' })
+  @ApiParam({ name: 'photoIndex', description: 'Índice de la foto a eliminar (0, 1, 2...)' })
+  @ApiResponse({ status: 200, description: 'Foto eliminada exitosamente.' })
+  @ApiResponse({ status: 403, description: 'No autorizado.' })
+  @ApiResponse({ status: 404, description: 'Estudio o foto no encontrada.' })
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles(UserRole.STUDIO_OWNER)
+  deletePhoto(
+    @Param('studioId', ParseUUIDPipe) studioId: string,
+    @Param('photoIndex') photoIndex: string,
+    @Request() req,
+  ) {
+    const index = parseInt(photoIndex, 10);
+    if (isNaN(index)) {
+      throw new BadRequestException('El índice de la foto debe ser un número.');
+    }
+    return this.studiosService.deletePhoto(req.user, studioId, index);
   }
 }
