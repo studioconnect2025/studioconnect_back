@@ -45,6 +45,33 @@ export class StudiosService {
     return studio;
   }
 
+  // --- OBTENER URL INLINE DE REGISTRO COMERCIAL ---
+  async getComercialRegisterUrl(id: string): Promise<{ inline: string; download: string }> {
+    const studio = await this.studioRepository.findOne({ where: { id } });
+    
+    if (!studio) {
+      throw new NotFoundException(`Estudio con ID #${id} no encontrado.`);
+    }
+    
+    if (!studio.comercialRegister) {
+      throw new NotFoundException('Este estudio no tiene un registro comercial asignado.');
+    }
+  
+    this.logger.log(`🔍 Buscando PDF con public_id guardado: ${studio.comercialRegister}`);
+  
+    try {
+      // Llamada directa y única al servicio de FileUpload.
+      return await this.fileUploadService.getPublicPdfUrl(studio.comercialRegister);
+      
+    } catch (error) {
+      this.logger.error(`❌ No se pudo generar la URL para el registro del estudio ${id}. Error: ${error.message}`);
+      
+      // Re-lanzamos el error que nos da el servicio (NotFound, InternalServer, etc.)
+      throw error;
+    }
+  }
+
+
   // --- MÉTODOS PROTEGIDOS ---
   async findMyStudios(user: User): Promise<Studio[]> {
     return this.studioRepository.find({
@@ -71,7 +98,6 @@ export class StudiosService {
     Object.assign(studio, dto);
     const updatedStudio = await this.studioRepository.save(studio);
 
-    // --- NOTIFICACIÓN DE ACTUALIZACIÓN DE ESTUDIO ---
     this.emailService.sendProfileUpdateEmail(
       user.email,
       'Estudio',
@@ -82,7 +108,7 @@ export class StudiosService {
     return updatedStudio;
   }
 
-  // --- SUBIR FOTOS INDIVIDUALES ---
+  // --- SUBIR FOTO INDIVIDUAL ---
   async uploadPhoto(
     user: User,
     id: string,
@@ -101,13 +127,12 @@ export class StudiosService {
         'No tienes permiso para modificar este estudio.',
       );
 
-    // Validar máximo 5 fotos
     if ((studio.photos?.length || 0) >= 5) {
       throw new BadRequestException('Ya tienes 5 fotos cargadas.');
     }
 
     try {
-      const result = await this.fileUploadService.uploadFile(file);
+      const result = await this.fileUploadService.uploadFile(file, 'images');
       studio.photos = [...(studio.photos || []), result.secure_url];
       return this.studioRepository.save(studio);
     } catch (error) {
@@ -132,7 +157,7 @@ export class StudiosService {
       );
     }
 
-    // 🔴 NEW: Verificar si ya existe un estudio asociado al dueño
+    // ✅ Lógica de la rama 'develop': Verificar si el usuario ya tiene un estudio.
     const existingStudio = await this.studioRepository.findOne({
       where: { owner: { id: user.id } },
     });
@@ -146,7 +171,7 @@ export class StudiosService {
     if (files.photos && files.photos.length > 5) {
       throw new BadRequestException('Solo se permiten hasta 5 fotos.');
     }
-
+    
     const { photos, comercialRegister, ...cleanDto } = createStudioDto;
 
     const studio = this.studioRepository.create({
@@ -166,13 +191,9 @@ export class StudiosService {
       if (coords) {
         studio.lat = coords.lat;
         studio.lng = coords.lng;
-      } else {
-        this.logger.warn(
-          `No se pudieron obtener coordenadas para el estudio ${studio.name}`,
-        );
       }
     } catch (error) {
-      console.warn(
+      this.logger.warn(
         `Error al geocodificar estudio ${studio.name}: ${error.message}`,
       );
     }
@@ -180,24 +201,24 @@ export class StudiosService {
     if (files.photos) {
       studio.photos = [];
       for (const file of files.photos) {
-        const result = await this.fileUploadService.uploadFile(file);
+        const result = await this.fileUploadService.uploadFile(file, 'images');
         studio.photos.push(result.secure_url);
       }
     }
 
+    // ✅ Tu lógica para subir el PDF
     if (files.comercialRegister && files.comercialRegister[0]) {
       const result = await this.fileUploadService.uploadFile(
         files.comercialRegister[0],
+        'pdfs',
       );
-      studio.comercialRegister = result.secure_url;
+      studio.comercialRegister = result.public_id;
     }
 
     const savedStudio = await this.studioRepository.save(studio);
 
-    // --- NOTIFICACIÓN DE BIENVENIDA AL DUEÑO DEL ESTUDIO ---
+    // ✅ Lógica de la rama 'develop': Enviar emails de notificación
     this.emailService.sendWelcomeStudioEmail(user.email, savedStudio.name);
-
-    // --- ✅ NOTIFICACIÓN DE NUEVO ESTUDIO AL ADMINISTRADOR ---
     this.emailService.sendNewStudioAdminNotification(
       savedStudio.name,
       user.email,
@@ -222,10 +243,7 @@ export class StudiosService {
       relations: ['owner'],
     });
 
-    if (!studio) {
-      throw new NotFoundException('Estudio no encontrado.');
-    }
-
+    if (!studio) throw new NotFoundException('Estudio no encontrado.');
     if (studio.owner.id !== user.id) {
       throw new ForbiddenException(
         'No tienes permiso para actualizar este estudio.',
@@ -233,29 +251,6 @@ export class StudiosService {
     }
 
     Object.assign(studio, dto);
-
-    try {
-      const coords = await this.geocodingService.geocodeProfile({
-        calle: studio.address,
-        ciudad: studio.city,
-        provincia: studio.province,
-        pais: studio.pais,
-        codigoPostal: studio.codigoPostal,
-      });
-
-      if (coords) {
-        studio.lat = coords.lat;
-        studio.lng = coords.lng;
-      } else {
-        this.logger.warn(
-          `No se pudieron obtener coordenadas para el estudio ${studio.name}`,
-        );
-      }
-    } catch (error) {
-      this.logger.warn(
-        `Error al geocodificar estudio ${studio.name}: ${error.message}`,
-      );
-    }
 
     if (files.photos && files.photos.length > 0) {
       const currentPhotos = studio.photos || [];
@@ -265,7 +260,7 @@ export class StudiosService {
         );
       }
       for (const file of files.photos) {
-        const result = await this.fileUploadService.uploadFile(file);
+        const result = await this.fileUploadService.uploadFile(file, 'images');
         currentPhotos.push(result.secure_url);
       }
       studio.photos = currentPhotos;
@@ -274,13 +269,13 @@ export class StudiosService {
     if (files.comercialRegister && files.comercialRegister[0]) {
       const result = await this.fileUploadService.uploadFile(
         files.comercialRegister[0],
+        'pdfs',
       );
-      studio.comercialRegister = result.secure_url;
+      studio.comercialRegister = result.public_id;
     }
 
     const updatedStudio = await this.studioRepository.save(studio);
 
-    // --- NOTIFICACIÓN DE ACTUALIZACIÓN DE ESTUDIO ---
     this.emailService.sendProfileUpdateEmail(
       user.email,
       'Estudio',

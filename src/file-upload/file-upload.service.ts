@@ -1,6 +1,5 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException, InternalServerErrorException } from '@nestjs/common';
 import { v2 as cloudinary, UploadApiResponse } from 'cloudinary';
-import * as streamifier from 'streamifier';
 
 @Injectable()
 export class FileUploadService {
@@ -12,57 +11,119 @@ export class FileUploadService {
     });
   }
 
-  /**
-   * Sube un archivo a Cloudinary.
-   * @param file Archivo de multer
-   * @param folder Carpeta opcional en Cloudinary
-   * @returns Promise con la info del archivo subido
-   */
-  uploadFile(file: Express.Multer.File, folder: string = 'studios'): Promise<UploadApiResponse> {
-    // Validar tipo de archivo
-    if (!file.mimetype.startsWith('image/') && file.mimetype !== 'application/pdf') {
-      throw new BadRequestException('Solo se permiten imágenes o PDF.');
-    }
-
+  async uploadFile(
+    file: Express.Multer.File,
+    folder: string,
+  ): Promise<UploadApiResponse> {
     return new Promise<UploadApiResponse>((resolve, reject) => {
+      if (folder === 'pdfs') {
+        const isPdf = file.mimetype === 'application/pdf' || 
+                     file.originalname.toLowerCase().endsWith('.pdf');
+        
+        if (!isPdf) {
+          return reject(new BadRequestException(
+            `Solo se permiten archivos PDF. Recibido: ${file.mimetype}`
+          ));
+        }
+      }
+
+      const uploadOptions: any = {
+        resource_type: folder === 'pdfs' ? 'raw' : 'image',
+        folder,
+        // --- 🔥 SOLUCIÓN DEFINITIVA ---
+        // Forzamos a Cloudinary a usar el preset que configuramos como público.
+        // Asegúrate de que el nombre 'ml_default' coincida exactamente con tu preset.
+        upload_preset: 'ml_default',
+      };
+
+      if (folder === 'pdfs') {
+        const filename = file.originalname.replace(/\.[^/.]+$/, '');
+        uploadOptions.public_id = `${filename}_${Date.now()}`;
+        uploadOptions.format = 'pdf';
+      }
+
       const uploadStream = cloudinary.uploader.upload_stream(
-        { folder },
+        uploadOptions,
         (error, result) => {
-          if (error || !result) {
-            return reject(error || new Error('Cloudinary returned an empty result.'));
+          if (error) {
+            console.error('❌ Error uploading to Cloudinary:', error);
+            return reject(error);
           }
+          if (!result) {
+            return reject(new Error('Upload failed, result is undefined'));
+          }
+          console.log('✅ Upload successful with preset "ml_default":', {
+            public_id: result.public_id,
+            secure_url: result.secure_url,
+          });
           resolve(result);
         },
       );
-      streamifier.createReadStream(file.buffer).pipe(uploadStream);
+
+      uploadStream.end(file.buffer);
     });
   }
 
-  /**
-   * Elimina un archivo de Cloudinary usando su public_id
-   * @param publicId El public_id del archivo en Cloudinary
-   * @returns Promise con el resultado de la eliminación
-   */
-  async deleteFile(publicId: string): Promise<any> {
+  async getPublicPdfUrl(publicId: string): Promise<{ inline: string; download: string }> {
     try {
-      const result = await cloudinary.uploader.destroy(publicId);
-      return result;
+      const resource = await cloudinary.api.resource(publicId, {
+        resource_type: 'raw'
+      });
+      
+      console.log('📄 PDF Resource found:', { public_id: resource.public_id });
+
+      const inlineUrl = cloudinary.utils.url(publicId, {
+        resource_type: 'raw',
+        secure: true,
+      });
+
+      const downloadUrl = cloudinary.utils.url(publicId, {
+        resource_type: 'raw',
+        secure: true,
+        flags: 'attachment'
+      });
+
+      console.log('🔗 Generated URLs:', { inline: inlineUrl, download: downloadUrl });
+
+      return { inline: inlineUrl, download: downloadUrl };
+
     } catch (error) {
-      throw new BadRequestException(`Error al eliminar archivo: ${error.message}`);
+      console.error('❌ Error getting PDF URLs:', error);
+      
+      if (error.error?.http_code === 404) {
+        throw new NotFoundException(
+          `PDF no encontrado en Cloudinary con Public ID: ${publicId}.`
+        );
+      }
+      
+      throw new InternalServerErrorException(`Error al obtener URLs del PDF: ${error.message}`);
     }
   }
 
-  /**
-   * Elimina múltiples archivos de Cloudinary
-   * @param publicIds Array de public_ids de los archivos
-   * @returns Promise con los resultados de las eliminaciones
-   */
-  async deleteFiles(publicIds: string[]): Promise<any[]> {
+  // ... (El resto de los métodos no cambian)
+  async getPublicImageUrl(publicId: string): Promise<string> {
+    return cloudinary.utils.url(publicId, {
+      resource_type: 'image',
+      secure: true,
+    });
+  }
+
+  async checkFileExists(publicId: string, resourceType: 'image' | 'raw' = 'raw'): Promise<boolean> {
     try {
-      const deletePromises = publicIds.map(publicId => this.deleteFile(publicId));
-      return await Promise.all(deletePromises);
+      await cloudinary.api.resource(publicId, { resource_type: resourceType });
+      return true;
     } catch (error) {
-      throw new BadRequestException(`Error al eliminar archivos: ${error.message}`);
+      return false;
+    }
+  }
+
+  async deleteFile(publicId: string, resourceType: 'image' | 'raw' | 'auto' = 'auto'): Promise<any> {
+    try {
+      return await cloudinary.uploader.destroy(publicId, {
+        resource_type: resourceType as any,
+      });
+    } catch (error) {
+      throw new BadRequestException(`Error al eliminar archivo: ${error.message}`);
     }
   }
 }
