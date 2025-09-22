@@ -1,4 +1,4 @@
-import { Injectable, InternalServerErrorException, Logger, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, InternalServerErrorException, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { User } from '../users/entities/user.entity';
 import { In, Repository } from 'typeorm';
@@ -6,6 +6,9 @@ import { UserRole } from '../auth/enum/roles.enum';
 import { Studio } from '../studios/entities/studio.entity';
 import { Booking } from 'src/bookings/dto/bookings.entity';
 import { StudioStatus } from '../studios/enum/studio-status.enum';
+import { EmailService } from '../auth/services/email.service';
+import { UpdateStudioStatusDto } from './dto/update-studio-status';
+import { Review } from '../reviews/entities/review.entity';
 
 @Injectable()
 export class AdminService {
@@ -15,6 +18,9 @@ export class AdminService {
     @InjectRepository(User) private readonly usersRepository: Repository<User>,
     @InjectRepository(Studio) private readonly studioRepository: Repository<Studio>,
     @InjectRepository(Booking) private readonly bookingRepository: Repository<Booking>,
+      @InjectRepository(Review) // Inyectar el repositorio de Review
+    private readonly reviewRepository: Repository<Review>,
+     private readonly emailService: EmailService,
   ) {}
 
   // --- MÉTODOS DE USUARIOS ---
@@ -58,6 +64,8 @@ export class AdminService {
   async findAllStudioOwners() {
     return this.findUsersByRole([UserRole.STUDIO_OWNER]);
   }
+
+  
   
   async findAllActiveUsers() {
     try {
@@ -106,22 +114,67 @@ export class AdminService {
     }
   }
 
-  async processStudioRequest(studioId: string, status: StudioStatus): Promise<Studio> {
-    const studio = await this.studioRepository.findOneBy({ id: studioId });
+  async processStudioRequest(
+    studioId: string,
+    dto: UpdateStudioStatusDto,
+  ): Promise<Studio> {
+    const studio = await this.studioRepository.findOne({
+      where: { id: studioId },
+      relations: ['owner'], // Cargar la relación con el dueño
+    });
+
     if (!studio) {
       throw new NotFoundException(`Estudio con ID "${studioId}" no encontrado.`);
     }
 
-    studio.status = status;
-    if (status === StudioStatus.APPROVED) {
+    if (!studio.owner) {
+      throw new InternalServerErrorException(
+        'El estudio no tiene un dueño asociado. No se puede notificar.',
+      );
+    }
+
+    studio.status = dto.status;
+
+    // Lógica para manejar cada estado
+    if (dto.status === StudioStatus.APPROVED) {
       studio.isActive = true;
+      studio.rejectionReason = undefined; // Limpiar motivo de rechazo si existía
+      
+      // Enviar email de aprobación
+      await this.emailService.sendStudioApprovedEmail(
+        studio.owner.email,
+        studio.name,
+        studio.id,
+      );
+
+    } else if (dto.status === StudioStatus.REJECTED) {
+      if (!dto.rejectionReason) {
+        throw new BadRequestException('El motivo de rechazo es obligatorio.');
+      }
+      studio.isActive = false;
+      studio.rejectionReason = dto.rejectionReason;
+
+      // Enviar email de rechazo
+      await this.emailService.sendStudioRejectionEmail(
+        studio.owner.email,
+        studio.name,
+        dto.rejectionReason,
+      );
+
+    } else if (dto.status === StudioStatus.PENDING) {
+      studio.isActive = false; // Un estudio pendiente no debería estar activo
     }
 
     try {
       return await this.studioRepository.save(studio);
     } catch (error) {
-      this.logger.error(`Error al procesar la solicitud del estudio ${studioId}`, error.stack);
-      throw new InternalServerErrorException('Error al actualizar el estado del estudio.');
+      this.logger.error(
+        `Error al procesar la solicitud del estudio ${studioId}`,
+        error.stack,
+      );
+      throw new InternalServerErrorException(
+        'Error al actualizar el estado del estudio.',
+      );
     }
   }
 
@@ -132,6 +185,19 @@ export class AdminService {
     } catch (error) {
       this.logger.error('Error al obtener todas las reservas', error.stack);
       throw new InternalServerErrorException('No se pudieron obtener las reservas.');
+    }
+  }
+  async findAllReviews() {
+    try {
+      return await this.reviewRepository.find({
+        relations: ['musician', 'room', 'room.studio', 'booking'],
+        order: { createdAt: 'DESC' },
+      });
+    } catch (error) {
+      this.logger.error('Error al obtener todas las reseñas', error.stack);
+      throw new InternalServerErrorException(
+        'No se pudieron obtener las reseñas.',
+      );
     }
   }
 }

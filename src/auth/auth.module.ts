@@ -53,7 +53,7 @@ import { redisStore } from 'cache-manager-redis-store';
       useFactory: (configService: ConfigService) => {
         return new JwtService({
           secret: configService.get<string>('JWT_REGISTRATION_SECRET'),
-          signOptions: { expiresIn: '2h' },
+          signOptions: { expiresIn: '8h' },
         });
       },
     },

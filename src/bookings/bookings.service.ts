@@ -35,6 +35,37 @@ export class BookingsService {
     private readonly emailService: EmailService,
   ) {}
 
+  async getAllBookings({
+    page,
+    limit,
+    status,
+    studioId,
+    musicianId,
+  }: {
+    page: number;
+    limit: number;
+    status?: string;
+    studioId?: string;
+    musicianId?: string;
+  }) {
+    const query = this.bookingRepository
+      .createQueryBuilder('booking')
+      .leftJoinAndSelect('booking.studio', 'studio')
+      .leftJoinAndSelect('booking.musician', 'musician');
+
+    if (status) query.andWhere('booking.status = :status', { status });
+    if (studioId) query.andWhere('studio.id = :studioId', { studioId });
+    if (musicianId) query.andWhere('musician.id = :musicianId', { musicianId });
+
+    const [items, total] = await query
+      .skip((page - 1) * limit)
+      .take(limit)
+      .orderBy('booking.startTime', 'DESC')
+      .getManyAndCount();
+
+    return { items, total, page, limit };
+  }
+
   /**
    * Crea una nueva reserva para un músico.
    */

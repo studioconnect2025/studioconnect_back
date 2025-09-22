@@ -11,6 +11,7 @@ import {
 import { ApiProperty } from '@nestjs/swagger';
 import { StudioTypeEnum } from '../enum/studio-type.enum';
 import { ServicesType } from '../enum/ServicesType.enum';
+import { Transform } from 'class-transformer';
 
 export class CreateStudioDto {
   @ApiProperty({
@@ -29,7 +30,6 @@ export class CreateStudioDto {
   @IsEnum(StudioTypeEnum)
   studioType: StudioTypeEnum;
 
-  // Ubicación desanidada para que el servicio pueda usarla directamente
   @ApiProperty({ description: 'País', example: 'Mexico' })
   @IsString()
   @IsNotEmpty()
@@ -74,6 +74,16 @@ export class CreateStudioDto {
   @IsEnum(ServicesType, { each: true })
   @IsArray()
   @IsOptional()
+  @Transform(({ value }) => {
+    if (typeof value === 'string') {
+      // Permite "Sala de grabación,Cafetería" o solo "Sala de grabación"
+      if (value.includes(',')) {
+        return value.split(',').map((v) => v.trim());
+      }
+      return [value];
+    }
+    return value;
+  })
   services?: ServicesType[];
 
   @ApiProperty({
@@ -114,15 +124,3 @@ export class CreateStudioDto {
   })
   closingTime?: string;
 }
-
-
-
-// @ApiPropertyOptional({ description: 'Hora de apertura, formato HH:MM', example: '09:30' })
-// @IsOptional()
-// @Matches(/^([0-1]\d|2[0-3]):([0-5]\d)$/, { message: 'Hora debe tener formato HH:MM' })
-// openingTime?: string;
-
-// @ApiPropertyOptional({ description: 'Hora de cierre, formato HH:MM', example: '21:00' })
-// @IsOptional()
-// @Matches(/^([0-1]\d|2[0-3]):([0-5]\d)$/, { message: 'Hora debe tener formato HH:MM' })
-// closingTime?: string;

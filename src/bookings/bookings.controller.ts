@@ -7,6 +7,7 @@ import {
   Request,
   Patch,
   Param,
+  Query,
 } from '@nestjs/common';
 import { BookingsService } from './bookings.service';
 import { AuthGuard } from '@nestjs/passport';
@@ -29,6 +30,29 @@ import { ReprogramBookingDto } from './dto/reprogram-booking.dto';
 @Controller('bookings')
 export class BookingsController {
   constructor(private readonly bookingsService: BookingsService) {}
+
+  // --- ADMIN: obtener todas las reservas ---
+  @Get('admin/all')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({
+    summary: 'Obtener todas las reservas con filtros y paginación (Admin)',
+  })
+  async getAllBookingsAdmin(
+    @Query('page') page = 1,
+    @Query('limit') limit = 20,
+    @Query('status') status?: string,
+    @Query('studioId') studioId?: string,
+    @Query('musicianId') musicianId?: string,
+  ) {
+    return this.bookingsService.getAllBookings({
+      page: Number(page),
+      limit: Number(limit),
+      status,
+      studioId,
+      musicianId,
+    });
+  }
 
   // --- RUTA PARA MÚSICOS ---
 

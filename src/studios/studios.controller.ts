@@ -11,6 +11,8 @@ import {
   UploadedFiles,
   ParseUUIDPipe,
   UploadedFile,
+  BadRequestException,
+  Delete,
 } from '@nestjs/common';
 import { StudiosService } from './studios.service';
 import { CreateStudioDto } from './dto/create-studio.dto';
@@ -30,7 +32,10 @@ import {
   ApiBearerAuth,
   ApiConsumes,
   ApiBody,
+  ApiParam,
 } from '@nestjs/swagger';
+import { ServicesType } from './enum/ServicesType.enum';
+import { StudioTypeEnum } from './enum/studio-type.enum';
 
 @ApiTags('Studios')
 @ApiBearerAuth()
@@ -57,6 +62,19 @@ export class StudiosController {
     return this.studiosService.findOne(id);
   }
 
+  // --- 📄 OBTENER COMERCIAL REGISTER INLINE ---
+  @Get(':id/comercial-register')
+  @ApiOperation({ summary: 'Obtener URL segura del registro comercial (PDF)' })
+  @ApiResponse({
+    status: 200,
+    description: 'Devuelve una URL firmada para visualizar el PDF inline.',
+  })
+  async getComercialRegister(@Param('id', ParseUUIDPipe) id: string) {
+    return this.studiosService.getComercialRegisterUrl(id);
+  }
+
+
+  
   // --- RUTAS PROTEGIDAS PARA DUEÑOS DE ESTUDIO ---
   @Get('me/my-studios')
   @ApiBearerAuth('JWT-auth')
@@ -81,18 +99,26 @@ export class StudiosController {
       type: 'object',
       properties: {
         name: { type: 'string' },
-        studioType: { type: 'string' },
-        pais: {type: 'string'},
-        codigoPostal: {type: 'string'},
+        studioType: { type: 'string', enum: Object.values(StudioTypeEnum) },
+        pais: { type: 'string' },
+        codigoPostal: { type: 'string' },
         city: { type: 'string' },
         province: { type: 'string' },
         address: { type: 'string' },
         description: { type: 'string' },
-        services: { type: 'array', items: { type: 'string' } },
-        availableEquipment: { type: 'array', items: { type: 'string' } },
-        openingTime: { type: 'number' },
-        closingTime: { type: 'number' },
-        photos: { type: 'array', items: { type: 'string', format: 'binary' } },
+        services: {
+          type: 'array',
+          items: {
+            type: 'string',
+            enum: Object.values(ServicesType),
+          },
+        },
+        openingTime: { type: 'string', example: '09:30' },
+        closingTime: { type: 'string', example: '21:00' },
+        photos: {
+          type: 'array',
+          items: { type: 'string', format: 'binary' },
+        },
         comercialRegister: { type: 'string', format: 'binary' },
       },
     },
@@ -136,18 +162,26 @@ export class StudiosController {
       type: 'object',
       properties: {
         name: { type: 'string' },
-        studioType: { type: 'string' },
-        pais: {type: 'string'},
-        codigoPostal: {type: 'string'},
+        studioType: { type: 'string', enum: Object.values(StudioTypeEnum) },
+        pais: { type: 'string' },
+        codigoPostal: { type: 'string' },
         city: { type: 'string' },
         province: { type: 'string' },
         address: { type: 'string' },
         description: { type: 'string' },
-        services: { type: 'array', items: { type: 'string' } },
-        availableEquipment: { type: 'array', items: { type: 'string' } },
-        openingTime: { type: 'number' },
-        closingTime: { type: 'number' },
-        photos: { type: 'array', items: { type: 'string', format: 'binary' } },
+        services: {
+          type: 'array',
+          items: {
+            type: 'string',
+            enum: Object.values(ServicesType),
+          },
+        },
+        openingTime: { type: 'string', example: '09:30' },
+        closingTime: { type: 'string', example: '21:00' },
+        photos: {
+          type: 'array',
+          items: { type: 'string', format: 'binary' },
+        },
         comercialRegister: { type: 'string', format: 'binary' },
       },
     },
@@ -208,5 +242,27 @@ export class StudiosController {
     @Request() req,
   ) {
     return this.studiosService.uploadPhoto(req.user, id, file);
+  }
+
+  @Delete('me/:studioId/photos/:photoIndex')
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Eliminar una foto de un estudio por su índice' })
+  @ApiParam({ name: 'studioId', description: 'ID del estudio' })
+  @ApiParam({ name: 'photoIndex', description: 'Índice de la foto a eliminar (0, 1, 2...)' })
+  @ApiResponse({ status: 200, description: 'Foto eliminada exitosamente.' })
+  @ApiResponse({ status: 403, description: 'No autorizado.' })
+  @ApiResponse({ status: 404, description: 'Estudio o foto no encontrada.' })
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles(UserRole.STUDIO_OWNER)
+  deletePhoto(
+    @Param('studioId', ParseUUIDPipe) studioId: string,
+    @Param('photoIndex') photoIndex: string,
+    @Request() req,
+  ) {
+    const index = parseInt(photoIndex, 10);
+    if (isNaN(index)) {
+      throw new BadRequestException('El índice de la foto debe ser un número.');
+    }
+    return this.studiosService.deletePhoto(req.user, studioId, index);
   }
 }
