@@ -93,5 +93,11 @@ export class AdminController {
   getAllBookings() {
     return this.adminService.findAllBookings();
   }
+
+  @Get('reviews')
+  @ApiOperation({ summary: 'Obtener todas las reseñas (Admin)' })
+  getAllReviews() {
+    return this.adminService.findAllReviews();
+  }
 }
 

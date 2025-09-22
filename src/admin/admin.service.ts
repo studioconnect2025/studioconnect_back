@@ -8,6 +8,7 @@ import { Booking } from 'src/bookings/dto/bookings.entity';
 import { StudioStatus } from '../studios/enum/studio-status.enum';
 import { EmailService } from '../auth/services/email.service';
 import { UpdateStudioStatusDto } from './dto/update-studio-status';
+import { Review } from '../reviews/entities/review.entity';
 
 @Injectable()
 export class AdminService {
@@ -17,6 +18,8 @@ export class AdminService {
     @InjectRepository(User) private readonly usersRepository: Repository<User>,
     @InjectRepository(Studio) private readonly studioRepository: Repository<Studio>,
     @InjectRepository(Booking) private readonly bookingRepository: Repository<Booking>,
+      @InjectRepository(Review) // Inyectar el repositorio de Review
+    private readonly reviewRepository: Repository<Review>,
      private readonly emailService: EmailService,
   ) {}
 
@@ -182,6 +185,19 @@ export class AdminService {
     } catch (error) {
       this.logger.error('Error al obtener todas las reservas', error.stack);
       throw new InternalServerErrorException('No se pudieron obtener las reservas.');
+    }
+  }
+  async findAllReviews() {
+    try {
+      return await this.reviewRepository.find({
+        relations: ['musician', 'room', 'room.studio', 'booking'],
+        order: { createdAt: 'DESC' },
+      });
+    } catch (error) {
+      this.logger.error('Error al obtener todas las reseñas', error.stack);
+      throw new InternalServerErrorException(
+        'No se pudieron obtener las reseñas.',
+      );
     }
   }
 }
