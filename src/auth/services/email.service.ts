@@ -901,4 +901,67 @@ export class EmailService {
     };
     await this.sendEmail(mailOptions, 'expiración de membresía');
   }
+
+   async sendStudioPendingReviewEmail(
+    ownerEmail: string,
+    studioName: string,
+  ): Promise<void> {
+    const mailOptions = {
+      from: `StudioConnect <${this.configService.get<string>('FROM_EMAIL')}>`,
+      to: ownerEmail,
+      subject: `Hemos recibido tu solicitud para ${studioName}`,
+      html: `
+        <h1>Tu estudio está en revisión</h1>
+        <p>Hola,</p>
+        <p>Hemos recibido la solicitud para registrar tu estudio "<strong>${studioName}</strong>" en StudioConnect. ¡Gracias por unirte a nuestra comunidad!</p>
+        <p>Nuestro equipo revisará la información proporcionada para asegurar que todo cumple con nuestros estándares de calidad y seguridad. Este proceso suele tardar entre 24 y 48 horas hábiles.</p>
+        <p>Recibirás un correo electrónico tan pronto como tu estudio sea aprobado. Mientras tanto, puedes acceder a tu panel para completar cualquier información pendiente.</p>
+        <p>¡Estamos ansiosos por tenerte a bordo!</p>
+      `,
+    };
+    await this.sendEmail(
+      mailOptions,
+      `estudio pendiente de revisión para ${ownerEmail}`,
+    );
+  }
+
+  /**
+   * Notifica al dueño que su estudio ha sido aprobado y ya es público.
+   */
+  async sendStudioApprovedEmail(
+    ownerEmail: string,
+    studioName: string,
+    studioId: string,
+  ): Promise<void> {
+    const frontendUrl = this.configService.get<string>('FRONTEND_URL');
+    const studioUrl = `${frontendUrl}/studios/${studioId}`;
+    const dashboardUrl = `${frontendUrl}/dashboard`;
+
+    const mailOptions = {
+      from: `StudioConnect <${this.configService.get<string>('FROM_EMAIL')}>`,
+      to: ownerEmail,
+      subject: `¡Felicidades! Tu estudio ${studioName} ha sido aprobado`,
+      html: `
+        <h1>¡Tu estudio ya está visible en StudioConnect!</h1>
+        <p>Hola,</p>
+        <p>Tenemos excelentes noticias: tu estudio <strong>${studioName}</strong> ha sido revisado y aprobado por nuestro equipo.</p>
+        <p>Ahora es público y los músicos ya pueden encontrarlo, ver tus salas y hacer reservas. ¡Prepárate para recibir a los artistas!</p>
+        
+        <h2>Próximos pasos recomendados:</h2>
+        <ol>
+          <li><strong>Añade tus salas:</strong> Si aún no lo has hecho, crea las salas de ensayo desde tu panel.</li>
+          <li><strong>Configura tu calendario:</strong> Asegúrate de que tus horarios de disponibilidad estén actualizados.</li>
+          <li><strong>Comparte tu perfil:</strong> Haz que el mundo conozca tu espacio.</li>
+        </ol>
+
+        <a href="${studioUrl}" class="button">Ver mi estudio público</a>
+        <br><br>
+        <a href="${dashboardUrl}" class="button">Ir a mi Panel de Control</a>
+      `,
+    };
+    await this.sendEmail(
+      mailOptions,
+      `aprobación de estudio para ${ownerEmail}`,
+    );
+  }
 }

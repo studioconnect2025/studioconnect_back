@@ -5,6 +5,7 @@ import {
   HttpCode,
   HttpStatus,
   Param,
+  ParseUUIDPipe,
   Patch,
   UseGuards,
 } from '@nestjs/common';
@@ -73,16 +74,16 @@ export class AdminController {
   }
 
   @Patch('studios/:id/process')
-  @ApiOperation({ summary: 'Aprobar o rechazar una solicitud de estudio (Admin)' })
+  @ApiOperation({
+    summary: 'Aprobar o rechazar una solicitud de estudio (Admin)',
+  })
   @HttpCode(HttpStatus.OK)
   processStudioRequest(
-    @Param('id') studioId: string,
+    @Param('id', ParseUUIDPipe) studioId: string, // Usar ParseUUIDPipe para validar el ID
     @Body() updateStudioStatusDto: UpdateStudioStatusDto,
   ) {
-    return this.adminService.processStudioRequest(
-      studioId,
-      updateStudioStatusDto.status,
-    );
+    // ✅ Pasar el DTO completo al servicio
+    return this.adminService.processStudioRequest(studioId, updateStudioStatusDto);
   }
 
   // --- Endpoints de Reservas ---
