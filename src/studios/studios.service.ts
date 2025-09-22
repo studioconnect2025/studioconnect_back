@@ -215,10 +215,14 @@ export class StudiosService {
       studio.comercialRegister = result.public_id;
     }
 
-    const savedStudio = await this.studioRepository.save(studio);
+     const savedStudio = await this.studioRepository.save(studio);
 
-    // ✅ Lógica de la rama 'develop': Enviar emails de notificación
-    this.emailService.sendWelcomeStudioEmail(user.email, savedStudio.name);
+    // ✅ --- CAMBIO IMPORTANTE AQUÍ --- ✅
+    // CAMBIO: Anteriormente se enviaba un email de bienvenida.
+    // AHORA: Se notifica que el estudio está pendiente de revisión.
+    this.emailService.sendStudioPendingReviewEmail(user.email, savedStudio.name);
+    
+    // Esta notificación al admin sigue siendo correcta.
     this.emailService.sendNewStudioAdminNotification(
       savedStudio.name,
       user.email,
