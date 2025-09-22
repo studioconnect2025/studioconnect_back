@@ -79,6 +79,8 @@ export class ProfileService {
    * Ignora id/userId del DTO para no permitir cambiarlos.
    */
 // profile.service.ts
+// profile.service.ts
+
 async updateMyProfile(
   userId: string,
   dto: UpdateProfileDto,
@@ -125,7 +127,11 @@ async updateMyProfile(
     const uploadResult = await this.fileUploadService.uploadFile(file, 'profile_pictures');
 
     if (profile.profileImagePublicId) {
-      await this.fileUploadService.deleteFile(profile.profileImagePublicId);
+      // ✅ Se agrega 'image' para especificar el tipo de recurso a eliminar.
+      await this.fileUploadService.deleteFile(
+        profile.profileImagePublicId,
+        'image',
+      );
     }
 
     profile.profileImageUrl = uploadResult.secure_url;
@@ -134,6 +140,5 @@ async updateMyProfile(
 
   return this.profileRepo.save(profile);
 }
-
 
 }
