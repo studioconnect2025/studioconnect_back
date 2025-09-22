@@ -12,6 +12,7 @@ import { User } from 'src/users/entities/user.entity';
 import { Booking } from 'src/bookings/dto/bookings.entity';
 import { BookingStatus } from 'src/bookings/enum/enums-bookings';
 import { EmailService } from 'src/auth/services/email.service';
+import { PublicReviewDto } from './dto/public-review.dto';
 
 @Injectable()
 export class ReviewsService {
@@ -112,6 +113,21 @@ export class ReviewsService {
     .where('studio."ownerId" = :ownerId', { ownerId })
     .orderBy('review.created_at', 'DESC')
     .getMany();
+}
+
+async getAllPublicReviews(): Promise<PublicReviewDto[]> {
+  const reviews = await this.reviewRepository.find({
+    relations: ['musician', 'room', 'room.studio'],
+    order: { createdAt: 'DESC' },
+  });
+
+  return reviews.map(r => ({
+    rating: r.rating,
+    comment: r.comment,
+    musicianName: r.musician.profile?.nombre || r.musician.email,
+    musicianAvatar: r.musician.profile?.profileImageUrl,
+    roomName: r.room.name,
+  }));
 }
 
 }
