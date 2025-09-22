@@ -27,7 +27,17 @@ import { UserRole } from 'src/auth/enum/roles.enum';
 @ApiBearerAuth('JWT-auth')
 @Controller('users')
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(private readonly usersService: UsersService) { }
+
+    @Get('me')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @ApiOperation({ summary: 'Obtener usuario autenticado' })
+  @ApiResponse({ status: 200, description: 'Usuario encontrado', type: User })
+  @ApiResponse({ status: 404, description: 'Usuario no encontrado' })
+  async getMe(@Req() req): Promise<User> {
+    const userId = req.user.id || req.user.sub; // depende de tu JWT
+    return await this.usersService.findOneById(userId);
+  }
 
   @Get(':id')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
@@ -81,4 +91,5 @@ export class UsersController {
     const message = await this.usersService.toggleOwnStudioStatus(ownerId);
     return { message };
   }
+
 }
