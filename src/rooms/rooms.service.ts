@@ -1,3 +1,5 @@
+// rooms.service.ts
+
 import {
   Injectable,
   NotFoundException,
@@ -14,13 +16,13 @@ import { Studio } from 'src/studios/entities/studio.entity';
 import { User } from 'src/users/entities/user.entity';
 import { FileUploadService } from '../file-upload/file-upload.service';
 import { EmailService } from 'src/auth/services/email.service';
-import { StudioStatus } from 'src/studios/enum/studio-status.enum'; // importa tu enum
-import { MembershipsService } from 'src/membership/membership.service'; // NEW
-import { Cron } from '@nestjs/schedule'; // NEW
+import { StudioStatus } from 'src/studios/enum/studio-status.enum';
+import { MembershipsService } from 'src/membership/membership.service';
+import { Cron } from '@nestjs/schedule';
 
 @Injectable()
 export class RoomsService {
-  private readonly logger = new Logger(RoomsService.name); // NEW
+  private readonly logger = new Logger(RoomsService.name);
 
   constructor(
     @InjectRepository(Room)
@@ -32,14 +34,11 @@ export class RoomsService {
     private readonly membershipsService: MembershipsService,
   ) {}
 
-  /**
-   * Crear una sala obteniendo automáticamente el studioId del usuario autenticado
-   * NUEVO MÉTODO para flujo más fluido
-   */
+  // ... (los otros métodos como create, update, etc., no cambian)
   async createWithAutoStudio(dto: CreateRoomDto, user: User): Promise<Room> {
     const studio = await this.studioRepository.findOne({
       where: { owner: { id: user.id } },
-      relations: ['owner'],
+      relations: ['owner', 'rooms'], // Cargar las salas para el conteo
     });
 
     if (!studio) {
@@ -48,14 +47,12 @@ export class RoomsService {
       );
     }
 
-    // 🚨 Validación con enum
     if (studio.status !== StudioStatus.APPROVED) {
       throw new BadRequestException(
         'Tu estudio aún no está aprobado por el administrador, no puedes crear salas.',
       );
     }
 
-    // NEW - Validar membresía para crear más de 2 salas
     const totalRooms = studio.rooms.length;
     if (totalRooms >= 2) {
       const activeMembership =
@@ -67,13 +64,13 @@ export class RoomsService {
       }
     }
 
-    const isPremium = studio.rooms.length >= 2; // NEW - a partir de la 3ra sala
+    const isPremium = studio.rooms.length >= 2;
     const room = this.roomRepository.create({
       ...dto,
       studio,
       imageUrls: [],
       imagePublicIds: [],
-      isPremium, // NEW
+      isPremium,
       isActive: true,
     });
 
@@ -89,9 +86,6 @@ export class RoomsService {
     return savedRoom;
   }
 
-  /**
-   * Método original - mantiene compatibilidad hacia atrás
-   */
   async create(
     dto: CreateRoomDto,
     user: User,
@@ -99,7 +93,7 @@ export class RoomsService {
   ): Promise<Room> {
     const studio = await this.studioRepository.findOne({
       where: { id: studioId },
-      relations: ['owner'],
+      relations: ['owner', 'rooms'], // Cargar las salas para el conteo
     });
 
     if (!studio) throw new NotFoundException('Estudio no encontrado');
@@ -109,7 +103,6 @@ export class RoomsService {
       );
     }
 
-    // 🚨 Validación con enum
     if (studio.status !== StudioStatus.APPROVED) {
       throw new BadRequestException(
         'Este estudio aún no está aprobado, no puedes crear salas.',
@@ -127,14 +120,14 @@ export class RoomsService {
       }
     }
 
-    const isPremium = studio.rooms.length >= 2; // NEW - a partir de la 3ra sala
+    const isPremium = studio.rooms.length >= 2;
 
     const room = this.roomRepository.create({
       ...dto,
       studio,
       imageUrls: [],
       imagePublicIds: [],
-      isPremium, // NEW
+      isPremium,
       isActive: true,
     });
 
@@ -155,7 +148,6 @@ export class RoomsService {
     Object.assign(room, dto);
     const updatedRoom = await this.roomRepository.save(room);
 
-    // --- NOTIFICACIÓN DE ACTUALIZACIÓN DE SALA ---
     this.emailService.sendProfileUpdateEmail(
       user.email,
       'Sala',
@@ -177,7 +169,6 @@ export class RoomsService {
       throw new ForbiddenException('No puedes borrar una sala que no es tuya');
     }
 
-    // Eliminar imágenes de Cloudinary antes de borrar la sala
     if (room.imagePublicIds && room.imagePublicIds.length > 0) {
       await this.deleteImagesFromCloudinary(room.imagePublicIds);
     }
@@ -195,9 +186,6 @@ export class RoomsService {
     return studio.rooms;
   }
 
-  /**
-   * NUEVO MÉTODO: Obtener todas las salas del usuario autenticado
-   */
   async findRoomsByUser(user: User): Promise<Room[]> {
     const studio = await this.studioRepository.findOne({
       where: { owner: { id: user.id } },
@@ -210,9 +198,7 @@ export class RoomsService {
 
     return studio.rooms;
   }
-
-  // ===================== MÉTODOS PARA MANEJO DE IMÁGENES =====================
-
+  
   async uploadImages(
     roomId: string,
     files: Express.Multer.File[],
@@ -224,9 +210,8 @@ export class RoomsService {
       throw new BadRequestException('No se proporcionaron archivos');
     }
 
-    // Validar límite de imágenes
     const currentImageCount = room.imageUrls?.length || 0;
-    const maxImages = 1;
+    const maxImages = 5; // Límite de 5 imágenes
 
     if (currentImageCount + files.length > maxImages) {
       throw new BadRequestException(
@@ -235,14 +220,12 @@ export class RoomsService {
     }
 
     try {
-      // 📌 Usar tu FileUploadService en lugar de simular
       const uploadPromises = files.map((file) =>
         this.fileUploadService.uploadFile(file, `rooms/${roomId}`),
       );
 
       const uploadResults = await Promise.all(uploadPromises);
 
-      // Guardar las URLs reales y public_ids que Cloudinary devuelve
       const newImageUrls = uploadResults.map((result) => result.secure_url);
       const newPublicIds = uploadResults.map((result) => result.public_id);
 
@@ -251,11 +234,12 @@ export class RoomsService {
 
       return await this.roomRepository.save(room);
     } catch (error) {
-      console.error('❌ Error al subir imágenes a Cloudinary:', error);
+      this.logger.error('Error al subir imágenes a Cloudinary:', error);
       throw new BadRequestException('Error al subir las imágenes');
     }
   }
 
+  // --- 🔥 MÉTODO CORREGIDO ---
   async deleteImage(
     roomId: string,
     imageIndex: number,
@@ -274,15 +258,16 @@ export class RoomsService {
     const publicIdToDelete = room.imagePublicIds[imageIndex];
 
     try {
-      // Eliminar de Cloudinary
-      // await this.cloudinaryService.deleteImage(publicIdToDelete);
+      // ✅ 1. Eliminar de Cloudinary especificando el tipo de recurso
+      await this.fileUploadService.deleteFile(publicIdToDelete, 'image');
 
-      // Remover de los arrays
+      // ✅ 2. Remover de los arrays en la base de datos
       room.imageUrls.splice(imageIndex, 1);
       room.imagePublicIds.splice(imageIndex, 1);
 
       return await this.roomRepository.save(room);
     } catch (error) {
+      this.logger.error(`Error al eliminar imagen: ${error.message}`);
       throw new BadRequestException('Error al eliminar la imagen');
     }
   }
@@ -298,13 +283,11 @@ export class RoomsService {
       throw new NotFoundException('La sala no tiene imágenes');
     }
 
-    // Validar que todas las URLs proporcionadas existen en la sala
     const validUrls = imageUrls.every((url) => room.imageUrls.includes(url));
     if (!validUrls || imageUrls.length !== room.imageUrls.length) {
       throw new BadRequestException('URLs de imagen inválidas');
     }
 
-    // Reordenar los public IDs en el mismo orden
     const reorderedPublicIds = imageUrls.map((url) => {
       const index = room.imageUrls.indexOf(url);
       return room.imagePublicIds[index];
@@ -315,8 +298,6 @@ export class RoomsService {
 
     return await this.roomRepository.save(room);
   }
-
-  // ===================== MÉTODOS PRIVADOS/AUXILIARES =====================
 
   private async findRoomWithValidation(
     roomId: string,
@@ -337,26 +318,18 @@ export class RoomsService {
     return room;
   }
 
-  /**
-   * Método auxiliar para eliminar múltiples imágenes de Cloudinary
-   */
   private async deleteImagesFromCloudinary(publicIds: string[]): Promise<void> {
-  try {
-    // ✅ CORRECCIÓN: Usamos Promise.all para ejecutar todas las eliminaciones en paralelo.
-    const deletePromises = publicIds.map((publicId) =>
-      this.fileUploadService.deleteFile(publicId, 'image'),
-    );
-    await Promise.all(deletePromises);
-    console.log(`✅ ${publicIds.length} imágenes eliminadas de Cloudinary.`);
-  } catch (error) {
-    console.error('Error eliminando imágenes de Cloudinary:', error);
+    try {
+      const deletePromises = publicIds.map((publicId) =>
+        this.fileUploadService.deleteFile(publicId, 'image'),
+      );
+      await Promise.all(deletePromises);
+      this.logger.log(`✅ ${publicIds.length} imágenes eliminadas de Cloudinary.`);
+    } catch (error) {
+      this.logger.error('Error eliminando imágenes de Cloudinary:', error);
+    }
   }
-}
 
-  /**
-   * MÉTODO ADICIONAL: Si el usuario puede tener múltiples studios
-   * Crear en el primer studio activo del usuario
-   */
   async createWithAutoStudioMultiple(
     dto: CreateRoomDto,
     user: User,
@@ -372,7 +345,6 @@ export class RoomsService {
       );
     }
 
-    // 🚨 Filtrar solo los aprobados
     const approvedStudios = studios.filter(
       (studio) => studio.status === StudioStatus.APPROVED,
     );
@@ -395,8 +367,7 @@ export class RoomsService {
     return this.roomRepository.save(room);
   }
 
-  // NEW - Cron para desactivar salas premium cuando la membresía expire
-  @Cron('0 0 * * *') // todos los días a medianoche
+  @Cron('0 0 * * *')
   async deactivateExpiredPremiumRooms() {
     this.logger.log('Ejecutando CRON para desactivar salas premium...');
 
@@ -407,7 +378,6 @@ export class RoomsService {
         await this.membershipsService.getActiveMembership(studio.id);
 
       if (!activeMembership) {
-        // Si no hay membresía activa, desactivar todas las salas premium
         const roomsToDeactivate = studio.rooms.filter(
           (r) => r.isPremium && r.isActive,
         );
@@ -419,7 +389,6 @@ export class RoomsService {
           );
         }
       } else {
-        // Reactivar salas premium si la membresía está activa
         const roomsToActivate = studio.rooms.filter(
           (r) => r.isPremium && !r.isActive,
         );

@@ -1,3 +1,5 @@
+// studios.service.ts
+
 import {
   Injectable,
   NotFoundException,
@@ -45,7 +47,6 @@ export class StudiosService {
     return studio;
   }
 
-  // --- OBTENER URL INLINE DE REGISTRO COMERCIAL ---
   async getComercialRegisterUrl(id: string): Promise<{ inline: string; download: string }> {
     const studio = await this.studioRepository.findOne({ where: { id } });
     
@@ -60,17 +61,12 @@ export class StudiosService {
     this.logger.log(`🔍 Buscando PDF con public_id guardado: ${studio.comercialRegister}`);
   
     try {
-      // Llamada directa y única al servicio de FileUpload.
       return await this.fileUploadService.getPublicPdfUrl(studio.comercialRegister);
-      
     } catch (error) {
       this.logger.error(`❌ No se pudo generar la URL para el registro del estudio ${id}. Error: ${error.message}`);
-      
-      // Re-lanzamos el error que nos da el servicio (NotFound, InternalServer, etc.)
       throw error;
     }
   }
-
 
   // --- MÉTODOS PROTEGIDOS ---
   async findMyStudios(user: User): Promise<Studio[]> {
@@ -90,9 +86,7 @@ export class StudiosService {
     });
 
     if (!studio) {
-      throw new NotFoundException(
-        'No se encontró el estudio o no te pertenece.',
-      );
+      throw new NotFoundException('No se encontró el estudio o no te pertenece.');
     }
 
     Object.assign(studio, dto);
@@ -123,9 +117,7 @@ export class StudiosService {
 
     if (!studio) throw new NotFoundException('Estudio no encontrado.');
     if (studio.owner.id !== user.id)
-      throw new ForbiddenException(
-        'No tienes permiso para modificar este estudio.',
-      );
+      throw new ForbiddenException('No tienes permiso para modificar este estudio.');
 
     if ((studio.photos?.length || 0) >= 5) {
       throw new BadRequestException('Ya tienes 5 fotos cargadas.');
@@ -136,13 +128,52 @@ export class StudiosService {
       studio.photos = [...(studio.photos || []), result.secure_url];
       return this.studioRepository.save(studio);
     } catch (error) {
-      throw new InternalServerErrorException(
-        `Error al subir la imagen: ${error.message}`,
-      );
+      throw new InternalServerErrorException(`Error al subir la imagen: ${error.message}`);
+    }
+  }
+  
+  // --- 🔥 NUEVO MÉTODO PARA BORRAR FOTO ---
+  async deletePhoto(user: User, studioId: string, photoIndex: number): Promise<Studio> {
+    const studio = await this.studioRepository.findOne({
+      where: { id: studioId },
+      relations: ['owner'],
+    });
+
+    if (!studio) throw new NotFoundException('Estudio no encontrado.');
+    if (studio.owner.id !== user.id) {
+      throw new ForbiddenException('No tienes permiso para modificar este estudio.');
+    }
+
+    if (!studio.photos || photoIndex < 0 || photoIndex >= studio.photos.length) {
+      throw new BadRequestException('Índice de foto inválido.');
+    }
+
+    const photoUrlToDelete = studio.photos[photoIndex];
+    
+    // Extraer el public_id de la URL
+    // Formato URL: https://res.cloudinary.com/<cloud_name>/image/upload/v<version>/<public_id>.<format>
+    const publicIdMatch = photoUrlToDelete.match(/upload\/(?:v\d+\/)?([^\.]+)/);
+    if (!publicIdMatch || !publicIdMatch[1]) {
+        this.logger.error(`No se pudo extraer el public_id de la URL: ${photoUrlToDelete}`);
+        throw new InternalServerErrorException('No se pudo procesar la URL de la imagen.');
+    }
+    const publicIdToDelete = publicIdMatch[1];
+
+    try {
+      // 1. Borrar de Cloudinary
+      await this.fileUploadService.deleteFile(publicIdToDelete, 'image');
+
+      // 2. Borrar de la base de datos
+      studio.photos.splice(photoIndex, 1);
+      return this.studioRepository.save(studio);
+    } catch (error) {
+      this.logger.error(`Error al eliminar la foto del estudio ${studioId}: ${error.message}`);
+      throw new InternalServerErrorException('Error al eliminar la foto.');
     }
   }
 
-  // --- CREAR ESTUDIO CON ARCHIVOS ---
+
+  // --- CREAR Y ACTUALIZAR CON ARCHIVOS (sin cambios) ---
   async createWithFiles(
     createStudioDto: CreateStudioDto,
     user: User,
@@ -152,20 +183,15 @@ export class StudiosService {
     },
   ): Promise<Studio> {
     if (user.role !== UserRole.STUDIO_OWNER) {
-      throw new ForbiddenException(
-        'Solo los dueños de estudio pueden crear estudios',
-      );
+      throw new ForbiddenException('Solo los dueños de estudio pueden crear estudios');
     }
 
-    // ✅ Lógica de la rama 'develop': Verificar si el usuario ya tiene un estudio.
     const existingStudio = await this.studioRepository.findOne({
       where: { owner: { id: user.id } },
     });
 
     if (existingStudio) {
-      throw new BadRequestException(
-        'Ya tienes un estudio registrado. Solo puedes crear uno por dueño.',
-      );
+      throw new BadRequestException('Ya tienes un estudio registrado. Solo puedes crear uno por dueño.');
     }
 
     if (files.photos && files.photos.length > 5) {
@@ -193,9 +219,7 @@ export class StudiosService {
         studio.lng = coords.lng;
       }
     } catch (error) {
-      this.logger.warn(
-        `Error al geocodificar estudio ${studio.name}: ${error.message}`,
-      );
+      this.logger.warn(`Error al geocodificar estudio ${studio.name}: ${error.message}`);
     }
 
     if (files.photos) {
@@ -206,33 +230,19 @@ export class StudiosService {
       }
     }
 
-    // ✅ Tu lógica para subir el PDF
     if (files.comercialRegister && files.comercialRegister[0]) {
-      const result = await this.fileUploadService.uploadFile(
-        files.comercialRegister[0],
-        'pdfs',
-      );
+      const result = await this.fileUploadService.uploadFile(files.comercialRegister[0], 'pdfs');
       studio.comercialRegister = result.public_id;
     }
 
-     const savedStudio = await this.studioRepository.save(studio);
+    const savedStudio = await this.studioRepository.save(studio);
 
-    // ✅ --- CAMBIO IMPORTANTE AQUÍ --- ✅
-    // CAMBIO: Anteriormente se enviaba un email de bienvenida.
-    // AHORA: Se notifica que el estudio está pendiente de revisión.
     this.emailService.sendStudioPendingReviewEmail(user.email, savedStudio.name);
-    
-    // Esta notificación al admin sigue siendo correcta.
-    this.emailService.sendNewStudioAdminNotification(
-      savedStudio.name,
-      user.email,
-      savedStudio.id,
-    );
+    this.emailService.sendNewStudioAdminNotification(savedStudio.name, user.email, savedStudio.id);
 
     return savedStudio;
   }
 
-  // --- ACTUALIZAR ESTUDIO CON ARCHIVOS ---
   async updateMyStudioWithFiles(
     user: User,
     studioId: string,
@@ -249,9 +259,7 @@ export class StudiosService {
 
     if (!studio) throw new NotFoundException('Estudio no encontrado.');
     if (studio.owner.id !== user.id) {
-      throw new ForbiddenException(
-        'No tienes permiso para actualizar este estudio.',
-      );
+      throw new ForbiddenException('No tienes permiso para actualizar este estudio.');
     }
 
     Object.assign(studio, dto);
@@ -259,9 +267,7 @@ export class StudiosService {
     if (files.photos && files.photos.length > 0) {
       const currentPhotos = studio.photos || [];
       if (currentPhotos.length + files.photos.length > 5) {
-        throw new BadRequestException(
-          'Solo se permiten hasta 5 fotos en total.',
-        );
+        throw new BadRequestException('Solo se permiten hasta 5 fotos en total.');
       }
       for (const file of files.photos) {
         const result = await this.fileUploadService.uploadFile(file, 'images');
@@ -271,10 +277,7 @@ export class StudiosService {
     }
 
     if (files.comercialRegister && files.comercialRegister[0]) {
-      const result = await this.fileUploadService.uploadFile(
-        files.comercialRegister[0],
-        'pdfs',
-      );
+      const result = await this.fileUploadService.uploadFile(files.comercialRegister[0], 'pdfs');
       studio.comercialRegister = result.public_id;
     }
 
