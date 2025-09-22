@@ -36,19 +36,28 @@ export class EmailService {
   }
 
   // --- HELPER PRIVADO PARA ENVIAR EMAILS Y MANEJAR ERRORES ---
-  private async sendEmail(mailOptions: nodemailer.SendMailOptions, logContext: string): Promise<void> {
+  private async sendEmail(
+    mailOptions: nodemailer.SendMailOptions,
+    logContext: string,
+  ): Promise<void> {
     try {
       await this.transporter.sendMail(mailOptions);
       this.logger.log(`Email de ${logContext} enviado a: ${mailOptions.to}`);
     } catch (error) {
-      this.logger.error(`Error enviando email de ${logContext} a ${mailOptions.to}:`, error);
+      this.logger.error(
+        `Error enviando email de ${logContext} a ${mailOptions.to}:`,
+        error,
+      );
       // No lanzamos un error para no detener otros procesos
     }
   }
 
   // --- MÉTODOS DE AUTENTICACIÓN Y BIENVENIDA ---
 
-  async sendPasswordResetEmail(email: string, resetToken: string): Promise<void> {
+  async sendPasswordResetEmail(
+    email: string,
+    resetToken: string,
+  ): Promise<void> {
     const frontendUrl = this.configService.get<string>('FRONTEND_URL');
     const resetUrl = `${frontendUrl}/reset-password?token=${resetToken}`;
     const mailOptions = {
@@ -57,10 +66,12 @@ export class EmailService {
       subject: 'Recuperación de contraseña',
       html: this.getPasswordResetTemplate(resetUrl),
     };
-    await this.sendEmail(mailOptions, 'recuperación de contraseña').catch(err => {
+    await this.sendEmail(mailOptions, 'recuperación de contraseña').catch(
+      (err) => {
         // En este caso específico, sí queremos que el error se propague
         throw new Error('Error al enviar el email de recuperación');
-    });
+      },
+    );
   }
 
   private getPasswordResetTemplate(resetUrl: string): string {
@@ -86,21 +97,24 @@ export class EmailService {
     const greetingName = name || 'nuevo usuario';
     return `<h1>¡Hola, ${greetingName}! Te damos la bienvenida.</h1>`;
   }
-  
+
   async sendPasswordChangedEmail(to: string): Promise<void> {
-      const mailOptions = {
-          from: `StudioConnect <${this.configService.get('FROM_EMAIL')}>`,
-          to,
-          subject: 'Confirmación de cambio de contraseña',
-          html: `<p>Hola,</p><p>Te confirmamos que tu contraseña ha sido <b>cambiada exitosamente</b>.</p>`,
-      };
-      await this.sendEmail(mailOptions, 'cambio de contraseña');
+    const mailOptions = {
+      from: `StudioConnect <${this.configService.get('FROM_EMAIL')}>`,
+      to,
+      subject: 'Confirmación de cambio de contraseña',
+      html: `<p>Hola,</p><p>Te confirmamos que tu contraseña ha sido <b>cambiada exitosamente</b>.</p>`,
+    };
+    await this.sendEmail(mailOptions, 'cambio de contraseña');
   }
 
   // --- NOTIFICACIONES DEL PROCESO DE RESERVA ---
 
   // 1. Solicitud enviada (para el músico)
-  async sendBookingRequestMusician(email: string, details: BookingDetails): Promise<void> {
+  async sendBookingRequestMusician(
+    email: string,
+    details: BookingDetails,
+  ): Promise<void> {
     const mailOptions = {
       from: `StudioConnect <${this.configService.get<string>('FROM_EMAIL')}>`,
       to: email,
@@ -125,7 +139,10 @@ export class EmailService {
   }
 
   // 2. Reserva confirmada (para el músico)
-  async sendBookingConfirmedEmail(email: string, details: BookingDetails): Promise<void> {
+  async sendBookingConfirmedEmail(
+    email: string,
+    details: BookingDetails,
+  ): Promise<void> {
     const mailOptions = {
       from: `StudioConnect <${this.configService.get<string>('FROM_EMAIL')}>`,
       to: email,
@@ -156,7 +173,10 @@ export class EmailService {
   }
 
   // 3. Reserva rechazada (para el músico)
-  async sendBookingRejectedEmail(email: string, details: BookingDetails): Promise<void> {
+  async sendBookingRejectedEmail(
+    email: string,
+    details: BookingDetails,
+  ): Promise<void> {
     const mailOptions = {
       from: `StudioConnect <${this.configService.get<string>('FROM_EMAIL')}>`,
       to: email,
@@ -167,7 +187,9 @@ export class EmailService {
   }
 
   private getBookingRejectedTemplate(details: BookingDetails): string {
-    const reason = details.rejectionReason ? `<p><strong>Motivo del rechazo:</strong> "${details.rejectionReason}"</p>` : '';
+    const reason = details.rejectionReason
+      ? `<p><strong>Motivo del rechazo:</strong> "${details.rejectionReason}"</p>`
+      : '';
     const frontendUrl = this.configService.get<string>('FRONTEND_URL');
     return `
       <h1>Tu solicitud de reserva no fue aceptada</h1>
@@ -184,7 +206,10 @@ export class EmailService {
   }
 
   // 4. Recordatorio de reserva (para el músico)
-  async sendBookingReminderEmail(email: string, details: BookingDetails): Promise<void> {
+  async sendBookingReminderEmail(
+    email: string,
+    details: BookingDetails,
+  ): Promise<void> {
     const mailOptions = {
       from: `StudioConnect <${this.configService.get<string>('FROM_EMAIL')}>`,
       to: email,
@@ -211,7 +236,10 @@ export class EmailService {
   }
 
   // 5. Confirmación de cancelación (para el músico)
-  async sendBookingCancellationEmail(email: string, details: BookingDetails): Promise<void> {
+  async sendBookingCancellationEmail(
+    email: string,
+    details: BookingDetails,
+  ): Promise<void> {
     const mailOptions = {
       from: `StudioConnect <${this.configService.get<string>('FROM_EMAIL')}>`,
       to: email,
@@ -234,7 +262,11 @@ export class EmailService {
   }
 
   // 6. Reserva modificada (para el músico)
-  async sendBookingModifiedEmail(email: string, details: BookingDetails, changes: string): Promise<void> {
+  async sendBookingModifiedEmail(
+    email: string,
+    details: BookingDetails,
+    changes: string,
+  ): Promise<void> {
     const mailOptions = {
       from: `StudioConnect <${this.configService.get<string>('FROM_EMAIL')}>`,
       to: email,
@@ -244,7 +276,10 @@ export class EmailService {
     await this.sendEmail(mailOptions, 'modificación de reserva');
   }
 
-  private getBookingModifiedTemplate(details: BookingDetails, changes: string): string {
+  private getBookingModifiedTemplate(
+    details: BookingDetails,
+    changes: string,
+  ): string {
     return `
       <h1>Tu reserva ha sido modificada</h1>
       <p>Hola,</p>
@@ -262,7 +297,10 @@ export class EmailService {
 
   // --- NOTIFICACIONES PARA EL DUEÑO DEL ESTUDIO ---
 
-  async sendBookingRequestOwner(ownerEmail: string, details: BookingDetails): Promise<void> {
+  async sendBookingRequestOwner(
+    ownerEmail: string,
+    details: BookingDetails,
+  ): Promise<void> {
     const frontendUrl = this.configService.get<string>('FRONTEND_URL');
     const mailOptions = {
       from: `StudioConnect <${this.configService.get<string>('FROM_EMAIL')}>`,
@@ -285,7 +323,12 @@ export class EmailService {
     await this.sendEmail(mailOptions, `nueva reserva para ${ownerEmail}`);
   }
 
-  async sendOwnerBookingUpdateAlert(ownerEmail: string, details: BookingDetails, subject: string, message: string): Promise<void> {
+  async sendOwnerBookingUpdateAlert(
+    ownerEmail: string,
+    details: BookingDetails,
+    subject: string,
+    message: string,
+  ): Promise<void> {
     const frontendUrl = this.configService.get<string>('FRONTEND_URL');
     const mailOptions = {
       from: `StudioConnect <${this.configService.get<string>('FROM_EMAIL')}>`,
@@ -304,13 +347,19 @@ export class EmailService {
         <a href="${frontendUrl}/dashboard/bookings" class="button">Ver mis Reservas</a>
       `,
     };
-    await this.sendEmail(mailOptions, `alerta de actualización de reserva para ${ownerEmail}`);
+    await this.sendEmail(
+      mailOptions,
+      `alerta de actualización de reserva para ${ownerEmail}`,
+    );
   }
 
   /**
    * Envía un resumen al dueño cuando una reserva es confirmada.
    */
-  async sendOwnerBookingConfirmedNotice(ownerEmail: string, details: BookingDetails): Promise<void> {
+  async sendOwnerBookingConfirmedNotice(
+    ownerEmail: string,
+    details: BookingDetails,
+  ): Promise<void> {
     const mailOptions = {
       from: `StudioConnect <${this.configService.get<string>('FROM_EMAIL')}>`,
       to: ownerEmail,
@@ -327,13 +376,19 @@ export class EmailService {
         </ul>
       `,
     };
-    await this.sendEmail(mailOptions, `aviso de confirmación de reserva para ${ownerEmail}`);
+    await this.sendEmail(
+      mailOptions,
+      `aviso de confirmación de reserva para ${ownerEmail}`,
+    );
   }
 
   /**
    * Da la bienvenida al dueño cuando registra su estudio.
    */
-  async sendWelcomeStudioEmail(ownerEmail: string, studioName: string): Promise<void> {
+  async sendWelcomeStudioEmail(
+    ownerEmail: string,
+    studioName: string,
+  ): Promise<void> {
     const frontendUrl = this.configService.get<string>('FRONTEND_URL');
     const mailOptions = {
       from: `StudioConnect <${this.configService.get<string>('FROM_EMAIL')}>`,
@@ -352,13 +407,21 @@ export class EmailService {
         <a href="${frontendUrl}/dashboard" class="button">Ir a mi Panel de Control</a>
       `,
     };
-    await this.sendEmail(mailOptions, `bienvenida de estudio para ${ownerEmail}`);
+    await this.sendEmail(
+      mailOptions,
+      `bienvenida de estudio para ${ownerEmail}`,
+    );
   }
 
   /**
    * Confirma al dueño la creación de una nueva sala.
    */
-  async sendNewRoomAddedEmail(ownerEmail: string, studioName: string, roomName: string, roomId: string): Promise<void> {
+  async sendNewRoomAddedEmail(
+    ownerEmail: string,
+    studioName: string,
+    roomName: string,
+    roomId: string,
+  ): Promise<void> {
     const frontendUrl = this.configService.get<string>('FRONTEND_URL');
     const mailOptions = {
       from: `StudioConnect <${this.configService.get<string>('FROM_EMAIL')}>`,
@@ -377,7 +440,12 @@ export class EmailService {
   /**
    * Notificación de seguridad cuando se actualizan datos del estudio o una sala.
    */
-  async sendProfileUpdateEmail(ownerEmail: string, entityType: 'Estudio' | 'Sala', entityName: string, updatedSection: string): Promise<void> {
+  async sendProfileUpdateEmail(
+    ownerEmail: string,
+    entityType: 'Estudio' | 'Sala',
+    entityName: string,
+    updatedSection: string,
+  ): Promise<void> {
     const mailOptions = {
       from: `StudioConnect <${this.configService.get<string>('FROM_EMAIL')}>`,
       to: ownerEmail,
@@ -389,10 +457,17 @@ export class EmailService {
         <p>Si no reconoces esta actividad, por favor revisa tu cuenta o contacta a soporte de inmediato.</p>
       `,
     };
-    await this.sendEmail(mailOptions, `actualización de perfil para ${ownerEmail}`);
+    await this.sendEmail(
+      mailOptions,
+      `actualización de perfil para ${ownerEmail}`,
+    );
   }
 
-  async sendBookingReminder(musicianEmail: string, booking: Booking, timeRemaining: string) {
+  async sendBookingReminder(
+    musicianEmail: string,
+    booking: Booking,
+    timeRemaining: string,
+  ) {
     const subject = `🔔 Recordatorio: Tu reserva es ${timeRemaining}`;
     const html = `
       <h1>¡Hola!</h1>
@@ -406,17 +481,24 @@ export class EmailService {
 
     // AHORA CONSTRUIMOS EL OBJETO mailOptions ANTES DE LLAMAR a sendEmail
     const mailOptions = {
-        from: `StudioConnect <${this.configService.get<string>('FROM_EMAIL')}>`,
-        to: musicianEmail,
-        subject: subject,
-        html: html,
+      from: `StudioConnect <${this.configService.get<string>('FROM_EMAIL')}>`,
+      to: musicianEmail,
+      subject: subject,
+      html: html,
     };
-    
+
     // Y LLAMAMOS a sendEmail CON LOS DOS ARGUMENTOS CORRECTOS
-    await this.sendEmail(mailOptions, `recordatorio de reserva (${timeRemaining})`); 
+    await this.sendEmail(
+      mailOptions,
+      `recordatorio de reserva (${timeRemaining})`,
+    );
   }
 
-  async sendPaymentSuccessMusician(musicianEmail: string, details: BookingDetails, paymentIntentId: string): Promise<void> {
+  async sendPaymentSuccessMusician(
+    musicianEmail: string,
+    details: BookingDetails,
+    paymentIntentId: string,
+  ): Promise<void> {
     const mailOptions = {
       from: `StudioConnect <${this.configService.get<string>('FROM_EMAIL')}>`,
       to: musicianEmail,
@@ -443,7 +525,11 @@ export class EmailService {
   /**
    * Notifica al dueño del estudio que ha recibido el pago de una reserva.
    */
-  async sendPaymentReceivedOwner(ownerEmail: string, details: BookingDetails, ownerPayoutAmount: number): Promise<void> {
+  async sendPaymentReceivedOwner(
+    ownerEmail: string,
+    details: BookingDetails,
+    ownerPayoutAmount: number,
+  ): Promise<void> {
     const commission = details.totalPrice - ownerPayoutAmount;
     const mailOptions = {
       from: `StudioConnect <${this.configService.get<string>('FROM_EMAIL')}>`,
@@ -467,10 +553,17 @@ export class EmailService {
         <p>Los fondos han sido enviados a tu cuenta de Stripe conectada.</p>
       `,
     };
-    await this.sendEmail(mailOptions, `notificación de pago para ${ownerEmail}`);
+    await this.sendEmail(
+      mailOptions,
+      `notificación de pago para ${ownerEmail}`,
+    );
   }
 
-   async sendStudioRejectionEmail(ownerEmail: string, studioName: string, rejectionReason: string): Promise<void> {
+  async sendStudioRejectionEmail(
+    ownerEmail: string,
+    studioName: string,
+    rejectionReason: string,
+  ): Promise<void> {
     const mailOptions = {
       from: `StudioConnect <${this.configService.get<string>('FROM_EMAIL')}>`,
       to: ownerEmail,
@@ -480,7 +573,10 @@ export class EmailService {
     await this.sendEmail(mailOptions, `rechazo de estudio para ${ownerEmail}`);
   }
 
-  private getStudioRejectionTemplate(studioName: string, rejectionReason: string): string {
+  private getStudioRejectionTemplate(
+    studioName: string,
+    rejectionReason: string,
+  ): string {
     const frontendUrl = this.configService.get<string>('FRONTEND_URL');
     return `
       <h1>Tu solicitud para ${studioName} no fue aprobada</h1>
@@ -497,8 +593,6 @@ export class EmailService {
     `;
   }
 
- 
-
   /**
    * Notifica al destinatario que ha recibido un nuevo mensaje en el chat de una reserva.
    */
@@ -506,24 +600,38 @@ export class EmailService {
     recipientEmail: string,
     senderName: string,
     messagePreview: string,
-    bookingId: string
+    bookingId: string,
   ): Promise<void> {
     const mailOptions = {
       from: `StudioConnect <${this.configService.get<string>('FROM_EMAIL')}>`,
       to: recipientEmail,
       subject: `Has recibido un nuevo mensaje de ${senderName}`,
-      html: this.getNewMessageNotificationTemplate(senderName, messagePreview, bookingId),
+      html: this.getNewMessageNotificationTemplate(
+        senderName,
+        messagePreview,
+        bookingId,
+      ),
     };
-    await this.sendEmail(mailOptions, `notificación de nuevo mensaje para ${recipientEmail}`);
+    await this.sendEmail(
+      mailOptions,
+      `notificación de nuevo mensaje para ${recipientEmail}`,
+    );
   }
 
-  private getNewMessageNotificationTemplate(senderName: string, messagePreview: string, bookingId: string): string {
+  private getNewMessageNotificationTemplate(
+    senderName: string,
+    messagePreview: string,
+    bookingId: string,
+  ): string {
     const frontendUrl = this.configService.get<string>('FRONTEND_URL');
     // Asumimos una ruta como /dashboard/bookings/:id/chat para ver la conversación
-    const chatUrl = `${frontendUrl}/dashboard/bookings/${bookingId}?tab=chat`; 
+    const chatUrl = `${frontendUrl}/dashboard/bookings/${bookingId}?tab=chat`;
 
     // Acortamos la vista previa si el mensaje es muy largo
-    const preview = messagePreview.length > 150 ? messagePreview.substring(0, 147) + '...' : messagePreview;
+    const preview =
+      messagePreview.length > 150
+        ? messagePreview.substring(0, 147) + '...'
+        : messagePreview;
 
     return `
       <h1>Nuevo Mensaje de ${senderName}</h1>
@@ -546,15 +654,24 @@ export class EmailService {
     studioName: string,
     rating: number,
     comment: string,
-    studioId: string
+    studioId: string,
   ): Promise<void> {
     const mailOptions = {
       from: `StudioConnect <${this.configService.get<string>('FROM_EMAIL')}>`,
       to: ownerEmail,
       subject: `¡${musicianName} ha calificado tu estudio!`,
-      html: this.getNewReviewTemplate(musicianName, studioName, rating, comment, studioId),
+      html: this.getNewReviewTemplate(
+        musicianName,
+        studioName,
+        rating,
+        comment,
+        studioId,
+      ),
     };
-    await this.sendEmail(mailOptions, `notificación de nueva reseña para ${ownerEmail}`);
+    await this.sendEmail(
+      mailOptions,
+      `notificación de nueva reseña para ${ownerEmail}`,
+    );
   }
 
   private getNewReviewTemplate(
@@ -562,7 +679,7 @@ export class EmailService {
     studioName: string,
     rating: number,
     comment: string,
-    studioId: string
+    studioId: string,
   ): string {
     const frontendUrl = this.configService.get<string>('FRONTEND_URL');
     // Asumimos una ruta como /studios/:id para ver el estudio y sus reseñas
@@ -588,22 +705,28 @@ export class EmailService {
     `;
   }
 
-   // --- NOTIFICACIONES PARA EL ADMINISTRADOR ---
+  // --- NOTIFICACIONES PARA EL ADMINISTRADOR ---
   // ✅ --- INICIO DE NUEVO CÓDIGO --- ✅
 
   /**
    * Notifica al admin sobre un nuevo estudio que necesita aprobación.
    */
-  async sendNewStudioAdminNotification(studioName: string, ownerEmail: string, studioId: string): Promise<void> {
+  async sendNewStudioAdminNotification(
+    studioName: string,
+    ownerEmail: string,
+    studioId: string,
+  ): Promise<void> {
     const adminEmail = this.configService.get<string>('ADMIN_EMAIL');
     if (!adminEmail) {
-      this.logger.warn('ADMIN_EMAIL no está configurado. No se puede enviar la notificación de nuevo estudio.');
+      this.logger.warn(
+        'ADMIN_EMAIL no está configurado. No se puede enviar la notificación de nuevo estudio.',
+      );
       return;
     }
 
     const frontendUrl = this.configService.get<string>('FRONTEND_URL');
     // Asumimos que hay un panel de admin para ver los estudios pendientes
-    const reviewUrl = `${frontendUrl}/admin/studios/pending`; 
+    const reviewUrl = `${frontendUrl}/admin/studios/pending`;
 
     const mailOptions = {
       from: `StudioConnect Alertas <${this.configService.get<string>('FROM_EMAIL')}>`,
@@ -627,10 +750,16 @@ export class EmailService {
   /**
    * Notifica al admin sobre una nueva disputa (PQRS).
    */
-  async sendNewDisputeAdminNotification(bookingId: string, reporterEmail: string, reason: string): Promise<void> {
+  async sendNewDisputeAdminNotification(
+    bookingId: string,
+    reporterEmail: string,
+    reason: string,
+  ): Promise<void> {
     const adminEmail = this.configService.get<string>('ADMIN_EMAIL');
     if (!adminEmail) {
-      this.logger.warn('ADMIN_EMAIL no está configurado. No se puede enviar la notificación de disputa.');
+      this.logger.warn(
+        'ADMIN_EMAIL no está configurado. No se puede enviar la notificación de disputa.',
+      );
       return;
     }
 
@@ -658,10 +787,17 @@ export class EmailService {
   /**
    * Notifica al admin sobre un fallo en el procesamiento de un pago.
    */
-  async sendPaymentFailureAdminNotification(bookingId: string, musicianEmail: string, amount: number, errorMessage: string): Promise<void> {
+  async sendPaymentFailureAdminNotification(
+    bookingId: string,
+    musicianEmail: string,
+    amount: number,
+    errorMessage: string,
+  ): Promise<void> {
     const adminEmail = this.configService.get<string>('ADMIN_EMAIL');
     if (!adminEmail) {
-      this.logger.warn('ADMIN_EMAIL no está configurado. No se puede enviar la notificación de fallo de pago.');
+      this.logger.warn(
+        'ADMIN_EMAIL no está configurado. No se puede enviar la notificación de fallo de pago.',
+      );
       return;
     }
 
@@ -688,10 +824,17 @@ export class EmailService {
   /**
    * Notifica al admin sobre contenido reportado por un usuario.
    */
-  async sendContentReportedAdminNotification(reportType: 'Reseña' | 'Foto' | 'Perfil', contentId: string, reporterEmail: string, reason: string): Promise<void> {
+  async sendContentReportedAdminNotification(
+    reportType: 'Reseña' | 'Foto' | 'Perfil',
+    contentId: string,
+    reporterEmail: string,
+    reason: string,
+  ): Promise<void> {
     const adminEmail = this.configService.get<string>('ADMIN_EMAIL');
     if (!adminEmail) {
-      this.logger.warn('ADMIN_EMAIL no está configurado. No se puede enviar la notificación de contenido reportado.');
+      this.logger.warn(
+        'ADMIN_EMAIL no está configurado. No se puede enviar la notificación de contenido reportado.',
+      );
       return;
     }
 
@@ -717,4 +860,45 @@ export class EmailService {
     await this.sendEmail(mailOptions, 'contenido reportado para admin');
   }
 
+  // --- NOTIFICACIONES DE MEMBRESÍA ---
+  async sendMembershipActivated(
+    to: string,
+    data: { plan: string; startDate: Date; endDate: Date; studioName: string },
+  ): Promise<void> {
+    const mailOptions = {
+      from: `StudioConnect <${this.configService.get<string>('FROM_EMAIL')}>`,
+      to,
+      subject: `¡Tu membresía en ${data.studioName} está activa!`,
+      html: `
+      <h1>Membresía Activada</h1>
+      <p>Hola,</p>
+      <p>Tu membresía para el estudio <strong>${data.studioName}</strong> ha sido activada exitosamente.</p>
+      <ul>
+        <li><strong>Plan:</strong> ${data.plan}</li>
+        <li><strong>Fecha de inicio:</strong> ${data.startDate.toLocaleDateString()}</li>
+        <li><strong>Fecha de fin:</strong> ${data.endDate.toLocaleDateString()}</li>
+      </ul>
+      <p>Ahora puedes crear más salas de tu estudio según los beneficios de tu plan.</p>
+    `,
+    };
+    await this.sendEmail(mailOptions, 'activación de membresía');
+  }
+
+  async sendMembershipExpired(
+    to: string,
+    data: { plan: string; studioName: string; expiredAt: Date },
+  ): Promise<void> {
+    const mailOptions = {
+      from: `StudioConnect <${this.configService.get<string>('FROM_EMAIL')}>`,
+      to,
+      subject: `Tu membresía en ${data.studioName} ha expirado`,
+      html: `
+      <h1>Membresía Expirada</h1>
+      <p>Hola,</p>
+      <p>Tu membresía para el estudio <strong>${data.studioName}</strong> ha expirado el ${data.expiredAt.toLocaleDateString()}.</p>
+      <p>Recuerda que ya no podrás crear más salas adicionales hasta renovar tu membresía.</p>
+    `,
+    };
+    await this.sendEmail(mailOptions, 'expiración de membresía');
+  }
 }

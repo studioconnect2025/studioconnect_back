@@ -30,6 +30,7 @@ import {
   ApiBearerAuth,
 } from '@nestjs/swagger';
 import { Request as ExpressRequest } from 'express';
+import { Membership } from 'src/membership/entities/membership.entity';
 type RawBodyRequest = ExpressRequest & { body: Buffer };
 
 @ApiTags('Payments')
@@ -79,11 +80,10 @@ export class PaymentsController {
   @ApiOperation({ summary: 'Confirmar estado de un PaymentIntent' })
   async confirmPayment(
     @Param('paymentIntentId') paymentIntentId: string,
-  ): Promise<
-    Booking | { studioId: string; isActive: boolean } | Stripe.PaymentIntent
-  > {
+  ): Promise<Booking | Membership | Stripe.PaymentIntent> {
     return this.paymentsService.confirmPayment(paymentIntentId);
   }
+  
   @Post('webhook')
   @HttpCode(HttpStatus.OK)
   async stripeWebhook(
