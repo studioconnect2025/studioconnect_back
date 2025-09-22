@@ -7,6 +7,7 @@ import {
   Request,
   UseGuards,
   NotFoundException,
+  Query,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -28,6 +29,27 @@ import { CreateMembershipDto } from './dto/create-membership.dto';
 @Controller('memberships')
 export class MembershipsController {
   constructor(private readonly membershipsService: MembershipsService) {}
+
+  // --- ADMIN: obtener todas las membresías ---
+  @Get('admin/all')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({
+    summary: 'Obtener todas las membresías con filtros y paginación (Admin)',
+  })
+  async getAllMembershipsAdmin(
+    @Query('page') page = 1,
+    @Query('limit') limit = 20,
+    @Query('status') status?: string,
+    @Query('studioId') studioId?: string,
+  ) {
+    return this.membershipsService.getAllMemberships({
+      page: Number(page),
+      limit: Number(limit),
+      status,
+      studioId,
+    });
+  }
 
   // --- RUTA PARA DUEÑOS DE ESTUDIO ---
   @ApiOperation({
