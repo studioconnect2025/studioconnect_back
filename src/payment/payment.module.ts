@@ -10,6 +10,7 @@ import { Studio } from 'src/studios/entities/studio.entity';
 import { PricingModule } from 'src/pricingTotal/pricing.module';
 import { Payment } from './entities/payment.entity';
 import { AuthModule } from 'src/auth/auth.module';
+import { MembershipModule } from 'src/membership/membership.module';
 
 @Module({
   imports: [
@@ -22,7 +23,8 @@ import { AuthModule } from 'src/auth/auth.module';
       Payment,
     ]),
     PricingModule,
-     AuthModule,
+    AuthModule,
+    MembershipModule,
   ],
   controllers: [PaymentsController],
   providers: [PaymentsService],

@@ -14,13 +14,13 @@ import { User } from 'src/users/entities/user.entity';
 import { Studio } from 'src/studios/entities/studio.entity';
 import { UserRole } from 'src/auth/enum/roles.enum';
 import { CreatePaymentDto } from './dto/create-payment.dto';
-import {
-  CreateMembershipPaymentDto,
-  MembershipPlan,
-} from './dto/Create-Membership-Paymentdto';
+import { CreateMembershipPaymentDto } from './dto/Create-Membership-Paymentdto';
 import { PricingService } from 'src/pricingTotal/pricing.service';
 import { Payment } from './entities/payment.entity';
 import { EmailService } from 'src/auth/services/email.service';
+import { MembershipsService } from 'src/membership/membership.service';
+import { MembershipPlan } from 'src/membership/enum/enum.membership';
+import { Membership } from 'src/membership/entities/membership.entity';
 
 @Injectable()
 export class PaymentsService {
@@ -38,6 +38,7 @@ export class PaymentsService {
     private readonly paymentRepo: Repository<Payment>,
     private readonly pricingService: PricingService,
     private readonly emailService: EmailService,
+    private readonly membershipsService: MembershipsService, // NEW
   ) {
     const stripeKey = process.env.STRIPE_SECRET_KEY;
     if (!stripeKey) throw new Error('STRIPE_SECRET_KEY no definido');
@@ -140,10 +141,25 @@ export class PaymentsService {
   async createMembershipPayment(
     user: User,
     dto: CreateMembershipPaymentDto,
-  ): Promise<{ clientSecret: string; amount: number }> {
+  ): Promise<{
+    clientSecret: string;
+    amount: number;
+    paymentIntentId: string;
+  }> {
     if (user.role !== UserRole.STUDIO_OWNER) {
       throw new ForbiddenException(
         'Solo dueños de estudio pueden pagar membresía',
+      );
+    }
+
+    if (!user.studio) {
+      throw new BadRequestException('El usuario no tiene un estudio asignado');
+    }
+
+    // Validar que el estudio esté activo
+    if (!user.studio.isActive) {
+      throw new ForbiddenException(
+        'El estudio no está activo. No se pueden comprar membresías.',
       );
     }
 
@@ -159,15 +175,17 @@ export class PaymentsService {
       },
     });
 
-    return { clientSecret: paymentIntent.client_secret ?? '', amount };
+    return {
+      clientSecret: paymentIntent.client_secret ?? '',
+      amount,
+      paymentIntentId: paymentIntent.id,
+    };
   }
 
   // 🔹 Confirmar pago (reserva o membresía)
   async confirmPayment(
     paymentIntentId: string,
-  ): Promise<
-    Booking | { studioId: string; isActive: boolean } | Stripe.PaymentIntent
-  > {
+  ): Promise<Booking | Membership | Stripe.PaymentIntent> {
     const paymentIntent =
       await this.stripe.paymentIntents.retrieve(paymentIntentId);
 
@@ -187,15 +205,11 @@ export class PaymentsService {
       return booking;
     }
 
-    const studioId = paymentIntent.metadata?.studioId;
-    if (studioId) {
-      const studio = await this.studioRepo.findOne({ where: { id: studioId } });
-      if (!studio) throw new NotFoundException('Studio no encontrado');
-
-      studio.isActive = paymentIntent.status === 'succeeded';
-      await this.studioRepo.save(studio);
-
-      return { studioId: studio.id, isActive: studio.isActive };
+    // Caso membresía (NEW)
+    if (paymentIntent.metadata?.membershipPlan) {
+      if (paymentIntent.status === 'succeeded') {
+        return this.membershipsService.activateMembership(paymentIntent.id);
+      }
     }
 
     return paymentIntent;
@@ -263,11 +277,12 @@ export class PaymentsService {
             relations: ['musician'],
           });
           if (booking && booking.musician) {
-            this.emailService.sendPaymentFailureAdminNotification(
+            await this.emailService.sendPaymentFailureAdminNotification(
               booking.id,
               booking.musician.email,
               intent.amount / 100,
-              intent.last_payment_error?.message ?? 'Error desconocido desde Stripe',
+              intent.last_payment_error?.message ??
+                'Error desconocido desde Stripe',
             );
           }
         }
@@ -343,11 +358,14 @@ export class PaymentsService {
     return { booking, paymentId: payment.id };
   }
 
-  private async handleSuccessfulPayment(booking: Booking, intent: Stripe.PaymentIntent) {
+  private async handleSuccessfulPayment(
+    booking: Booking,
+    intent: Stripe.PaymentIntent,
+  ) {
     booking.isPaid = true;
     booking.paymentStatus = 'SUCCEEDED';
     await this.bookingRepo.save(booking);
-    
+
     await this.savePaymentRecordFromIntent(intent, 'succeeded');
 
     const totalAmount = intent.amount / 100;
@@ -364,11 +382,19 @@ export class PaymentsService {
     };
 
     if (booking.musician?.email) {
-      this.emailService.sendPaymentSuccessMusician(booking.musician.email, bookingDetails, intent.id);
+      await this.emailService.sendPaymentSuccessMusician(
+        booking.musician.email,
+        bookingDetails,
+        intent.id,
+      );
     }
 
     if (booking.studio.owner?.email) {
-      this.emailService.sendPaymentReceivedOwner(booking.studio.owner.email, bookingDetails, ownerPayout);
+      await this.emailService.sendPaymentReceivedOwner(
+        booking.studio.owner.email,
+        bookingDetails,
+        ownerPayout,
+      );
     }
   }
 }
