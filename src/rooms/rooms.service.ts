@@ -34,11 +34,11 @@ export class RoomsService {
     private readonly membershipsService: MembershipsService,
   ) {}
 
-  // ... (los otros métodos como create, update, etc., no cambian)
+  // ... (create, createWithAutoStudio, and other methods remain unchanged)
   async createWithAutoStudio(dto: CreateRoomDto, user: User): Promise<Room> {
     const studio = await this.studioRepository.findOne({
       where: { owner: { id: user.id } },
-      relations: ['owner', 'rooms', 'rooms'], // Cargar las salas para el conteo
+      relations: ['owner', 'rooms'], // Cargar las salas para el conteo
     });
 
     if (!studio) {
@@ -93,7 +93,7 @@ export class RoomsService {
   ): Promise<Room> {
     const studio = await this.studioRepository.findOne({
       where: { id: studioId },
-      relations: ['owner', 'rooms', 'rooms'], // Cargar las salas para el conteo
+      relations: ['owner', 'rooms'], // Cargar las salas para el conteo
     });
 
     if (!studio) throw new NotFoundException('Estudio no encontrado');
@@ -258,17 +258,18 @@ export class RoomsService {
     const publicIdToDelete = room.imagePublicIds[imageIndex];
 
     try {
-      // ✅ 1. Eliminar de Cloudinary especificando el tipo de recurso
+      // ✅ 1. Eliminar de Cloudinary especificando el tipo de recurso 'image'.
+      // Esto asume que tu `fileUploadService.deleteFile` puede aceptar un segundo argumento.
       await this.fileUploadService.deleteFile(publicIdToDelete, 'image');
 
-      // ✅ 2. Remover de los arrays en la base de datos
+      // ✅ 2. Remover de los arrays en la base de datos solo si la eliminación anterior fue exitosa.
       room.imageUrls.splice(imageIndex, 1);
       room.imagePublicIds.splice(imageIndex, 1);
 
       return await this.roomRepository.save(room);
     } catch (error) {
       this.logger.error(`Error al eliminar imagen: ${error.message}`);
-      throw new BadRequestException('Error al eliminar la imagen');
+      throw new BadRequestException('No se pudo eliminar la imagen del servidor externo.');
     }
   }
 
@@ -330,6 +331,7 @@ export class RoomsService {
     }
   }
 
+  // ... (createWithAutoStudioMultiple and CRON job remain unchanged)
   async createWithAutoStudioMultiple(
     dto: CreateRoomDto,
     user: User,
