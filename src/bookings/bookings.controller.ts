@@ -54,6 +54,27 @@ export class BookingsController {
     });
   }
 
+  @ApiOperation({ summary: 'Obtener los detalles de una reserva por su ID' })
+  @ApiResponse({
+    status: 200,
+    description: 'Detalles de la reserva encontrados',
+  })
+  @ApiResponse({ status: 404, description: 'Reserva no encontrada' })
+  @ApiResponse({ status: 401, description: 'No autenticado' })
+  @ApiResponse({
+    status: 403,
+    description: 'No autorizado: la reserva no te pertenece',
+  })
+  @Get(':bookingId')
+  @UseGuards(AuthGuard('jwt'))
+  async getBookingById(
+    @Param('bookingId') bookingId: string,
+    @Request() req: { user: User },
+  ) {
+    // Llama a un nuevo método en el servicio para encontrar la reserva
+    // y verificar que pertenece al usuario logueado.
+    return this.bookingsService.findOneBookingForUser(bookingId, req.user);
+  }
   // --- RUTA PARA MÚSICOS ---
 
   @ApiOperation({ summary: 'Crear una nueva reserva (solo músicos)' })
