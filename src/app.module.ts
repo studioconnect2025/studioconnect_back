@@ -31,7 +31,7 @@ import { MembershipModule } from './membership/membership.module';
     }),
     // ---- MODULO DE SCHEDULE PUESTO EN EL LUGAR CORRECTO ----
     ScheduleModule.forRoot(),
-    
+
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule], // Se quita ScheduleModule de aquí
       inject: [ConfigService],
@@ -42,7 +42,7 @@ import { MembershipModule } from './membership/membership.module';
           ssl: { rejectUnauthorized: false },
           extra: { ssl: { rejectUnauthorized: false } },
           autoLoadEntities: true,
-          synchronize: true,
+          synchronize: false,
         };
       },
     }),
@@ -63,10 +63,9 @@ import { MembershipModule } from './membership/membership.module';
     ChatModule,
     PqrsModule,
     ReviewsModule,
-    MembershipModule, 
+    MembershipModule,
   ],
   controllers: [AppController, OwnersController],
   providers: [AppService],
 })
 export class AppModule {}
-
