@@ -2,7 +2,7 @@ import { Entity, PrimaryGeneratedColumn, Column, ManyToOne } from 'typeorm';
 import { Studio } from 'src/studios/entities/studio.entity';
 import { MembershipPlan, MembershipStatus } from '../enum/enum.membership';
 
-@Entity()
+@Entity('memberships')
 export class Membership {
   @PrimaryGeneratedColumn('uuid')
   id: string;

@@ -42,7 +42,7 @@ import { MembershipModule } from './membership/membership.module';
           ssl: { rejectUnauthorized: false },
           extra: { ssl: { rejectUnauthorized: false } },
           autoLoadEntities: true,
-          synchronize: false,
+          synchronize: true,
         };
       },
     }),
