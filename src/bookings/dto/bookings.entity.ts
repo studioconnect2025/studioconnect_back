@@ -15,6 +15,7 @@ import { Room } from 'src/rooms/entities/room.entity';
 import { BookingAction } from '../enum/booking-action.enum';
 import { Instruments } from 'src/instrumentos/entities/instrumento.entity';
 import { Review } from 'src/reviews/entities/review.entity';
+import { PaymentStatus } from '../enum/paymentStatus';
 
 @Entity('bookings')
 export class Booking {
@@ -54,10 +55,10 @@ export class Booking {
 
   @Column({
     type: 'enum',
-    enum: ['PENDING', 'SUCCEEDED', 'FAILED'], // NEW
-    default: 'PENDING',
+    enum: PaymentStatus, // NEW
+    default: PaymentStatus.PENDING,
   })
-  paymentStatus: string;
+  paymentStatus: PaymentStatus;
 
   @Column({ nullable: true })
   paymentIntentId: string;
