@@ -42,7 +42,10 @@ export class PricingService {
       instrumentsList = await this.instrumentRepo.find({
         where: { id: In(instrumentIds) },
       });
-      instrumentsPrice = instrumentsList.reduce((sum, i) => sum + i.price, 0);
+      instrumentsPrice = instrumentsList.reduce(
+        (sum, i) => sum + i.price * hours,
+        0,
+      );
     }
 
     // 🔹 Comisiones y totales

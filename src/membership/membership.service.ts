@@ -94,6 +94,11 @@ export class MembershipsService {
     return await this.membershipRepository.save(membership);
   }
 
+  // MembershipsService
+  async saveMembership(membership: Membership): Promise<Membership> {
+    return this.membershipRepository.save(membership);
+  }
+
   // Activación desde payments al confirmar pago
   async activateMembership(paymentId: string): Promise<Membership> {
     const membership = await this.membershipRepository.findOne({
