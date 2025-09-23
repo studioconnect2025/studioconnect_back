@@ -14,6 +14,7 @@ import { ApiPropertyOptional } from '@nestjs/swagger';
 import { StudioStatus } from '../enum/studio-status.enum';
 import { StudioTypeEnum } from '../enum/studio-type.enum';
 import { ServicesType } from '../enum/ServicesType.enum';
+import { Transform } from 'class-transformer'; // <--- 1. IMPORTAR TRANSFORM
 
 export class UpdateStudioDto {
   @ApiPropertyOptional({ description: 'Nombre del estudio', example: 'Estudio Actualizado' })
@@ -71,6 +72,13 @@ export class UpdateStudioDto {
   @IsEnum(ServicesType, { each: true })
   @IsArray()
   @IsOptional()
+  // <--- 2. AÑADIR EL DECORADOR @Transform
+  @Transform(({ value }) => {
+    if (typeof value === 'string') {
+      return value.split(',').map((v) => v.trim());
+    }
+    return value;
+  })
   services?: ServicesType[];
 
   @ApiPropertyOptional({ description: 'Fotos del estudio (máximo 5)', type: 'array', items: { type: 'string', format: 'binary' }, required: false })
