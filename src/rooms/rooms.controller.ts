@@ -11,6 +11,7 @@ import {
   UseInterceptors,
   UploadedFiles,
   BadRequestException,
+  ParseIntPipe, // 🔥 1. IMPORTAR ParseIntPipe
 } from '@nestjs/common';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { RoomsService } from './rooms.service';
@@ -38,7 +39,7 @@ import { Room } from './entities/room.entity';
 export class RoomsController {
   constructor(private readonly roomsService: RoomsService) {}
 
-  // NUEVA RUTA SIN NECESIDAD DE studioId en la URL
+  // ... (los endpoints createRoom, createRoomInStudio, updateRoom, deleteRoom, findRoomsByStudio y findMyRooms no cambian)
   @Post()
   @ApiBearerAuth('JWT-auth')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
@@ -52,11 +53,9 @@ export class RoomsController {
     type: Room,
   })
   createRoom(@Body() dto: CreateRoomDto, @Request() req) {
-    // El studioId se obtiene automáticamente en el service
     return this.roomsService.createWithAutoStudio(dto, req.user);
   }
 
-  // MANTENER LA RUTA ORIGINAL PARA BACKWARD COMPATIBILITY (opcional)
   @Post(':studioId')
   @ApiBearerAuth('JWT-auth')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
@@ -114,7 +113,6 @@ export class RoomsController {
     return this.roomsService.findRoomsByStudio(studioId);
   }
 
-  // NUEVO ENDPOINT PARA OBTENER SALAS DEL USUARIO AUTENTICADO
   @Get('my-rooms')
   @ApiBearerAuth('JWT-auth')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
@@ -128,6 +126,7 @@ export class RoomsController {
   findMyRooms(@Request() req) {
     return this.roomsService.findRoomsByUser(req.user);
   }
+
 
   // ===================== ENDPOINTS DE IMÁGENES =====================
 
@@ -199,14 +198,12 @@ export class RoomsController {
   })
   deleteRoomImage(
     @Param('roomId') roomId: string,
-    @Param('imageIndex') imageIndex: string,
+    // 🔥 2. APLICAR ParseIntPipe para asegurar que el índice sea un número.
+    @Param('imageIndex', ParseIntPipe) imageIndex: number,
     @Request() req,
   ) {
-    const index = parseInt(imageIndex, 10);
-    if (isNaN(index)) {
-      throw new BadRequestException('Índice de imagen debe ser un número');
-    }
-    return this.roomsService.deleteImage(roomId, index, req.user);
+    // Ya no es necesario convertirlo manualmente.
+    return this.roomsService.deleteImage(roomId, imageIndex, req.user);
   }
 
   @Patch(':roomId/images/order')
