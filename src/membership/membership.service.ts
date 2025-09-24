@@ -165,7 +165,7 @@ export class MembershipsService {
   }
 
   // Cron para expirar automáticamente
-  @Cron('*/15 * * * *') 
+  @Cron('*/15 * * * *')
   async handleExpiredMemberships() {
     this.logger.log('Ejecutando CRON para expirar membresías...');
     const now = new Date();
