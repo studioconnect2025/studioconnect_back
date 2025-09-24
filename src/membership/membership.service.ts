@@ -94,7 +94,16 @@ export class MembershipsService {
     return await this.membershipRepository.save(membership);
   }
 
-  // MembershipsService
+  // NEW: Método para encontrar la membresía por el ID de Stripe
+  async findMembershipByPaymentId(
+    paymentId: string,
+  ): Promise<Membership | null> {
+    return this.membershipRepository.findOne({
+      where: { paymentId, status: MembershipStatus.INACTIVE },
+      relations: ['studio', 'studio.owner'],
+    });
+  }
+  // NEW: Método para guardar la membresía
   async saveMembership(membership: Membership): Promise<Membership> {
     return this.membershipRepository.save(membership);
   }

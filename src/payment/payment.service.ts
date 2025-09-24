@@ -19,7 +19,10 @@ import { PricingService } from 'src/pricingTotal/pricing.service';
 import { Payment } from './entities/payment.entity';
 import { EmailService } from 'src/auth/services/email.service';
 import { MembershipsService } from 'src/membership/membership.service';
-import { MembershipPlan } from 'src/membership/enum/enum.membership';
+import {
+  MembershipPlan,
+  MembershipStatus,
+} from 'src/membership/enum/enum.membership';
 import { Membership } from 'src/membership/entities/membership.entity';
 import { PaymentStatus } from 'src/bookings/enum/paymentStatus';
 import { BookingStatus } from 'src/bookings/enum/enums-bookings';
@@ -226,6 +229,15 @@ export class PaymentsService {
       },
     });
 
+    // NEW: Antes de retornar, guarda la membresía en estado INACTIVE con el paymentId de Stripe
+    await this.membershipsService.create(
+      {
+        plan: dto.plan,
+        paymentId: paymentIntent.id, // Guarda el ID de Stripe aquí
+      },
+      user,
+    );
+
     return {
       clientSecret: paymentIntent.client_secret ?? '',
       amount,
@@ -269,11 +281,34 @@ export class PaymentsService {
     // Caso membresía (NEW)
     if (paymentIntent.metadata?.membershipPlan) {
       if (paymentIntent.status === 'succeeded') {
-        const membership = await this.membershipsService.activateMembership(
-          paymentIntent.id,
-        );
+        const membership =
+          await this.membershipsService.findMembershipByPaymentId(
+            paymentIntent.id,
+          );
+
+        // NEW: Validar si la membresía existe
+        if (!membership) {
+          throw new NotFoundException('Membresía no encontrada o ya activada.');
+        }
+
+        // NEW: Activar y guardar la membresía
+        const start = new Date();
+        const end = new Date(start);
+        if (membership.plan === MembershipPlan.MONTHLY) {
+          end.setMonth(start.getMonth() + 1);
+        } else {
+          end.setFullYear(start.getFullYear() + 1);
+        }
+
+        membership.startDate = start;
+        membership.endDate = end;
+        membership.status = MembershipStatus.ACTIVE;
+
+        const savedMembership =
+          await this.membershipsService.saveMembership(membership);
+
         const payment = this.paymentRepo.create({
-          membership: membership,
+          membership: savedMembership,
           stripePaymentIntentId: paymentIntent.id,
           amount: (paymentIntent.amount_received ?? paymentIntent.amount) / 100,
           status: 'succeeded',
@@ -281,10 +316,7 @@ export class PaymentsService {
         });
         await this.paymentRepo.save(payment);
 
-        membership.paymentId = payment.id;
-        await this.membershipsService.saveMembership(membership);
-
-        return membership;
+        return savedMembership;
       } else {
         // Si falló, podemos devolver solo el PaymentIntent
         return paymentIntent;
