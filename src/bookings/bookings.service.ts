@@ -66,6 +66,28 @@ export class BookingsService {
     return { items, total, page, limit };
   }
 
+  async findOneBookingForUser(bookingId: string, user: User) {
+    const booking = await this.bookingRepository.findOne({
+      where: { id: bookingId },
+      relations: ['musician', 'room', 'room.studio', 'studio', 'studio.owner'],
+    });
+
+    if (!booking) {
+      throw new NotFoundException(`Reserva con ID ${bookingId} no encontrada.`);
+    }
+
+    // Verificar si el usuario es el músico o el dueño del estudio.
+    // Esto previene que un usuario vea la reserva de otro.
+    const isMusician = booking.musician.id === user.id;
+    const isOwner = booking.studio.owner.id === user.id;
+
+    if (!isMusician && !isOwner) {
+      throw new ForbiddenException('No tienes permiso para ver esta reserva.');
+    }
+
+    return booking;
+  }
+
   /**
    * Crea una nueva reserva para un músico.
    */
@@ -499,7 +521,7 @@ export class BookingsService {
     return booking;
   }
 
-  @Cron('0 * * * *') // Se ejecuta cada hora, en el minuto 0.
+  @Cron('*/15 * * * *')  // Se ejecuta cada hora, en el minuto 0.
   async handleBookingReminders() {
     this.logger.log(
       'Ejecutando CRON job para buscar recordatorios de reservas...',

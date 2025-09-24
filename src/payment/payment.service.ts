@@ -21,6 +21,8 @@ import { EmailService } from 'src/auth/services/email.service';
 import { MembershipsService } from 'src/membership/membership.service';
 import { MembershipPlan } from 'src/membership/enum/enum.membership';
 import { Membership } from 'src/membership/entities/membership.entity';
+import { PaymentStatus } from 'src/bookings/enum/paymentStatus';
+import { BookingStatus } from 'src/bookings/enum/enums-bookings';
 
 @Injectable()
 export class PaymentsService {
@@ -150,7 +152,7 @@ export class PaymentsService {
       paymentIntent = await this.stripe.paymentIntents.create({
         amount: Math.round(pricing.totalPrice * 100), // centavos
         currency: 'usd',
-        capture_method: 'manual',
+        capture_method: 'automatic',
         application_fee_amount: commissionAmountInCents,
         transfer_data: {
           destination: booking.studio.stripeAccountId,
@@ -175,7 +177,7 @@ export class PaymentsService {
     }
 
     booking.paymentIntentId = paymentIntent.id;
-    booking.paymentStatus = 'PENDING';
+    booking.paymentStatus = PaymentStatus.PENDING;
     await this.bookingRepo.save(booking);
 
     return {
@@ -224,6 +226,15 @@ export class PaymentsService {
       },
     });
 
+    // NEW: Antes de retornar, guarda la membresía en estado INACTIVE con el paymentId de Stripe
+    await this.membershipsService.create(
+      {
+        plan: dto.plan,
+        paymentId: paymentIntent.id, // Guarda el ID de Stripe aquí
+      },
+      user,
+    );
+
     return {
       clientSecret: paymentIntent.client_secret ?? '',
       amount,
@@ -246,18 +257,48 @@ export class PaymentsService {
     if (booking) {
       if (paymentIntent.status === 'succeeded') {
         booking.isPaid = true;
-        booking.paymentStatus = 'SUCCEEDED';
+        booking.paymentStatus = PaymentStatus.SUCCEEDED;
+        booking.status = BookingStatus.CONFIRMED;
       } else {
-        booking.paymentStatus = 'FAILED';
+        booking.paymentStatus = PaymentStatus.FAILED;
       }
       await this.bookingRepo.save(booking);
+
+      const paymentRecord = this.paymentRepo.create({
+        booking: booking,
+        stripePaymentIntentId: paymentIntent.id,
+        amount: (paymentIntent.amount_received ?? paymentIntent.amount) / 100,
+        status: paymentIntent.status === 'succeeded' ? 'succeeded' : 'failed',
+        currency: paymentIntent.currency ?? 'usd',
+      });
+      await this.paymentRepo.save(paymentRecord);
       return booking;
     }
 
     // Caso membresía (NEW)
     if (paymentIntent.metadata?.membershipPlan) {
       if (paymentIntent.status === 'succeeded') {
-        return this.membershipsService.activateMembership(paymentIntent.id);
+        try {
+          const activatedMembership =
+            await this.membershipsService.activateMembership(paymentIntent.id);
+
+          const payment = this.paymentRepo.create({
+            membership: activatedMembership,
+            stripePaymentIntentId: paymentIntent.id,
+            amount:
+              (paymentIntent.amount_received ?? paymentIntent.amount) / 100,
+            status: 'succeeded',
+            currency: paymentIntent.currency ?? 'usd',
+          });
+          await this.paymentRepo.save(payment);
+          return activatedMembership;
+        } catch (error) {
+          console.error('Error al activar la membresía:', error);
+          return paymentIntent;
+        }
+      } else {
+        // Si falló, podemos devolver solo el PaymentIntent
+        return paymentIntent;
       }
     }
 
@@ -275,7 +316,7 @@ export class PaymentsService {
 
       if (booking) {
         booking.isPaid = true;
-        booking.paymentStatus = 'SUCCEEDED';
+        booking.paymentStatus = PaymentStatus.SUCCEEDED;
         await this.bookingRepo.save(booking);
         await this.savePaymentRecordFromIntent(intent, 'succeeded');
       }
@@ -309,14 +350,12 @@ export class PaymentsService {
       case 'payment_intent.succeeded': {
         const intent = event.data.object;
         await this.confirmPayment(intent.id);
-        await this.savePaymentRecordFromIntent(intent, 'succeeded');
         break;
       }
 
       case 'payment_intent.payment_failed': {
         const intent = event.data.object;
         await this.confirmPayment(intent.id);
-        await this.savePaymentRecordFromIntent(intent, 'failed');
 
         // --- ✅ NOTIFICACIÓN DE FALLO DE PAGO AL ADMINISTRADOR ---
         const bookingId = intent.metadata?.bookingId;
@@ -391,7 +430,7 @@ export class PaymentsService {
     if (booking.isPaid) throw new BadRequestException('Reserva ya pagada');
 
     booking.isPaid = true;
-    booking.paymentStatus = 'SUCCEEDED';
+    booking.paymentStatus = PaymentStatus.SUCCEEDED;
     booking.paymentIntentId = `dev-simulated-${Date.now()}`;
     await this.bookingRepo.save(booking);
 
@@ -412,7 +451,7 @@ export class PaymentsService {
     intent: Stripe.PaymentIntent,
   ) {
     booking.isPaid = true;
-    booking.paymentStatus = 'SUCCEEDED';
+    booking.paymentStatus = PaymentStatus.SUCCEEDED;
     await this.bookingRepo.save(booking);
 
     await this.savePaymentRecordFromIntent(intent, 'succeeded');
