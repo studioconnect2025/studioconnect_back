@@ -22,6 +22,7 @@ import { MembershipsService } from 'src/membership/membership.service';
 import { MembershipPlan } from 'src/membership/enum/enum.membership';
 import { Membership } from 'src/membership/entities/membership.entity';
 import { PaymentStatus } from 'src/bookings/enum/paymentStatus';
+import { BookingStatus } from 'src/bookings/enum/enums-bookings';
 
 @Injectable()
 export class PaymentsService {
@@ -248,6 +249,7 @@ export class PaymentsService {
       if (paymentIntent.status === 'succeeded') {
         booking.isPaid = true;
         booking.paymentStatus = PaymentStatus.SUCCEEDED;
+        booking.status = BookingStatus.CONFIRMED;
       } else {
         booking.paymentStatus = PaymentStatus.FAILED;
       }
@@ -337,14 +339,12 @@ export class PaymentsService {
       case 'payment_intent.succeeded': {
         const intent = event.data.object;
         await this.confirmPayment(intent.id);
-        await this.savePaymentRecordFromIntent(intent, 'succeeded');
         break;
       }
 
       case 'payment_intent.payment_failed': {
         const intent = event.data.object;
         await this.confirmPayment(intent.id);
-        await this.savePaymentRecordFromIntent(intent, 'failed');
 
         // --- ✅ NOTIFICACIÓN DE FALLO DE PAGO AL ADMINISTRADOR ---
         const bookingId = intent.metadata?.bookingId;
