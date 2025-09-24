@@ -521,7 +521,7 @@ export class BookingsService {
     return booking;
   }
 
-  @Cron('0 * * * *') // Se ejecuta cada hora, en el minuto 0.
+  @Cron('*/15 * * * *')  // Se ejecuta cada hora, en el minuto 0.
   async handleBookingReminders() {
     this.logger.log(
       'Ejecutando CRON job para buscar recordatorios de reservas...',
