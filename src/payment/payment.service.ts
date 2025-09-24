@@ -151,7 +151,7 @@ export class PaymentsService {
       paymentIntent = await this.stripe.paymentIntents.create({
         amount: Math.round(pricing.totalPrice * 100), // centavos
         currency: 'usd',
-        capture_method: 'manual',
+        capture_method: 'automatic',
         application_fee_amount: commissionAmountInCents,
         transfer_data: {
           destination: booking.studio.stripeAccountId,
