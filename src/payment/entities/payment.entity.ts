@@ -18,7 +18,12 @@ export class Payment {
   @JoinColumn({ name: 'bookingId' })
   booking: Booking | null;
 
+  // NUEVA LÍNEA: Columna para la clave foránea de Membership
+  @Column({ nullable: true })
+  membershipId: string;
+
   @ManyToOne(() => Membership, { nullable: true, eager: true })
+  @JoinColumn({ name: 'membershipId' })
   membership: Membership | null;
 
   @Column()
