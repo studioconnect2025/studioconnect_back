@@ -22,7 +22,7 @@ import { redisStore } from 'cache-manager-redis-store';
       inject: [ConfigService],
       useFactory: async (configService: ConfigService) => ({
         secret: configService.get<string>('JWT_SECRET'),
-        signOptions: { expiresIn: '1h' },
+        signOptions: { expiresIn: '3h' },
       }),
     }),
     // Asumo que tienes esta configuración de Cache/Redis
@@ -53,7 +53,7 @@ import { redisStore } from 'cache-manager-redis-store';
       useFactory: (configService: ConfigService) => {
         return new JwtService({
           secret: configService.get<string>('JWT_REGISTRATION_SECRET'),
-          signOptions: { expiresIn: '8h' },
+          signOptions: { expiresIn: '15m' },
         });
       },
     },
