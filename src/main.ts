@@ -13,14 +13,11 @@ class CorsSocketIoAdapter extends IoAdapter {
   createIOServer(port: number, options?: ServerOptions): any {
     console.log('[ADAPTER LOG] Creando servidor de Socket.IO...');
 
-    // 👇 LA CORRECCIÓN DEFINITIVA ESTÁ AQUÍ 👇
-    // Ignoramos las 'options' que vienen de NestJS para evitar conflictos de tipos
-    // y creamos una configuración limpia solo con lo que necesitamos.
     const server = super.createIOServer(port, {
       cors: {
         origin: [
-            'http://localhost:3001', // El frontend de dev
-            'https://studioconnect-front.vercel.app', // prod vercel
+          'http://localhost:3001', // El frontend de dev
+          'https://studioconnect-front.vercel.app', // prod vercel
         ],
         methods: ['GET', 'POST'],
         credentials: true,
@@ -29,14 +26,13 @@ class CorsSocketIoAdapter extends IoAdapter {
 
     console.log('[ADAPTER LOG] Servidor de Socket.IO creado.');
 
-    // --- Espía de errores de conexión ---
     server.engine.on('connection_error', (err) => {
-        console.log('================================================');
-        console.error('[ADAPTER LOG] ¡ERROR DE CONEXIÓN DETECTADO!');
-        console.error(`[ADAPTER LOG] Código de error: ${err.code}`);
-        console.error(`[ADAPTER LOG] Mensaje: ${err.message}`);
-        console.error(`[ADAPTER LOG] Contexto:`, err.context);
-        console.log('================================================');
+      console.log('================================================');
+      console.error('[ADAPTER LOG] ¡ERROR DE CONEXIÓN DETECTADO!');
+      console.error(`[ADAPTER LOG] Código de error: ${err.code}`);
+      console.error(`[ADAPTER LOG] Mensaje: ${err.message}`);
+      console.error(`[ADAPTER LOG] Contexto:`, err.context);
+      console.log('================================================');
     });
 
     return server;
@@ -46,19 +42,15 @@ class CorsSocketIoAdapter extends IoAdapter {
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  // Tu configuración de CORS para HTTP se mantiene igual
+  // 👇 LA CORRECCIÓN ESTÁ AQUÍ 👇
+  // Reemplazamos la función de origen dinámica por un array estático.
+  // Esta configuración es más robusta y soluciona el problema con las
+  // peticiones de pre-vuelo (OPTIONS) que verifican el header 'Authorization'.
   app.enableCors({
-    origin(origin, cb) {
-      const allowed = [
-        'http://localhost:3001', // dev
-        'https://studioconnect-front.vercel.app', // prod vercel
-      ];
-      const ok =
-        !origin ||
-        allowed.includes(origin) ||
-        origin.endsWith('.vercel.app'); // previews
-      cb(null, ok);
-    },
+    origin: [
+      'http://localhost:3001',
+      'https://studioconnect-front.vercel.app',
+    ],
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: [
       'Accept',
@@ -68,8 +60,6 @@ async function bootstrap() {
       'Authorization',
     ],
     credentials: true,
-    maxAge: 86400,
-    optionsSuccessStatus: 204,
   });
 
   // El resto de tu configuración no cambia
@@ -78,16 +68,16 @@ async function bootstrap() {
 
   app.use(
     session({
-        name: 'sc.sid',
-        secret: process.env.SESSION_SECRET || 'dev-secret-change-me',
-        resave: false,
-        saveUninitialized: false,
-        cookie: {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-            maxAge: 1000 * 60 * 5,
-        },
+      name: 'sc.sid',
+      secret: process.env.SESSION_SECRET || 'dev-secret-change-me',
+      resave: false,
+      saveUninitialized: false,
+      cookie: {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+        maxAge: 1000 * 60 * 5,
+      },
     }),
   );
 
@@ -113,7 +103,7 @@ async function bootstrap() {
   app.use('/payments/webhook', bodyParser.raw({ type: 'application/json' }));
 
   // Usamos el Adaptador personalizado
-  app.useWebSocketAdapter(new CorsSocketIoAdapter(app)); 
+  app.useWebSocketAdapter(new CorsSocketIoAdapter(app));
 
   await app.listen(process.env.PORT ?? 3000);
   console.log(`🚀 Servidor HTTP corriendo en el puerto ${process.env.PORT ?? 3000}`);
